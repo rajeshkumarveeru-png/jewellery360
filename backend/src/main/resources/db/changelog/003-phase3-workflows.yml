@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-sale-return
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: sale_return
+      changes:
+        - createTable:
+            tableName: sale_return
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: sale_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: return_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: return_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: COMPLETED, constraints: {nullable: false}}
+              - column: {name: created_by_id, type: BIGINT}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: sale_return, columnNames: company_id,return_no, constraintName: uk_sale_return_company_no}
+        - addForeignKeyConstraint: {baseTableName: sale_return, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_sale_return_company}
+        - addForeignKeyConstraint: {baseTableName: sale_return, baseColumnNames: branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_sale_return_branch}
+        - addForeignKeyConstraint: {baseTableName: sale_return, baseColumnNames: sale_id, referencedTableName: sale, referencedColumnNames: id, constraintName: fk_sale_return_sale}
+        - addForeignKeyConstraint: {baseTableName: sale_return, baseColumnNames: created_by_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_sale_return_user}
+        - createIndex: {tableName: sale_return, indexName: idx_sale_return_context_date, columns: [{column: {name: company_id}}, {column: {name: branch_id}}, {column: {name: return_date}}]}
+      rollback:
+        - dropTable: {tableName: sale_return}
+  - changeSet:
+      id: 003-sale-return-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: sale_return_item
+      changes:
+        - createTable:
+            tableName: sale_return_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: return_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: sale_item_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+        - addUniqueConstraint: {tableName: sale_return_item, columnNames: sale_item_id, constraintName: uk_sale_return_item_sale_item}
+        - addForeignKeyConstraint: {baseTableName: sale_return_item, baseColumnNames: return_id, referencedTableName: sale_return, referencedColumnNames: id, constraintName: fk_sale_return_item_return}
+        - addForeignKeyConstraint: {baseTableName: sale_return_item, baseColumnNames: sale_item_id, referencedTableName: sale_item, referencedColumnNames: id, constraintName: fk_sale_return_item_sale_item}
+        - addForeignKeyConstraint: {baseTableName: sale_return_item, baseColumnNames: jewellery_item_id, referencedTableName: jewellery_item, referencedColumnNames: id, constraintName: fk_sale_return_item_jewellery}
+      rollback:
+        - dropTable: {tableName: sale_return_item}
+  - changeSet:
+      id: 003-stock-transfer-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: stock_transfer_item
+      changes:
+        - createTable:
+            tableName: stock_transfer_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: transfer_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: quantity, type: 'DECIMAL(19,3)', defaultValueNumeric: 1, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: stock_transfer_item, columnNames: transfer_id,jewellery_item_id, constraintName: uk_transfer_item}
+        - addForeignKeyConstraint: {baseTableName: stock_transfer_item, baseColumnNames: transfer_id, referencedTableName: stock_transfer, referencedColumnNames: id, constraintName: fk_transfer_item_transfer}
+        - addForeignKeyConstraint: {baseTableName: stock_transfer_item, baseColumnNames: jewellery_item_id, referencedTableName: jewellery_item, referencedColumnNames: id, constraintName: fk_transfer_item_jewellery}
+      rollback:
+        - dropTable: {tableName: stock_transfer_item}
+  - changeSet:
+      id: 003-purchase-return
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: purchase_return
+      changes:
+        - createTable:
+            tableName: purchase_return
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: purchase_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: return_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: return_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+              - column: {name: status, type: VARCHAR(30), defaultValue: COMPLETED, constraints: {nullable: false}}
+              - column: {name: created_by_id, type: BIGINT}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: purchase_return, columnNames: company_id,return_no, constraintName: uk_purchase_return_company_no}
+        - addForeignKeyConstraint: {baseTableName: purchase_return, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_purchase_return_company}
+        - addForeignKeyConstraint: {baseTableName: purchase_return, baseColumnNames: branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_purchase_return_branch}
+        - addForeignKeyConstraint: {baseTableName: purchase_return, baseColumnNames: purchase_id, referencedTableName: purchase_order, referencedColumnNames: id, constraintName: fk_purchase_return_purchase}
+        - addForeignKeyConstraint: {baseTableName: purchase_return, baseColumnNames: created_by_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_purchase_return_user}
+      rollback:
+        - dropTable: {tableName: purchase_return}
+  - changeSet:
+      id: 003-purchase-return-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            tableExists:
+              tableName: purchase_return_item
+      changes:
+        - createTable:
+            tableName: purchase_return_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: return_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: purchase_item_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: jewellery_item_id, type: BIGINT}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+        - addForeignKeyConstraint: {baseTableName: purchase_return_item, baseColumnNames: return_id, referencedTableName: purchase_return, referencedColumnNames: id, constraintName: fk_purchase_return_item_return}
+        - addForeignKeyConstraint: {baseTableName: purchase_return_item, baseColumnNames: purchase_item_id, referencedTableName: purchase_item, referencedColumnNames: id, constraintName: fk_purchase_return_item_purchase_item}
+        - addForeignKeyConstraint: {baseTableName: purchase_return_item, baseColumnNames: jewellery_item_id, referencedTableName: jewellery_item, referencedColumnNames: id, constraintName: fk_purchase_return_item_jewellery}
+      rollback:
+        - dropTable: {tableName: purchase_return_item}

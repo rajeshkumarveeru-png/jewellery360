@@ -1,0 +1,7 @@
+.page-branches { width:100%; }
+@media (max-width: 980px) { .page-branches .moduleGrid, .page-branches .billingLayout { grid-template-columns:1fr; } }
+@media (max-width: 720px) { .page-branches .formGrid { grid-template-columns:1fr; } .page-branches .panelHead { flex-direction:column; align-items:flex-start; gap:10px; } .page-branches .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; } .page-branches table { min-width:680px; } }
+
+/* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
+@media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}

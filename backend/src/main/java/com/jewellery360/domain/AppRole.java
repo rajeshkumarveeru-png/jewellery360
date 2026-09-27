@@ -1,0 +1,2 @@
+package com.jewellery360.domain;
+public enum AppRole { APP_ADMIN, COMPANY_ADMIN, MANAGER, CASHIER, SALESMAN, INVENTORY_MANAGER, ACCOUNTANT, VIEWER }

@@ -1,0 +1,108 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-permission-seeds
+      author: jewellery360
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO permission(code,name) VALUES
+              ('BILLING_CREATE','Create billing'),('BILLING_UPDATE','Update billing'),('BILLING_RETURN','Return billing'),
+              ('BILLING_CANCEL','Cancel billing'),('JEWELLERY_CREATE','Create jewellery'),('JEWELLERY_UPDATE','Update jewellery'),
+              ('JEWELLERY_DELETE','Delete jewellery'),('GOLD_RATES_CREATE','Create gold rate'),('GOLD_RATES_UPDATE','Update gold rate'),
+              ('INVENTORY_CREATE','Create inventory movement'),('INVENTORY_TRANSFER','Transfer stock'),('PURCHASES_CREATE','Create purchase'),
+              ('PURCHASES_RETURN','Return purchase'),('CUSTOMERS_CREATE','Create customer'),('CUSTOMERS_UPDATE','Update customer'),
+              ('CUSTOMERS_DELETE','Delete customer'),('PAYMENTS_CREATE','Create payment'),('OLD_GOLD_CREATE','Create old gold transaction'),
+              ('SERVICES_UPDATE','Update service'),('REPORTS_VIEW','View reports'),('WHATSAPP_SEND','Send WhatsApp')
+              ON CONFLICT (code) DO NOTHING;
+      rollback:
+        - sql:
+            sql: DELETE FROM permission WHERE code IN ('BILLING_CREATE','BILLING_UPDATE','BILLING_RETURN','BILLING_CANCEL','JEWELLERY_CREATE','JEWELLERY_UPDATE','JEWELLERY_DELETE','GOLD_RATES_CREATE','GOLD_RATES_UPDATE','INVENTORY_CREATE','INVENTORY_TRANSFER','PURCHASES_CREATE','PURCHASES_RETURN','CUSTOMERS_CREATE','CUSTOMERS_UPDATE','CUSTOMERS_DELETE','PAYMENTS_CREATE','OLD_GOLD_CREATE','SERVICES_UPDATE','REPORTS_VIEW','WHATSAPP_SEND');
+  - changeSet:
+      id: 004-version-jewellery-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: jewellery_item}
+        - not:
+            columnExists: {tableName: jewellery_item, columnName: version}
+      changes:
+        - addColumn:
+            tableName: jewellery_item
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: jewellery_item, columnName: version}
+
+  - changeSet:
+      id: 004-version-stock
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: stock}
+        - not:
+            columnExists: {tableName: stock, columnName: version}
+      changes:
+        - addColumn:
+            tableName: stock
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: stock, columnName: version}
+
+  - changeSet:
+      id: 004-version-sale
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: sale}
+        - not:
+            columnExists: {tableName: sale, columnName: version}
+      changes:
+        - addColumn:
+            tableName: sale
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: sale, columnName: version}
+
+  - changeSet:
+      id: 004-version-purchase-order
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: purchase_order}
+        - not:
+            columnExists: {tableName: purchase_order, columnName: version}
+      changes:
+        - addColumn:
+            tableName: purchase_order
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: purchase_order, columnName: version}
+
+  - changeSet:
+      id: 004-version-gold-rate
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: gold_rate}
+        - not:
+            columnExists: {tableName: gold_rate, columnName: version}
+      changes:
+        - addColumn:
+            tableName: gold_rate
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: gold_rate, columnName: version}
+
+  - changeSet:
+      id: 004-version-customer
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists: {tableName: customer}
+        - not:
+            columnExists: {tableName: customer, columnName: version}
+      changes:
+        - addColumn:
+            tableName: customer
+            columns: [{column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}}]
+      rollback:
+        - dropColumn: {tableName: customer, columnName: version}

@@ -1,0 +1,4 @@
+package com.jewellery360.domain;
+import jakarta.persistence.*; import lombok.Getter; import lombok.Setter; import java.math.BigDecimal;
+@Entity @Table(name="sale_return_item", uniqueConstraints=@UniqueConstraint(name="uk_sale_return_item_sale_item", columnNames="sale_item_id"))
+@Getter @Setter public class SaleReturnItem { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id; @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="return_id") private SaleReturn returnRecord; @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="sale_item_id") private SaleItem saleItem; @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="jewellery_item_id") private JewelleryItem jewelleryItem; @Column(nullable=false,precision=19,scale=3) private BigDecimal amount=BigDecimal.ZERO; @Column(length=1000) private String reason; }

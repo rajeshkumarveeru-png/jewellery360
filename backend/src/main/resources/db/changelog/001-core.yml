@@ -1,0 +1,138 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-core
+      author: jewellery360
+      validCheckSum: 9:fc9e99e5d71c2f81d4f867ff60e93549
+      changes:
+        - createTable:
+            tableName: company
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: name, type: VARCHAR(150), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(30)}
+              - column: {name: gstin, type: VARCHAR(30)}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: email, type: VARCHAR(150)}
+              - column: {name: address, type: VARCHAR(500)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: company, columnNames: name, constraintName: uk_company_name}
+        - addUniqueConstraint: {tableName: company, columnNames: code, constraintName: uk_company_code}
+        - createTable:
+            tableName: branch
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: name, type: VARCHAR(120), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: address, type: VARCHAR(500)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addForeignKeyConstraint: {baseTableName: branch, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_branch_company}
+        - addUniqueConstraint: {tableName: branch, columnNames: code, constraintName: uk_branch_code}
+        - createTable:
+            tableName: app_user
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: username, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(200), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: password_hash, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: role, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: company_id, type: BIGINT}
+              - column: {name: branch_id, type: BIGINT}
+              - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: deleted, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: app_user, columnNames: username, constraintName: uk_app_user_username}
+        - addUniqueConstraint: {tableName: app_user, columnNames: email, constraintName: uk_app_user_email}
+        - addForeignKeyConstraint: {baseTableName: app_user, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_user_company}
+        - addForeignKeyConstraint: {baseTableName: app_user, baseColumnNames: branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_user_branch}
+        - createTable:
+            tableName: otp_challenge
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: user_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: otp_hash, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: expires_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: attempts, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: consumed, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+        - addForeignKeyConstraint: {baseTableName: otp_challenge, baseColumnNames: user_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_otp_user}
+        - createTable:
+            tableName: property
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: company_id, type: BIGINT}
+              - column: {name: property_key, type: VARCHAR(120), constraints: {nullable: false}}
+              - column: {name: property_value, type: VARCHAR(4000)}
+              - column: {name: property_type, type: VARCHAR(20), defaultValue: STRING, constraints: {nullable: false}}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addForeignKeyConstraint: {baseTableName: property, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_property_company}
+        - addUniqueConstraint: {tableName: property, columnNames: company_id,property_key, constraintName: uk_property_company_key}
+        - createTable:
+            tableName: user_preference
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: user_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: ui_theme, type: VARCHAR(40), defaultValue: LUXURY_GOLD, constraints: {nullable: false}}
+              - column: {name: density, type: VARCHAR(30), defaultValue: COMFORTABLE, constraints: {nullable: false}}
+              - column: {name: default_branch_id, type: BIGINT}
+        - addUniqueConstraint: {tableName: user_preference, columnNames: user_id, constraintName: uk_user_pref_user}
+        - addForeignKeyConstraint: {baseTableName: user_preference, baseColumnNames: user_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_pref_user}
+        - addForeignKeyConstraint: {baseTableName: user_preference, baseColumnNames: default_branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_pref_branch}
+        - createTable:
+            tableName: user_request
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: request_type, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(20), constraints: {nullable: false}}
+              - column: {name: target_user_id, type: BIGINT}
+              - column: {name: requested_by_id, type: BIGINT}
+              - column: {name: company_id, type: BIGINT}
+              - column: {name: message, type: VARCHAR(500)}
+              - column: {name: pending_password_hash, type: VARCHAR(255)}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+              - column: {name: processed_at, type: TIMESTAMP WITH TIME ZONE}
+        - addForeignKeyConstraint: {baseTableName: user_request, baseColumnNames: target_user_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_request_target}
+        - addForeignKeyConstraint: {baseTableName: user_request, baseColumnNames: requested_by_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_request_by}
+        - addForeignKeyConstraint: {baseTableName: user_request, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_request_company}
+        - createTable:
+            tableName: business_record
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: module, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: subtype, type: VARCHAR(80)}
+              - column: {name: title, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: ACTIVE, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: quantity, type: 'DECIMAL(19,3)', defaultValueNumeric: 1, constraints: {nullable: false}}
+              - column: {name: record_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: owner, type: VARCHAR(120)}
+              - column: {name: notes, type: VARCHAR(2000)}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: created_by_id, type: BIGINT}
+              - column: {name: payload, type: TEXT}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+        - addForeignKeyConstraint: {baseTableName: business_record, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_record_company}
+        - addForeignKeyConstraint: {baseTableName: business_record, baseColumnNames: branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_record_branch}
+        - addForeignKeyConstraint: {baseTableName: business_record, baseColumnNames: created_by_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_record_user}
+        - createIndex: {tableName: business_record, indexName: idx_record_company_module, columns: [{column: {name: company_id}},{column: {name: module}}]}
+        - createIndex: {tableName: business_record, indexName: idx_record_branch_module, columns: [{column: {name: branch_id}},{column: {name: module}}]}
+        - createTable:
+            tableName: audit_history
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueDate: NOW(), constraints: {nullable: false}}
+              - column: {name: user_id, type: BIGINT}
+              - column: {name: company_id, type: BIGINT}
+              - column: {name: branch_id, type: BIGINT}
+              - column: {name: action, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_type, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_id, type: BIGINT}
+              - column: {name: before_value, type: TEXT}
+              - column: {name: after_value, type: TEXT}
+        - addForeignKeyConstraint: {baseTableName: audit_history, baseColumnNames: user_id, referencedTableName: app_user, referencedColumnNames: id, constraintName: fk_audit_user}
+        - addForeignKeyConstraint: {baseTableName: audit_history, baseColumnNames: company_id, referencedTableName: company, referencedColumnNames: id, constraintName: fk_audit_company}
+        - addForeignKeyConstraint: {baseTableName: audit_history, baseColumnNames: branch_id, referencedTableName: branch, referencedColumnNames: id, constraintName: fk_audit_branch}

@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-core.yml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/002-jewellery-domain.yml
+      relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/003-phase3-workflows.yml
+
+  - include:
+      file: db/changelog/004-phase4-hardening.yml
+
+  - include:
+      file: db/changelog/005-core-schema-repair.yml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/006-core-business-record-repair.yml
+      relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/007-user-identity-constraints.yml
+      relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/008-global-user-identity.yml
+      relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/009-property-company-key-repair.yml
+      relativeToChangelogFile: false

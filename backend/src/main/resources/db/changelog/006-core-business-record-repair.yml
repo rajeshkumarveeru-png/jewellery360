@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-core-business-record-repair
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - not:
+            - tableExists:
+                tableName: business_record
+      changes:
+        - createTable:
+            tableName: business_record
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: module, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: subtype, type: VARCHAR(80)}
+              - column: {name: title, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: ACTIVE, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: quantity, type: 'DECIMAL(19,3)', defaultValueNumeric: 1, constraints: {nullable: false}}
+              - column: {name: record_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: owner, type: VARCHAR(120)}
+              - column: {name: notes, type: VARCHAR(2000)}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: created_by_id, type: BIGINT}
+              - column: {name: payload, type: TEXT}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueDate: NOW(), constraints: {nullable: false}}
+              - column: {name: updated_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueDate: NOW(), constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: business_record
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_record_company_repair
+        - addForeignKeyConstraint:
+            baseTableName: business_record
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_record_branch_repair
+        - addForeignKeyConstraint:
+            baseTableName: business_record
+            baseColumnNames: created_by_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_record_user_repair
+        - createIndex:
+            tableName: business_record
+            indexName: idx_record_company_module_repair
+            columns:
+              - column: {name: company_id}
+              - column: {name: module}
+        - createIndex:
+            tableName: business_record
+            indexName: idx_record_branch_module_repair
+            columns:
+              - column: {name: branch_id}
+              - column: {name: module}
+        - createIndex:
+            tableName: business_record
+            indexName: idx_record_date_repair
+            columns:
+              - column: {name: record_date}
+      # Repair-only changeset. If the table already exists, the changeset is MARK_RAN;
+      # therefore rollback must never drop or delete application data.
+      rollback: []

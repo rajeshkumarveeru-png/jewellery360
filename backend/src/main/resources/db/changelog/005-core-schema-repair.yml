@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-core-audit-history-repair
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: app_user
+        - tableExists:
+            tableName: company
+        - tableExists:
+            tableName: branch
+      changes:
+        - createTable:
+            tableName: audit_history
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueDate: NOW(), constraints: {nullable: false}}
+              - column: {name: user_id, type: BIGINT}
+              - column: {name: company_id, type: BIGINT}
+              - column: {name: branch_id, type: BIGINT}
+              - column: {name: action, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_type, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_id, type: BIGINT}
+              - column: {name: before_value, type: TEXT}
+              - column: {name: after_value, type: TEXT}
+        - addForeignKeyConstraint:
+            baseTableName: audit_history
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_audit_user_repair
+        - addForeignKeyConstraint:
+            baseTableName: audit_history
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_audit_company_repair
+        - addForeignKeyConstraint:
+            baseTableName: audit_history
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_audit_branch_repair
+        - createIndex:
+            tableName: audit_history
+            indexName: idx_audit_company_created_repair
+            columns:
+              - column: {name: company_id}
+              - column: {name: created_at}
+        - createIndex:
+            tableName: audit_history
+            indexName: idx_audit_entity_repair
+            columns:
+              - column: {name: entity_type}
+              - column: {name: entity_id}
+      rollback:
+        - dropTable:
+            tableName: audit_history
+            cascadeConstraints: true

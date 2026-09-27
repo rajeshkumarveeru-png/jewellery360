@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+
+    <!-- ========================================================= -->
+    <!-- SMART BILLING LOGGING PROPERTIES                          -->
+    <!-- ========================================================= -->
+
+    <!-- External log directory -->
+    <property name="LOG_DIR" value="${SMART_BILLING_LOG_DIR:-logs}"/>
+
+    <!-- Main application log -->
+    <property name="LOG_FILE" value="${LOG_DIR}/smartbilling.log"/>
+
+    <!-- Rolling configuration -->
+    <property name="MAX_FILE_SIZE" value="50MB"/>
+    <property name="MAX_HISTORY" value="30"/>
+    <property name="TOTAL_SIZE_CAP" value="5GB"/>
+
+
+    <!-- ========================================================= -->
+    <!-- CONSOLE APPENDER                                          -->
+    <!-- ========================================================= -->
+
+    <appender name="CONSOLE"
+              class="ch.qos.logback.core.ConsoleAppender">
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [userId=%X{userId}] [username=%X{username}] [%logger{36}] - %msg%n</pattern>
+        </encoder>
+
+    </appender>
+
+
+    <!-- ========================================================= -->
+    <!-- ROLLING FILE APPENDER                                     -->
+    <!-- ========================================================= -->
+
+    <appender name="ROLLING_FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <file>${LOG_FILE}</file>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [userId=%X{userId}] [username=%X{username}] [%logger{36}] - %msg%n</pattern>
+        </encoder>
+
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+
+            <fileNamePattern>
+                ${LOG_DIR}/archive/smartbilling.%d{yyyy-MM-dd.HH}.%i.log.gz
+            </fileNamePattern>
+
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+
+        </rollingPolicy>
+
+    </appender>
+
+
+    <!-- ========================================================= -->
+    <!-- ASYNC FILE APPENDER                                       -->
+    <!-- ========================================================= -->
+
+    <appender name="ASYNC_FILE"
+              class="ch.qos.logback.classic.AsyncAppender">
+
+        <!-- Number of queued log events -->
+        <queueSize>8192</queueSize>
+
+        <!-- Do not discard INFO logs -->
+        <discardingThreshold>0</discardingThreshold>
+
+        <!-- Flush queued logs during shutdown -->
+        <maxFlushTime>5000</maxFlushTime>
+
+        <appender-ref ref="ROLLING_FILE"/>
+
+    </appender>
+
+
+    <!-- ========================================================= -->
+    <!-- ROOT LOGGER                                               -->
+    <!-- ========================================================= -->
+
+    <root level="INFO">
+
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+
+    </root>
+
+
+    <!-- ========================================================= -->
+    <!-- FRAMEWORK LOGGING                                         -->
+    <!-- ========================================================= -->
+
+    <logger name="org.springframework" level="INFO"/>
+
+    <logger name="org.hibernate" level="WARN"/>
+
+    <logger name="org.hibernate.SQL" level="WARN"/>
+
+    <logger name="org.springframework.security" level="INFO"/>
+
+</configuration>

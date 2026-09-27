@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-property-company-key-drop-legacy
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - sqlCheck:
+            expectedResult: "1"
+            sql: >
+              SELECT COUNT(*)
+              FROM information_schema.table_constraints
+              WHERE table_schema = current_schema()
+                AND table_name = 'property'
+                AND constraint_name = 'uk_property_company_key'
+      changes:
+        - dropUniqueConstraint:
+            tableName: property
+            constraintName: uk_property_company_key
+
+  - changeSet:
+      id: 009-property-company-key-create-composite
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: HALT
+        - sqlCheck:
+            expectedResult: "0"
+            sql: >
+              SELECT COUNT(*)
+              FROM information_schema.table_constraints
+              WHERE table_schema = current_schema()
+                AND table_name = 'property'
+                AND constraint_name = 'uk_property_company_key'
+      changes:
+        - addUniqueConstraint:
+            tableName: property
+            columnNames: company_id,property_key
+            constraintName: uk_property_company_key

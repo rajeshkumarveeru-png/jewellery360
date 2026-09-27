@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-user-identity-constraints
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: app_user
+        - sqlCheck:
+            expectedResult: '0'
+            sql: >-
+              SELECT COUNT(*) FROM (
+                SELECT company_id, LOWER(TRIM(username))
+                FROM app_user
+                WHERE username IS NOT NULL
+                GROUP BY company_id, LOWER(TRIM(username))
+                HAVING COUNT(*) > 1
+              ) duplicates
+        - sqlCheck:
+            expectedResult: '0'
+            sql: >-
+              SELECT COUNT(*) FROM (
+                SELECT LOWER(TRIM(phone))
+                FROM app_user
+                WHERE phone IS NOT NULL AND TRIM(phone) <> ''
+                GROUP BY LOWER(TRIM(phone))
+                HAVING COUNT(*) > 1
+              ) duplicates
+      changes:
+        - dropUniqueConstraint:
+            tableName: app_user
+            constraintName: uk_app_user_username
+        - addUniqueConstraint:
+            tableName: app_user
+            columnNames: company_id,username
+            constraintName: uk_app_user_company_username
+        - addUniqueConstraint:
+            tableName: app_user
+            columnNames: phone
+            constraintName: uk_app_user_phone
+      rollback:
+        - dropUniqueConstraint:
+            tableName: app_user
+            constraintName: uk_app_user_phone
+        - dropUniqueConstraint:
+            tableName: app_user
+            constraintName: uk_app_user_company_username
+        - addUniqueConstraint:
+            tableName: app_user
+            columnNames: username
+            constraintName: uk_app_user_username

@@ -1,0 +1,31 @@
+.page-approvals { width:100%; }
+@media (max-width: 980px) { .page-approvals .moduleGrid, .page-approvals .billingLayout { grid-template-columns:1fr; } }
+@media (max-width: 720px) { .page-approvals .formGrid { grid-template-columns:1fr; } .page-approvals .panelHead { flex-direction:column; align-items:flex-start; gap:10px; } .page-approvals .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; } .page-approvals table { min-width:680px; } }
+
+/* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
+@media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}
+
+.approvalIntro{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.5;max-width:760px}
+.approvalList{display:grid;gap:14px;margin-top:18px}
+.approvalCard{display:flex;justify-content:space-between;gap:24px;padding:20px;border:1px solid #e6dcc8;border-radius:16px;background:linear-gradient(145deg,#fffdf9,#f8f1e4);box-shadow:0 10px 26px rgba(31,35,42,.06)}
+.approvalMain{min-width:0;flex:1}
+.approvalType{display:flex;align-items:center;gap:10px}
+.approvalNumber{font-size:12px;color:#7c6f5d;font-weight:600}
+.approvalCard h3{margin:9px 0 14px;font-size:18px;color:#172033}
+.approvalGrid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px}
+.approvalGrid>div{padding:10px 12px;border:1px solid #eadfca;border-radius:10px;background:#fff}
+.approvalGrid small{display:block;color:#8b7b66;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.approvalGrid strong{display:block;color:#1d2939;font-size:13px;overflow-wrap:anywhere}
+.approvalMessage{margin:14px 0 0;padding:10px 12px;border-radius:10px;background:#f4ead7;color:#5d503f;font-size:13px}
+.approvalActions{display:flex;flex-direction:column;justify-content:center;gap:9px;min-width:120px}
+.approvalActions button{width:100%}
+@media(max-width:800px){
+ .approvalCard{flex-direction:column}
+ .approvalGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .approvalActions{flex-direction:row;min-width:0}
+}
+@media(max-width:520px){
+ .approvalGrid{grid-template-columns:1fr}
+ .approvalActions{flex-direction:column}
+}

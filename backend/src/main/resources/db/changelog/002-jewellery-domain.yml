@@ -1,0 +1,1787 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-jewellery-domain
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - tableExists:
+            tableName: company
+        - tableExists:
+            tableName: branch
+      changes:
+        - createTable:
+            tableName: role
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: code
+                  type: VARCHAR(40)
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: role
+            columnNames: code
+            constraintName: uk_role_code
+        - createTable:
+            tableName: permission
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: code
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(160)
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: permission
+            columnNames: code
+            constraintName: uk_permission_code
+        - createTable:
+            tableName: user_permission
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: permission_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: granted
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: user_permission
+            columnNames: user_id,permission_id
+            constraintName: uk_user_permission
+        - addForeignKeyConstraint:
+            baseTableName: user_permission
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_user_permission_user
+        - addForeignKeyConstraint:
+            baseTableName: user_permission
+            baseColumnNames: permission_id
+            referencedTableName: permission
+            referencedColumnNames: id
+            constraintName: fk_user_permission_permission
+        - createTable:
+            tableName: customer
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(180)
+                  constraints: {nullable: false}
+              - column:
+                  name: phone
+                  type: VARCHAR(25)
+              - column:
+                  name: email
+                  type: VARCHAR(180)
+              - column:
+                  name: address
+                  type: VARCHAR(600)
+              - column:
+                  name: gstin
+                  type: VARCHAR(30)
+              - column:
+                  name: notes
+                  type: VARCHAR(2000)
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: customer
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_customer_company
+        - addForeignKeyConstraint:
+            baseTableName: customer
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_customer_branch
+        - createIndex:
+            tableName: customer
+            indexName: idx_customer_company_phone
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: phone
+        - createTable:
+            tableName: jewellery_category
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints: {nullable: false}
+              - column:
+                  name: code
+                  type: VARCHAR(40)
+                  constraints: {nullable: false}
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: jewellery_category
+            columnNames: company_id,code
+            constraintName: uk_jewellery_category_company_code
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_category
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_jewellery_category_company
+        - createTable:
+            tableName: purity_master
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(50)
+                  constraints: {nullable: false}
+              - column:
+                  name: karat
+                  type: VARCHAR(10)
+              - column:
+                  name: fineness
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: purity_master
+            columnNames: company_id,name
+            constraintName: uk_purity_company_name
+        - addForeignKeyConstraint:
+            baseTableName: purity_master
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_purity_company
+        - createTable:
+            tableName: jewellery_design
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: category_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(180)
+                  constraints: {nullable: false}
+              - column:
+                  name: code
+                  type: VARCHAR(60)
+                  constraints: {nullable: false}
+              - column:
+                  name: description
+                  type: VARCHAR(2000)
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: jewellery_design
+            columnNames: company_id,code
+            constraintName: uk_design_company_code
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_design
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_design_company
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_design
+            baseColumnNames: category_id
+            referencedTableName: jewellery_category
+            referencedColumnNames: id
+            constraintName: fk_design_category
+        - createTable:
+            tableName: jewellery_product
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: category_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: design_id
+                  type: BIGINT
+              - column:
+                  name: name
+                  type: VARCHAR(180)
+                  constraints: {nullable: false}
+              - column:
+                  name: sku
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: description
+                  type: VARCHAR(2000)
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: jewellery_product
+            columnNames: company_id,sku
+            constraintName: uk_product_company_sku
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_product
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_product_company
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_product
+            baseColumnNames: category_id
+            referencedTableName: jewellery_category
+            referencedColumnNames: id
+            constraintName: fk_product_category
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_product
+            baseColumnNames: design_id
+            referencedTableName: jewellery_design
+            referencedColumnNames: id
+            constraintName: fk_product_design
+        - createTable:
+            tableName: jewellery_tag
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: tag_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: barcode
+                  type: VARCHAR(100)
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: AVAILABLE
+                  constraints: {nullable: false}
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: jewellery_tag
+            columnNames: company_id,tag_no
+            constraintName: uk_tag_company_no
+        - addUniqueConstraint:
+            tableName: jewellery_tag
+            columnNames: company_id,barcode
+            constraintName: uk_tag_company_barcode
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_tag
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_tag_company
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_tag
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_tag_branch
+        - createTable:
+            tableName: jewellery_item
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: product_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: tag_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: purity_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: gross_weight
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: stone_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: net_weight
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: huid
+                  type: VARCHAR(60)
+              - column:
+                  name: wastage_percent
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: making_charge
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: stone_value
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: IN_STOCK
+                  constraints: {nullable: false}
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+              - column:
+                  name: updated_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_item
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_item_company
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_item
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_item_branch
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_item
+            baseColumnNames: product_id
+            referencedTableName: jewellery_product
+            referencedColumnNames: id
+            constraintName: fk_item_product
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_item
+            baseColumnNames: tag_id
+            referencedTableName: jewellery_tag
+            referencedColumnNames: id
+            constraintName: fk_item_tag
+        - addForeignKeyConstraint:
+            baseTableName: jewellery_item
+            baseColumnNames: purity_id
+            referencedTableName: purity_master
+            referencedColumnNames: id
+            constraintName: fk_item_purity
+        - createIndex:
+            tableName: jewellery_item
+            indexName: idx_item_company_branch_status
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: branch_id
+              - column:
+                  name: status
+        - createTable:
+            tableName: gold_rate
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: purity_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: rate_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: rate_per_gram
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: source
+                  type: VARCHAR(100)
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: gold_rate
+            columnNames: company_id,branch_id,purity_id,rate_date
+            constraintName: uk_gold_rate_context_date
+        - addForeignKeyConstraint:
+            baseTableName: gold_rate
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_gold_rate_company
+        - addForeignKeyConstraint:
+            baseTableName: gold_rate
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_gold_rate_branch
+        - addForeignKeyConstraint:
+            baseTableName: gold_rate
+            baseColumnNames: purity_id
+            referencedTableName: purity_master
+            referencedColumnNames: id
+            constraintName: fk_gold_rate_purity
+        - createTable:
+            tableName: supplier
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: name
+                  type: VARCHAR(180)
+                  constraints: {nullable: false}
+              - column:
+                  name: phone
+                  type: VARCHAR(25)
+              - column:
+                  name: email
+                  type: VARCHAR(180)
+              - column:
+                  name: address
+                  type: VARCHAR(600)
+              - column:
+                  name: gstin
+                  type: VARCHAR(30)
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: supplier
+            columnNames: company_id,name
+            constraintName: uk_supplier_company_name
+        - addForeignKeyConstraint:
+            baseTableName: supplier
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_supplier_company
+        - createTable:
+            tableName: purchase_order
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: supplier_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: purchase_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: purchase_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: DRAFT
+                  constraints: {nullable: false}
+              - column:
+                  name: subtotal
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: gst
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: total
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: notes
+                  type: VARCHAR(2000)
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: purchase_order
+            columnNames: company_id,purchase_no
+            constraintName: uk_purchase_company_no
+        - addForeignKeyConstraint:
+            baseTableName: purchase_order
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_purchase_company
+        - addForeignKeyConstraint:
+            baseTableName: purchase_order
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_purchase_branch
+        - addForeignKeyConstraint:
+            baseTableName: purchase_order
+            baseColumnNames: supplier_id
+            referencedTableName: supplier
+            referencedColumnNames: id
+            constraintName: fk_purchase_supplier
+        - createTable:
+            tableName: purchase_item
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: purchase_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: jewellery_item_id
+                  type: BIGINT
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+                  constraints: {nullable: false}
+              - column:
+                  name: quantity
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 1
+                  constraints: {nullable: false}
+              - column:
+                  name: gross_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: net_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: rate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: purchase_item
+            baseColumnNames: purchase_id
+            referencedTableName: purchase_order
+            referencedColumnNames: id
+            constraintName: fk_purchase_item_purchase
+        - addForeignKeyConstraint:
+            baseTableName: purchase_item
+            baseColumnNames: jewellery_item_id
+            referencedTableName: jewellery_item
+            referencedColumnNames: id
+            constraintName: fk_purchase_item_item
+        - createTable:
+            tableName: stock
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: jewellery_item_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: IN_STOCK
+                  constraints: {nullable: false}
+              - column:
+                  name: location
+                  type: VARCHAR(120)
+              - column:
+                  name: updated_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: stock
+            columnNames: branch_id,jewellery_item_id
+            constraintName: uk_stock_branch_item
+        - addForeignKeyConstraint:
+            baseTableName: stock
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_stock_company
+        - addForeignKeyConstraint:
+            baseTableName: stock
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_stock_branch
+        - addForeignKeyConstraint:
+            baseTableName: stock
+            baseColumnNames: jewellery_item_id
+            referencedTableName: jewellery_item
+            referencedColumnNames: id
+            constraintName: fk_stock_item
+        - createTable:
+            tableName: stock_movement
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: jewellery_item_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: movement_type
+                  type: VARCHAR(40)
+                  constraints: {nullable: false}
+              - column:
+                  name: quantity
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 1
+                  constraints: {nullable: false}
+              - column:
+                  name: reference_type
+                  type: VARCHAR(50)
+              - column:
+                  name: reference_id
+                  type: BIGINT
+              - column:
+                  name: movement_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_by_id
+                  type: BIGINT
+        - addForeignKeyConstraint:
+            baseTableName: stock_movement
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_stock_movement_company
+        - addForeignKeyConstraint:
+            baseTableName: stock_movement
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_stock_movement_branch
+        - addForeignKeyConstraint:
+            baseTableName: stock_movement
+            baseColumnNames: jewellery_item_id
+            referencedTableName: jewellery_item
+            referencedColumnNames: id
+            constraintName: fk_stock_movement_item
+        - addForeignKeyConstraint:
+            baseTableName: stock_movement
+            baseColumnNames: created_by_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_stock_movement_user
+        - createIndex:
+            tableName: stock_movement
+            indexName: idx_stock_movement_context_date
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: branch_id
+              - column:
+                  name: movement_date
+        - createTable:
+            tableName: stock_transfer
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: from_branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: to_branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: transfer_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: transfer_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: DRAFT
+                  constraints: {nullable: false}
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: stock_transfer
+            columnNames: company_id,transfer_no
+            constraintName: uk_transfer_company_no
+        - addForeignKeyConstraint:
+            baseTableName: stock_transfer
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_transfer_company
+        - addForeignKeyConstraint:
+            baseTableName: stock_transfer
+            baseColumnNames: from_branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_transfer_from_branch
+        - addForeignKeyConstraint:
+            baseTableName: stock_transfer
+            baseColumnNames: to_branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_transfer_to_branch
+        - createTable:
+            tableName: sale
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: invoice_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: sale_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: COMPLETED
+                  constraints: {nullable: false}
+              - column:
+                  name: gold_rate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: subtotal
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: discount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: gst
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: total
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: payment_status
+                  type: VARCHAR(30)
+                  defaultValue: UNPAID
+                  constraints: {nullable: false}
+              - column:
+                  name: created_by_id
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: sale
+            columnNames: company_id,invoice_no
+            constraintName: uk_sale_company_invoice
+        - addForeignKeyConstraint:
+            baseTableName: sale
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_sale_company
+        - addForeignKeyConstraint:
+            baseTableName: sale
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_sale_branch
+        - addForeignKeyConstraint:
+            baseTableName: sale
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_sale_customer
+        - addForeignKeyConstraint:
+            baseTableName: sale
+            baseColumnNames: created_by_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_sale_user
+        - createIndex:
+            tableName: sale
+            indexName: idx_sale_context_date
+            columns:
+              - column:
+                  name: company_id
+              - column:
+                  name: branch_id
+              - column:
+                  name: sale_date
+        - createTable:
+            tableName: sale_item
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: sale_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: jewellery_item_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: tag_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: gross_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: stone_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: net_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: purity
+                  type: VARCHAR(20)
+                  constraints: {nullable: false}
+              - column:
+                  name: gold_rate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: wastage_value
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: making_charge
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: stone_charge
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: other_charge
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: gst
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: total
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: sale_item
+            baseColumnNames: sale_id
+            referencedTableName: sale
+            referencedColumnNames: id
+            constraintName: fk_sale_item_sale
+        - addForeignKeyConstraint:
+            baseTableName: sale_item
+            baseColumnNames: jewellery_item_id
+            referencedTableName: jewellery_item
+            referencedColumnNames: id
+            constraintName: fk_sale_item_item
+        - createTable:
+            tableName: payment
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+              - column:
+                  name: sale_id
+                  type: BIGINT
+              - column:
+                  name: purchase_id
+                  type: BIGINT
+              - column:
+                  name: payment_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: payment_type
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: payment_mode
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: amount
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: payment_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: reference
+                  type: VARCHAR(160)
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_by_id
+                  type: BIGINT
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: payment
+            columnNames: company_id,payment_no
+            constraintName: uk_payment_company_no
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_payment_company
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_payment_branch
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_payment_customer
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: sale_id
+            referencedTableName: sale
+            referencedColumnNames: id
+            constraintName: fk_payment_sale
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: purchase_id
+            referencedTableName: purchase_order
+            referencedColumnNames: id
+            constraintName: fk_payment_purchase
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: created_by_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_payment_user
+        - createTable:
+            tableName: old_gold_transaction
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: transaction_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: transaction_type
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: transaction_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: total_amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: COMPLETED
+                  constraints: {nullable: false}
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addUniqueConstraint:
+            tableName: old_gold_transaction
+            columnNames: company_id,transaction_no
+            constraintName: uk_old_gold_company_no
+        - addForeignKeyConstraint:
+            baseTableName: old_gold_transaction
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_old_gold_company
+        - addForeignKeyConstraint:
+            baseTableName: old_gold_transaction
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_old_gold_branch
+        - addForeignKeyConstraint:
+            baseTableName: old_gold_transaction
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_old_gold_customer
+        - createTable:
+            tableName: old_gold_item
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: transaction_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+                  constraints: {nullable: false}
+              - column:
+                  name: gross_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: stone_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: net_weight
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: purity
+                  type: VARCHAR(20)
+                  constraints: {nullable: false}
+              - column:
+                  name: rate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: old_gold_item
+            baseColumnNames: transaction_id
+            referencedTableName: old_gold_transaction
+            referencedColumnNames: id
+            constraintName: fk_old_gold_item_tx
+        - createTable:
+            tableName: repair_order
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: order_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: item_tag
+                  type: VARCHAR(80)
+              - column:
+                  name: received_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: description
+                  type: VARCHAR(2000)
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: RECEIVED
+                  constraints: {nullable: false}
+              - column:
+                  name: estimate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: final_amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: completed_date
+                  type: DATE
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+        - addUniqueConstraint:
+            tableName: repair_order
+            columnNames: company_id,order_no
+            constraintName: uk_repair_company_no
+        - addForeignKeyConstraint:
+            baseTableName: repair_order
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_repair_company
+        - addForeignKeyConstraint:
+            baseTableName: repair_order
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_repair_branch
+        - addForeignKeyConstraint:
+            baseTableName: repair_order
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_repair_customer
+        - createTable:
+            tableName: custom_order
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: order_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: order_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: description
+                  type: VARCHAR(2000)
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: NEW
+                  constraints: {nullable: false}
+              - column:
+                  name: estimate
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: final_amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: delivery_date
+                  type: DATE
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+        - addUniqueConstraint:
+            tableName: custom_order
+            columnNames: company_id,order_no
+            constraintName: uk_custom_order_company_no
+        - addForeignKeyConstraint:
+            baseTableName: custom_order
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_custom_order_company
+        - addForeignKeyConstraint:
+            baseTableName: custom_order
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_custom_order_branch
+        - addForeignKeyConstraint:
+            baseTableName: custom_order
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_custom_order_customer
+        - createTable:
+            tableName: customer_advance
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: advance_no
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: advance_date
+                  type: DATE
+                  constraints: {nullable: false}
+              - column:
+                  name: amount
+                  type: 'DECIMAL(19,3)'
+                  constraints: {nullable: false}
+              - column:
+                  name: utilized_amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: balance_amount
+                  type: 'DECIMAL(19,3)'
+                  defaultValueNumeric: 0
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: OPEN
+                  constraints: {nullable: false}
+              - column:
+                  name: notes
+                  type: VARCHAR(1000)
+        - addUniqueConstraint:
+            tableName: customer_advance
+            columnNames: company_id,advance_no
+            constraintName: uk_advance_company_no
+        - addForeignKeyConstraint:
+            baseTableName: customer_advance
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_advance_company
+        - addForeignKeyConstraint:
+            baseTableName: customer_advance
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_advance_branch
+        - addForeignKeyConstraint:
+            baseTableName: customer_advance
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_advance_customer
+        - createTable:
+            tableName: whatsapp_log
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: customer_id
+                  type: BIGINT
+              - column:
+                  name: phone
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: message_type
+                  type: VARCHAR(50)
+                  constraints: {nullable: false}
+              - column:
+                  name: reference_type
+                  type: VARCHAR(50)
+              - column:
+                  name: reference_id
+                  type: BIGINT
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: provider_message_id
+                  type: VARCHAR(200)
+              - column:
+                  name: error_message
+                  type: VARCHAR(2000)
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: whatsapp_log
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_whatsapp_company
+        - addForeignKeyConstraint:
+            baseTableName: whatsapp_log
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_whatsapp_branch
+        - addForeignKeyConstraint:
+            baseTableName: whatsapp_log
+            baseColumnNames: customer_id
+            referencedTableName: customer
+            referencedColumnNames: id
+            constraintName: fk_whatsapp_customer
+        - createTable:
+            tableName: notification_log
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints: {primaryKey: true}
+              - column:
+                  name: company_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: branch_id
+                  type: BIGINT
+                  constraints: {nullable: false}
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: channel
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: notification_type
+                  type: VARCHAR(80)
+                  constraints: {nullable: false}
+              - column:
+                  name: subject
+                  type: VARCHAR(200)
+              - column:
+                  name: message
+                  type: VARCHAR(4000)
+                  constraints: {nullable: false}
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints: {nullable: false}
+              - column:
+                  name: created_at
+                  type: 'TIMESTAMP WITH TIME ZONE'
+                  defaultValueDate: NOW()
+                  constraints: {nullable: false}
+        - addForeignKeyConstraint:
+            baseTableName: notification_log
+            baseColumnNames: company_id
+            referencedTableName: company
+            referencedColumnNames: id
+            constraintName: fk_notification_company
+        - addForeignKeyConstraint:
+            baseTableName: notification_log
+            baseColumnNames: branch_id
+            referencedTableName: branch
+            referencedColumnNames: id
+            constraintName: fk_notification_branch
+        - addForeignKeyConstraint:
+            baseTableName: notification_log
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_notification_user
+      rollback:
+        - dropTable:
+            tableName: notification_log
+            cascadeConstraints: true
+        - dropTable:
+            tableName: whatsapp_log
+            cascadeConstraints: true
+        - dropTable:
+            tableName: customer_advance
+            cascadeConstraints: true
+        - dropTable:
+            tableName: custom_order
+            cascadeConstraints: true
+        - dropTable:
+            tableName: repair_order
+            cascadeConstraints: true
+        - dropTable:
+            tableName: old_gold_item
+            cascadeConstraints: true
+        - dropTable:
+            tableName: old_gold_transaction
+            cascadeConstraints: true
+        - dropTable:
+            tableName: payment
+            cascadeConstraints: true
+        - dropTable:
+            tableName: sale_item
+            cascadeConstraints: true
+        - dropTable:
+            tableName: sale
+            cascadeConstraints: true
+        - dropTable:
+            tableName: stock_transfer
+            cascadeConstraints: true
+        - dropTable:
+            tableName: stock_movement
+            cascadeConstraints: true
+        - dropTable:
+            tableName: stock
+            cascadeConstraints: true
+        - dropTable:
+            tableName: purchase_item
+            cascadeConstraints: true
+        - dropTable:
+            tableName: purchase_order
+            cascadeConstraints: true
+        - dropTable:
+            tableName: supplier
+            cascadeConstraints: true
+        - dropTable:
+            tableName: gold_rate
+            cascadeConstraints: true
+        - dropTable:
+            tableName: jewellery_item
+            cascadeConstraints: true
+        - dropTable:
+            tableName: jewellery_tag
+            cascadeConstraints: true
+        - dropTable:
+            tableName: jewellery_product
+            cascadeConstraints: true
+        - dropTable:
+            tableName: jewellery_design
+            cascadeConstraints: true
+        - dropTable:
+            tableName: purity_master
+            cascadeConstraints: true
+        - dropTable:
+            tableName: jewellery_category
+            cascadeConstraints: true
+        - dropTable:
+            tableName: customer
+            cascadeConstraints: true
+        - dropTable:
+            tableName: user_permission
+            cascadeConstraints: true
+        - dropTable:
+            tableName: permission
+            cascadeConstraints: true
+        - dropTable:
+            tableName: role
+            cascadeConstraints: true

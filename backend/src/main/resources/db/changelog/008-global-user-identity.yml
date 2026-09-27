@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-global-user-identity
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: app_user
+      changes:
+        # 007 intentionally allowed the same username in different companies.
+        # Before creating the platform-wide unique index, preserve the first
+        # occurrence and deterministically rename later legacy duplicates.
+        # This is required because PostgreSQL cannot create the global unique
+        # index while those legacy duplicates exist.
+        - sql:
+            splitStatements: false
+            sql: >-
+              DO $$
+              DECLARE
+                r RECORD;
+                base_name TEXT;
+                candidate TEXT;
+                suffix TEXT;
+                n INTEGER;
+              BEGIN
+                FOR r IN
+                  SELECT id, username
+                  FROM (
+                    SELECT id, username,
+                           ROW_NUMBER() OVER (
+                             PARTITION BY LOWER(TRIM(username))
+                             ORDER BY id
+                           ) AS rn
+                    FROM app_user
+                    WHERE username IS NOT NULL AND TRIM(username) <> ''
+                  ) d
+                  WHERE rn > 1
+                  ORDER BY id
+                LOOP
+                  base_name := LEFT(TRIM(r.username), 60);
+                  candidate := base_name || '__' || r.id::TEXT;
+                  n := 0;
+                  WHILE EXISTS (
+                    SELECT 1 FROM app_user
+                    WHERE id <> r.id
+                      AND LOWER(TRIM(username)) = LOWER(candidate)
+                  ) LOOP
+                    n := n + 1;
+                    candidate := LEFT(base_name, GREATEST(1, 58 - LENGTH(n::TEXT)))
+                                || '__' || r.id::TEXT || '_' || n::TEXT;
+                  END LOOP;
+                  UPDATE app_user SET username = candidate WHERE id = r.id;
+                END LOOP;
+              END $$;
+        - sql:
+            sql: >-
+              ALTER TABLE app_user DROP CONSTRAINT IF EXISTS uk_app_user_company_username;
+              ALTER TABLE app_user DROP CONSTRAINT IF EXISTS uk_app_user_username;
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_username_global_ci
+              ON app_user (LOWER(TRIM(username)));
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_email_global_ci
+              ON app_user (LOWER(TRIM(email)));
+      rollback:
+        - sql:
+            sql: >-
+              DROP INDEX IF EXISTS uk_app_user_email_global_ci;
+              DROP INDEX IF EXISTS uk_app_user_username_global_ci;

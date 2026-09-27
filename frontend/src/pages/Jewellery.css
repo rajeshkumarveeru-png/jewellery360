@@ -1,0 +1,7 @@
+.page-jewellery { width:100%; }
+@media (max-width: 980px) { .page-jewellery .moduleGrid, .page-jewellery .billingLayout { grid-template-columns:1fr; } }
+@media (max-width: 720px) { .page-jewellery .formGrid { grid-template-columns:1fr; } .page-jewellery .panelHead { flex-direction:column; align-items:flex-start; gap:10px; } .page-jewellery .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; } .page-jewellery table { min-width:680px; } }
+
+/* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
+@media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}
