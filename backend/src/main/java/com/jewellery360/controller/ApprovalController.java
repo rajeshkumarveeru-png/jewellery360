@@ -28,6 +28,7 @@ public class ApprovalController {
     private final AuditService audit;
     private final WhatsAppService whatsApp;
     private final com.jewellery360.service.CompanyPropertyService companyProperties;
+    private final com.jewellery360.service.UserPropertyService userProperties;
 
     @GetMapping("/pending")
     @Transactional(readOnly = true)
@@ -132,6 +133,8 @@ public class ApprovalController {
                 // Create the complete company-scoped WhatsApp property set at approval time.
                 // Secrets intentionally start blank and must be supplied by an administrator.
                 companyProperties.initializeWhatsAppDefaults(r.getCompany());
+                // Every approved Company Admin starts with a DB-backed menu preference.
+                userProperties.initializeDefaultMenuPreference(r.getCompany(), r.getTargetUser());
             }
 
             if (r.getTargetUser().getBranch() != null) {
@@ -148,6 +151,10 @@ public class ApprovalController {
 
             r.getTargetUser().setEnabled(true);
             users.save(r.getTargetUser());
+            if (r.getTargetUser().getCompany() != null) {
+                // Every approved user starts with a DB-backed role-specific menu preference.
+                userProperties.initializeDefaultMenuPreference(r.getTargetUser().getCompany(), r.getTargetUser());
+            }
         }
 
         r.setStatus("APPROVED");

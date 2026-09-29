@@ -15,7 +15,7 @@ export default function GoldRatesModule({ready,onNotice}:{ready:boolean;onNotice
     if(!ready){setRows([]);setPurities([]);return;}
     try{
       const [r,p,m]=await Promise.all([domainGoldRates(),domainPurities(),marketGoldRates()]);
-      setRows(r.data||[]);setPurities(p.data||[]);setMarket(m.data||{rates:[]});
+      setRows(r.data||[]);setPurities(p.data||[]);setMarket(m.data||{marketRates:[]});
       const next:any={};
       (m.data?.marketRates||[]).forEach((x:any)=>{if(x.karat)next[x.karat]=x.ratePerGram;});
       setF((v:any)=>({...v,rates:{...next,...v.rates}}));
@@ -24,7 +24,7 @@ export default function GoldRatesModule({ready,onNotice}:{ready:boolean;onNotice
   useEffect(()=>{load();},[ready]);
 
   const purityByKarat=useMemo(()=>{const m:any={};purities.forEach(x=>{m[String(x.karat||x.name).toUpperCase()]=x;});return m;},[purities]);
-  const marketRates=Array.isArray(market?.marketRates)?market.marketRates:[];
+  const marketRates=Array.isArray(market?.marketRates)?market.marketRates:(Array.isArray(market?.rates)?market.rates:[]);
 
   const save=async(e:FormEvent)=>{
     e.preventDefault();

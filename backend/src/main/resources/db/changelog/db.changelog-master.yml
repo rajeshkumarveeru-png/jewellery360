@@ -30,3 +30,7 @@ databaseChangeLog:
   - include:
       file: db/changelog/009-property-company-key-repair.yml
       relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/010-user-property-preferences.yml
+      relativeToChangelogFile: false

@@ -36,7 +36,7 @@ public class BusinessRecord {
     @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="created_by_id")
     private AppUser createdBy;
 
-    @Lob @Column(columnDefinition="TEXT") private String payload;
+    @Column(columnDefinition="TEXT") private String payload;
 
     @Column(nullable=false) private Instant createdAt = Instant.now();
     @Column(nullable=false) private Instant updatedAt = Instant.now();

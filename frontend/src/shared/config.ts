@@ -11,6 +11,15 @@ export const roleMenus: Record<string,string[]> = {
   VIEWER:['Overview','Customers','Inventory','Reports']
 };
 
+export const navigationCatalog = [
+  'Overview','Companies','Branches','Users','Approvals','Billing','Jewellery','Gold & Rates','Inventory',
+  'Purchases','Old Gold','Customers','Services','Payments','Reports','WhatsApp','Settings','Audit Logs'
+];
+
+export function defaultPreferredMenu(role:string): string[] {
+  return [...(roleMenus[role] || ['Overview'])];
+}
+
 export const themeMap: Record<string,{bg:string;ink:string}> = {
   LUXURY_GOLD:{bg:'#f5efe4',ink:'#211c18'},
   CLASSIC_IVORY:{bg:'#fbf8f1',ink:'#2b2722'},

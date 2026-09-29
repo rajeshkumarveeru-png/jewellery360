@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
-import {getWhatsAppSettings, saveWhatsAppSettings, getFriendlyApiError} from '../api';
+import {getWhatsAppSettings, saveWhatsAppSettings, getUserMenuPreferences, saveUserMenuPreferences, getFriendlyApiError} from '../api';
 import {Role,User,ThemeKey} from '../shared/types';
-import {roleMenus} from '../shared/config';
+import {roleMenus,defaultPreferredMenu} from '../shared/config';
 import './Settings.css';
 
 type WhatsAppSettingsState = {
@@ -36,6 +36,45 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  const [message,setMessage]=useState('');
  const [error,setError]=useState('');
  const [secretVersion,setSecretVersion]=useState(0);
+ const [menuDraft,setMenuDraft]=useState<string[]>(()=>defaultPreferredMenu(user.role));
+ const [menuLoading,setMenuLoading]=useState(false);
+ const [menuSaving,setMenuSaving]=useState(false);
+ const [menuMessage,setMenuMessage]=useState('');
+ const allowedMenu=roleMenus[user.role]||['Overview'];
+ const companyIdForMenu=user.role==='APP_ADMIN' ? Number(localStorage.getItem('j360_context_company'))||null : (user.companyId??null);
+ const normalizeMenu=(items:string[])=>{const ordered=items.filter(x=>allowedMenu.includes(x)); if(allowedMenu.includes('Overview')&&!ordered.includes('Overview'))ordered.unshift('Overview'); return [...new Set(ordered)];};
+ useEffect(()=>{
+   setMenuDraft(defaultPreferredMenu(user.role));
+   if(!companyIdForMenu) return;
+   setMenuLoading(true);
+   getUserMenuPreferences(companyIdForMenu).then(r=>{
+     const saved=Array.isArray(r.data?.menu)?r.data.menu:[];
+     setMenuDraft(saved.length?normalizeMenu(saved):defaultPreferredMenu(user.role));
+   }).catch(()=>setMenuDraft(defaultPreferredMenu(user.role))).finally(()=>setMenuLoading(false));
+ },[user.id,user.role,companyIdForMenu]);
+ const moveMenu=(index:number,direction:-1|1)=>{
+   const next=[...menuDraft]; const target=index+direction;
+   if(target<0||target>=next.length)return;
+   [next[index],next[target]]=[next[target],next[index]]; setMenuDraft(next);
+ };
+ const toggleMenu=(item:string)=>{
+   if(item==='Overview'||item==='Settings')return;
+   setMenuDraft(v=>v.includes(item)?v.filter(x=>x!==item):[...v,item]);
+ };
+ const saveMenu=async()=>{
+   if(!companyIdForMenu){setMenuMessage('Select a company context before saving user menu settings.');return;}
+   const normalized=normalizeMenu(menuDraft);
+   setMenuSaving(true);setMenuMessage('');
+   try{await saveUserMenuPreferences(normalized,companyIdForMenu);setMenuDraft(normalized);setMenuMessage('Menu visibility and order saved to the database for this user.');window.dispatchEvent(new Event('j360-menu-preferences-changed'));}
+   catch(e){setMenuMessage(getFriendlyApiError(e,'Unable to save menu settings.'));}
+   finally{setMenuSaving(false);}
+ };
+ const resetMenu=async()=>{
+   if(!companyIdForMenu){setMenuMessage('Select a company context before resetting user menu settings.');return;}
+   const defaults=[...allowedMenu];
+   try{await saveUserMenuPreferences(defaults,companyIdForMenu);setMenuDraft(defaults);setMenuMessage('Default menu restored and saved to the database.');window.dispatchEvent(new Event('j360-menu-preferences-changed'));}
+   catch(e){setMenuMessage(getFriendlyApiError(e,'Unable to reset menu settings.'));}
+ };
  const companyId=user.role==='APP_ADMIN'
    ? Number(localStorage.getItem('j360_context_company'))||null
    : (user.companyId??null);
@@ -79,6 +118,22 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     <div className="setting"><div><b>Theme</b><small>Stored as a UI preference in this browser.</small></div><select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold</option><option value="CLASSIC_IVORY">Classic Ivory</option><option value="PREMIUM_DARK">Premium Dark</option><option value="MODERN_LIGHT">Modern Light</option></select></div>
     <div className="setting"><div><b>Business identity</b><small>{user.companyName||'Platform'} · {user.branchName||'No branch selected'}</small></div></div>
     <div className="setting"><div><b>Company property storage</b><small>WhatsApp configuration is stored per company in the <code>property</code> table. APP_ADMIN must select a company context before editing it.</small></div></div>
+   </div>
+
+   <div className="panel menuPreferencesPanel">
+    <span className="eyebrow">NAVIGATION</span><h2>Menu visibility & order</h2>
+    <p className="settingsHelp">Choose which menu sections this user sees and set the order shown in the left navigation. Preferences are stored in the database against this company and user, so they follow the user across browsers and devices.</p>
+    <div className="menuPreferenceList">
+      {allowedMenu.map(item=>{const checked=menuDraft.includes(item); const index=menuDraft.indexOf(item); return <div className={`menuPreferenceRow ${checked?'selected':'muted'}`} key={item}>
+        <label><input type="checkbox" checked={checked} disabled={item==='Overview'} onChange={()=>toggleMenu(item)}/><span>{item}</span></label>
+        <div className="menuMoveButtons">
+          <button type="button" disabled={!checked||index<=0} onClick={()=>moveMenu(index,-1)} aria-label={`Move ${item} up`}>↑</button>
+          <button type="button" disabled={!checked||index<0||index>=menuDraft.length-1} onClick={()=>moveMenu(index,1)} aria-label={`Move ${item} down`}>↓</button>
+        </div>
+      </div>})}
+    </div>
+    {menuLoading&&<div className="settingsNotice">Loading database menu preferences…</div>}{menuMessage&&<div className="settingsSuccess">{menuMessage}</div>}
+    <div className="menuPreferenceActions"><button className="secondary" type="button" disabled={menuSaving||menuLoading} onClick={resetMenu}>Reset default</button><button className="settingsSave" type="button" disabled={menuSaving||menuLoading} onClick={saveMenu}>{menuSaving?'Saving…':'Save menu settings'}</button></div>
    </div>
 
    <div className="panel settingsRight">

@@ -28,7 +28,7 @@ public class MarketGoldRateService {
     private static final String SOURCE_URL = "https://www.goodreturns.in/gold-rates/cuddalore.html";
     private static final Duration CACHE_FOR = Duration.ofMinutes(15);
     private static final Pattern RATE = Pattern.compile(
-            "(?i)(24K|22K|18K)\\s*Gold\\s*/g\\s*₹\\s*([0-9,]+(?:\\.[0-9]+)?)");
+            "(?i)(24K|22K|18K)\\s*(?:Gold)?\\s*(?:/g|/\\s*gram|per\\s*gram)\\s*₹?\\s*([0-9,]+(?:\\.[0-9]+)?)");
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(6))
@@ -60,7 +60,7 @@ public class MarketGoldRateService {
         }
 
         return Map.of("date", LocalDate.now(), "location", "Cuddalore", "source", SOURCE,
-                "sourceUrl", SOURCE_URL, "rates", List.of(), "available", false);
+                "sourceUrl", SOURCE_URL, "rates", List.of(), "marketRates", List.of(), "available", false);
     }
 
     private Map<String, Object> parse(String html) {
@@ -84,7 +84,7 @@ public class MarketGoldRateService {
         }
 
         return Map.of("date", LocalDate.now(), "location", "Cuddalore", "source", SOURCE,
-                "sourceUrl", SOURCE_URL, "rates", rates, "available", !rates.isEmpty());
+                "sourceUrl", SOURCE_URL, "rates", rates, "marketRates", rates, "available", !rates.isEmpty());
     }
 
     private record Cached(Map<String, Object> value, Instant loadedAt) {}

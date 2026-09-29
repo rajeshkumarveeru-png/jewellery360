@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-property-user-scope
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: property
+        - tableExists:
+            tableName: app_user
+      changes:
+        - addColumn:
+            tableName: property
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+        - addForeignKeyConstraint:
+            baseTableName: property
+            baseColumnNames: user_id
+            referencedTableName: app_user
+            referencedColumnNames: id
+            constraintName: fk_property_user
+            onDelete: SET NULL
+
+  - changeSet:
+      id: 010-property-scope-indexes
+      author: jewellery360
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE property DROP CONSTRAINT IF EXISTS uk_property_company_key;
+        - sql:
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_property_company_key_company
+              ON property(company_id, property_key)
+              WHERE user_id IS NULL;
+        - sql:
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_property_company_user_key
+              ON property(company_id, user_id, property_key)
+              WHERE user_id IS NOT NULL;

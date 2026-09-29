@@ -172,5 +172,7 @@ export const phase4Api = {
   report: (type: string) => api.get(`/phase3/reports/${type}`),
 };
 
+export const getUserMenuPreferences=(companyId?:number|null)=>api.get('/properties/user/menu',{params:companyId?{companyId}:undefined});
+export const saveUserMenuPreferences=(menu:string[],companyId?:number|null)=>api.put('/properties/user/menu',{menu},{params:companyId?{companyId}:undefined});
 export const getWhatsAppSettings=(companyId?:number|null)=>api.get('/properties/whatsapp',{params:companyId?{companyId}:undefined});
 export const saveWhatsAppSettings=(x:any,companyId?:number|null)=>api.put('/properties/whatsapp',x,{params:companyId?{companyId}:undefined});

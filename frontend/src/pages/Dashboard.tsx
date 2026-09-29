@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
-import {companies,branches,headerGoldRates} from '../api';
+import {companies,branches,headerGoldRates,getUserMenuPreferences} from '../api';
 import {User,ThemeKey,Company,Branch} from '../shared/types';
-import {roleMenus,themeMap} from '../shared/config';
+import {defaultPreferredMenu,themeMap} from '../shared/config';
 import {NavIcon} from '../shared/ui';
 import './Dashboard.css';
 
@@ -28,7 +28,7 @@ function HeaderMarketGadget({ready}:{ready:boolean}){
  const [rates,setRates]=useState<any[]>([]); const [marketRates,setMarketRates]=useState<any[]>([]); const [marketSource,setMarketSource]=useState('');
  const [rateDate,setRateDate]=useState('');
  useEffect(()=>{const id=window.setInterval(()=>setNow(new Date()),1000);return()=>window.clearInterval(id);},[]);
- useEffect(()=>{if(!ready){setRates([]);setMarketRates([]);setMarketSource('');return;} let cancelled=false; const load=()=>headerGoldRates().then(r=>{if(cancelled){return;} setRates(Array.isArray(r.data?.rates)?r.data.rates:[]);setMarketRates(Array.isArray(r.data?.marketRates)?r.data.marketRates:[]);setMarketSource(r.data?.marketSource||'');setRateDate(r.data?.date||'');}).catch(()=>{if(!cancelled){setRates([]);}}); load(); const id=window.setInterval(load,60000); return()=>{cancelled=true;window.clearInterval(id);};},[ready]);
+ useEffect(()=>{if(!ready){setRates([]);setMarketRates([]);setMarketSource('');return;} let cancelled=false; const load=()=>headerGoldRates().then(r=>{if(cancelled){return;} setRates(Array.isArray(r.data?.rates)?r.data.rates:[]);setMarketRates(Array.isArray(r.data?.marketRates)?r.data.marketRates:(Array.isArray(r.data?.rates)?r.data.rates:[]));setMarketSource(r.data?.marketSource||'');setRateDate(r.data?.date||'');}).catch(()=>{if(!cancelled){setRates([]);}}); load(); const id=window.setInterval(load,60000); return()=>{cancelled=true;window.clearInterval(id);};},[ready]);
  const day=now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
  const time=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Kolkata'});
  const topRates=(marketRates.length?marketRates:rates).filter(x=>x.active!==false).slice(0,2);
@@ -52,15 +52,31 @@ function HeaderMarketGadget({ready}:{ready:boolean}){
  </div>;
 }
 export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:ThemeKey;setTheme:(t:ThemeKey)=>void;logout:()=>void}){
- const menu=roleMenus[user.role]||['Overview'];const [tab,setTab]=useState(menu[0]);
  const [contextCompany,setContextCompany]=useState<number|null>(Number(localStorage.getItem('j360_context_company'))||null);
+ const [menu,setMenu]=useState<string[]>(()=>defaultPreferredMenu(user.role)); const [tab,setTab]=useState(menu[0]);
+ const loadUserMenu=()=>{
+   const companyId=user.role==='APP_ADMIN'?contextCompany:(user.companyId??null);
+   if(!companyId){setMenu(defaultPreferredMenu(user.role));return;}
+   getUserMenuPreferences(companyId).then(r=>{
+     const saved=Array.isArray(r.data?.menu)?r.data.menu:[];
+     const allowed=defaultPreferredMenu(user.role);
+     const ordered=saved.filter((x:string)=>allowed.includes(x));
+     setMenu(ordered.length?ordered:allowed);
+   }).catch(()=>setMenu(defaultPreferredMenu(user.role)));
+ };
  const [contextBranch,setContextBranch]=useState<number|null>(Number(localStorage.getItem('j360_context_branch'))||null);
  const [companiesData,setCompaniesData]=useState<Company[]>([]);const [branchesData,setBranchesData]=useState<Branch[]>([]);
  const [notice,setNotice]=useState('');const c=themeMap[theme];
 
  useEffect(()=>{if(user.role==='APP_ADMIN'){companies().then(r=>setCompaniesData(r.data)).catch(()=>{});}else{branches().then(r=>setBranchesData(r.data)).catch(()=>{});}},[user.role]);
  useEffect(()=>{if(user.role==='APP_ADMIN'&&contextCompany)branches().then(r=>setBranchesData(r.data.filter((b:Branch)=>b.companyId===contextCompany))).catch(()=>{});},[user.role,contextCompany]);
- useEffect(()=>{if(!menu.includes(tab))setTab(menu[0]);},[menu,tab]);
+ useEffect(()=>{ loadUserMenu(); },[user.id,user.role,contextCompany]);
+ useEffect(()=>{
+   const refreshMenu=()=>loadUserMenu();
+   window.addEventListener('j360-menu-preferences-changed',refreshMenu);
+   return()=>window.removeEventListener('j360-menu-preferences-changed',refreshMenu);
+ },[user.id,user.role,contextCompany]);
+ useEffect(()=>{if(!menu.includes(tab))setTab(menu[0]||'Overview');},[menu,tab]);
  const selectCompany=(id:number|null)=>{setContextCompany(id);setContextBranch(null);if(id)localStorage.setItem('j360_context_company',String(id));else localStorage.removeItem('j360_context_company');localStorage.removeItem('j360_context_branch');};
  const selectBranch=(id:number|null)=>{setContextBranch(id);if(id)localStorage.setItem('j360_context_branch',String(id));else localStorage.removeItem('j360_context_branch');};
  const readyContext=user.role!=='APP_ADMIN'||!!contextCompany&&!!contextBranch;

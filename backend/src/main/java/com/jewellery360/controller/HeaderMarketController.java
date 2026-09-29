@@ -41,19 +41,15 @@ public class HeaderMarketController {
 
         LocalDate today = LocalDate.now(INDIA_ZONE);
 
-        if (companyId == null || branchId == null) {
-            return Map.of(
-                    "date", today,
-                    "rates", List.of()
-            );
+        List<Map<String, Object>> rates = List.of();
+        if (companyId != null && branchId != null) {
+            rates = goldRates
+                    .findByCompanyIdAndBranchIdAndRateDateOrderByRatePerGramDesc(
+                            companyId, branchId, today)
+                    .stream()
+                    .map(this::toRate)
+                    .toList();
         }
-
-        List<Map<String, Object>> rates = goldRates
-                .findByCompanyIdAndBranchIdAndRateDateOrderByRatePerGramDesc(
-                        companyId, branchId, today)
-                .stream()
-                .map(this::toRate)
-                .toList();
 
         Map<String, Object> market = marketGoldRates.current();
         List<?> marketRates = market.get("rates") instanceof List<?> list ? list : List.of();
