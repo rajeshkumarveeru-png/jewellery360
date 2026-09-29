@@ -7,8 +7,13 @@ import jakarta.persistence.LockModeType;
 import java.util.*;
 
 public interface SaleRepository extends JpaRepository<Sale, Long> {
-    List<Sale> findByCompanyId(Long companyId);
+    @EntityGraph(attributePaths = {"company", "branch", "customer", "createdBy"})
+List<Sale> findByCompanyId(Long companyId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Sale s where s.id = :id")
     Optional<Sale> findByIdForUpdate(@Param("id") Long id);
+    @Override
+    @EntityGraph(attributePaths = {"company", "branch", "customer", "createdBy"})
+    Optional<Sale> findById(Long id);
+
 }

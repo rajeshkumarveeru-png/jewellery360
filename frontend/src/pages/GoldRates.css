@@ -1,8 +1,7 @@
-.menu-gold-rates-rates { width:100%; }
-.menu-gold-rates-rates .moduleGrid { grid-template-columns:minmax(280px,.8fr) minmax(0,1.4fr); }
-@media (max-width: 980px) { .menu-gold-rates-rates .moduleGrid { grid-template-columns:1fr; } }
-@media (max-width: 640px) { .menu-gold-rates-rates .panelHead { align-items:flex-start; flex-direction:column; gap:10px; } .menu-gold-rates-rates .buttonRow { flex-direction:column; } .menu-gold-rates-rates button { width:100%; } }
-
-/* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
-@media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}
+.menu-gold-rates-rates{width:100%;}
+.goldRateTopGrid{display:grid;grid-template-columns:minmax(340px,.9fr) minmax(0,1.25fr);gap:16px;margin-bottom:16px}
+.marketRateCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.marketRateCard{padding:18px;border:1px solid #e8dfcf;border-radius:14px;background:linear-gradient(145deg,#fffdf8,#f7f0e2)}
+.marketRateCard span{display:block;font-size:10px;font-weight:900;letter-spacing:.12em;color:#8b6a35}.marketRateCard strong{display:block;margin-top:8px;font-size:22px;color:#9a6f24}.marketRateCard small{display:block;margin-top:3px;color:#8b8173;font-size:9px}.marketSource{display:block;margin-top:14px;color:#8b8173;font-size:9px}.savedRatesPanel{min-width:0}
+@media(max-width:980px){.goldRateTopGrid{grid-template-columns:1fr}.marketRateCards{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.marketRateCards{grid-template-columns:1fr}.goldRateFormPanel .buttonRow{flex-direction:column}.goldRateFormPanel button{width:100%}.savedRatesPanel .tableWrap{overflow-x:auto}.savedRatesPanel table{min-width:760px}}

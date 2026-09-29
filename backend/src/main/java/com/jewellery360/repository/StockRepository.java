@@ -7,7 +7,8 @@ import jakarta.persistence.LockModeType;
 import java.util.*;
 
 public interface StockRepository extends JpaRepository<Stock, Long> {
-    List<Stock> findByCompanyId(Long companyId);
+    @EntityGraph(attributePaths = {"company", "branch", "jewelleryItem"})
+List<Stock> findByCompanyId(Long companyId);
     Optional<Stock> findByBranchIdAndJewelleryItemId(Long branchId, Long jewelleryItemId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Stock s where s.id = :id")
@@ -15,4 +16,8 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Stock s where s.branch.id = :branchId and s.jewelleryItem.id = :itemId")
     Optional<Stock> findByBranchAndItemForUpdate(@Param("branchId") Long branchId, @Param("itemId") Long itemId);
+    @Override
+    @EntityGraph(attributePaths = {"company", "branch", "jewelleryItem"})
+    Optional<Stock> findById(Long id);
+
 }

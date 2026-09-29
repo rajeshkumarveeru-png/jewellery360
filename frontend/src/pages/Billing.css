@@ -5,3 +5,32 @@
 /* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
 @media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}
+
+/* Jewellery barcode scanning on the billing screen */
+.barcodeScannerCard{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:14px 16px;
+  border:1px solid rgba(180,132,48,.28);
+  border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,249,234,.96),rgba(250,244,229,.72));
+  box-shadow:0 8px 24px rgba(32,24,12,.06);
+}
+.barcodeScannerCard>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:220px}
+.barcodeScannerCard b{font-size:15px}
+.barcodeScannerCard small{font-size:12px;opacity:.68}
+.barcodeScanRow{display:flex;align-items:center;gap:8px;min-width:min(460px,100%)}
+.barcodeScanRow input{flex:1;min-width:0}
+.barcodeScanRow button{min-width:92px}
+@media(max-width:720px){
+ .barcodeScannerCard{flex-direction:column;align-items:stretch}
+ .barcodeScanRow{width:100%;min-width:0}
+}
+
+.cameraButton{min-width:105px}.scannerOverlay{position:fixed;inset:0;z-index:1000;background:rgba(8,10,13,.72);display:grid;place-items:center;padding:18px;backdrop-filter:blur(5px)}
+.scannerModal{width:min(620px,100%);background:#fffdf8;border:1px solid #e7dfd0;border-radius:22px;padding:18px;box-shadow:0 28px 80px rgba(0,0,0,.3)}
+.scannerModalHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.scannerModalHead h3{margin:4px 0 0;font-size:20px}.scannerViewport{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:16px;background:#101214}.scannerViewport video{width:100%;height:100%;object-fit:cover}.scannerFrame{position:absolute;inset:18% 12%;border:2px solid rgba(224,189,118,.95);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.12)}.scannerFrame:after{content:'';position:absolute;left:8%;right:8%;top:50%;height:2px;background:#e0bd76;box-shadow:0 0 14px #e0bd76}.scannerHint{position:absolute;left:12px;right:12px;bottom:12px;padding:10px;border-radius:10px;background:rgba(0,0,0,.72);color:#fff;font-size:11px}.scannerCameraSelect{width:100%;margin-top:10px}.scannerError{margin-top:10px;padding:10px;border-radius:10px;background:#fff0ef;color:#9d3028;font-size:11px}.scannerFooter{display:block;margin-top:10px;color:#81786c;font-size:10px}
+@media(max-width:640px){.scannerOverlay{padding:8px}.scannerModal{padding:12px;border-radius:16px}.barcodeScanRow{flex-wrap:wrap}.barcodeScanRow input{flex-basis:100%}.barcodeScanRow button{flex:1}.cameraButton{min-width:0}}

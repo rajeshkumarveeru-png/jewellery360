@@ -1,9 +1,10 @@
 import {useEffect,useState} from 'react';
-import {companies,branches} from '../api';
+import {companies,branches,headerGoldRates} from '../api';
 import {User,ThemeKey,Company,Branch} from '../shared/types';
 import {roleMenus,themeMap} from '../shared/config';
 import {NavIcon} from '../shared/ui';
 import './Dashboard.css';
+
 import Overview from './Overview';
 import CompaniesModule from './Companies';
 import BranchesModule from './Branches';
@@ -22,6 +23,34 @@ import ServicesModule from './Services';
 import PaymentsModule from './Payments';
 import WhatsAppModule from './WhatsApp';
 import SettingsModule from './Settings';
+function HeaderMarketGadget({ready}:{ready:boolean}){
+ const [now,setNow]=useState(new Date());
+ const [rates,setRates]=useState<any[]>([]); const [marketRates,setMarketRates]=useState<any[]>([]); const [marketSource,setMarketSource]=useState('');
+ const [rateDate,setRateDate]=useState('');
+ useEffect(()=>{const id=window.setInterval(()=>setNow(new Date()),1000);return()=>window.clearInterval(id);},[]);
+ useEffect(()=>{if(!ready){setRates([]);setMarketRates([]);setMarketSource('');return;} let cancelled=false; const load=()=>headerGoldRates().then(r=>{if(cancelled){return;} setRates(Array.isArray(r.data?.rates)?r.data.rates:[]);setMarketRates(Array.isArray(r.data?.marketRates)?r.data.marketRates:[]);setMarketSource(r.data?.marketSource||'');setRateDate(r.data?.date||'');}).catch(()=>{if(!cancelled){setRates([]);}}); load(); const id=window.setInterval(load,60000); return()=>{cancelled=true;window.clearInterval(id);};},[ready]);
+ const day=now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
+ const time=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Kolkata'});
+ const topRates=(marketRates.length?marketRates:rates).filter(x=>x.active!==false).slice(0,2);
+ return <div className="headerMarketGadget" aria-label="Date, time and today's gold rates">
+  <div className="headerClock">
+   <span className="headerGadgetIcon">◷</span>
+   <div><b>{time}</b><small>{day}</small></div>
+  </div>
+  <div className="headerGold">
+   <span className="headerGadgetIcon">◆</span>
+   <div>
+    <small>TODAY'S GOLD RATE {rateDate ? `· ${rateDate}` : ''}</small>
+    <div className="headerGoldRates">
+     {!ready ? <span className="headerRateMuted">Select context</span> :
+      topRates.length ? topRates.map((x:any,i:number)=><span key={`${x.karat}-${i}`}><b>{x.karat || x.purity}</b> ₹{Number(x.ratePerGram || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}/g</span>) :
+      <span className="headerRateMuted">No market rate</span>}
+    {marketSource && <span className="headerRateSource">{marketSource}</span>}
+    </div>
+   </div>
+  </div>
+ </div>;
+}
 export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:ThemeKey;setTheme:(t:ThemeKey)=>void;logout:()=>void}){
  const menu=roleMenus[user.role]||['Overview'];const [tab,setTab]=useState(menu[0]);
  const [contextCompany,setContextCompany]=useState<number|null>(Number(localStorage.getItem('j360_context_company'))||null);
@@ -44,7 +73,7 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
   </aside>
   <section className="workspace">
    <header><div><span className="eyebrow">JEWELLERY360 / {user.role}</span><h1>{tab}</h1></div>
-    <div className="headerTools">
+    <div className="headerTools"><HeaderMarketGadget ready={readyContext}/>
       {user.role==='APP_ADMIN'&&<><select value={contextCompany??''} onChange={e=>selectCompany(Number(e.target.value)||null)}><option value="">Company context</option>{companiesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select value={contextBranch??''} disabled={!contextCompany} onChange={e=>selectBranch(Number(e.target.value)||null)}><option value="">Branch context</option>{branchesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></>}
       {user.role!=='APP_ADMIN'&&<span className="contextBadge">{user.companyName||'Platform'} · {user.branchName||'All branches'}</span>}
       <select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold</option><option value="CLASSIC_IVORY">Classic Ivory</option><option value="PREMIUM_DARK">Premium Dark</option><option value="MODERN_LIGHT">Modern Light</option></select>

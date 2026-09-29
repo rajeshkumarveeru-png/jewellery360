@@ -144,6 +144,8 @@ export const domainAdvances=()=>api.get('/domain/advances');
 export const createDomainAdvance=(x:any)=>api.post('/domain/advances',x);
 export const domainWhatsappLogs=()=>api.get('/domain/whatsapp-logs');
 export const domainNotifications=()=>api.get('/domain/notifications');
+export const headerGoldRates=()=>api.get('/header/gold-rates');
+export const marketGoldRates=()=>api.get('/header/gold-rates');
 
 // Phase 3 transactional workflows. These endpoints execute normalized domain transactions,
 // including stock movements and audit events; they do not use BusinessRecord.

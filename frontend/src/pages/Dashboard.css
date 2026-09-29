@@ -1,3 +1,27 @@
 @media (max-width: 1100px){.app{grid-template-columns:220px minmax(0,1fr)}}
 @media (max-width: 820px){.app{display:block;min-height:100vh}.app aside{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 12px;overflow-x:auto}.app .sideBrand{min-width:max-content}.app .nav{display:flex;gap:6px;overflow-x:auto;flex:1}.app .nav button{white-space:nowrap}.app .signout{white-space:nowrap}.workspace header{position:sticky;top:62px;z-index:15;flex-direction:column;align-items:flex-start;gap:12px}.headerTools{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}.headerTools select{min-width:0;width:100%}}
 @media (max-width:560px){.workspace{padding:14px}.headerTools{grid-template-columns:1fr}.heroPanel{grid-template-columns:1fr!important;gap:12px}.kpiGrid{grid-template-columns:1fr 1fr!important}.panel{padding:14px}.tableWrap{overflow-x:auto}table{min-width:680px}.toast{left:12px;right:12px;width:auto}.contextRequired{flex-direction:column}.app aside{align-items:flex-start}.app .nav button{font-size:12px;padding:9px 10px}}
+
+/* Live header market/date gadget */
+.headerMarketGadget{display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid #ded4c2;border-radius:14px;background:linear-gradient(135deg,#fffdf8,#f6efe1);box-shadow:0 5px 18px #6e552015;min-height:46px}
+.headerClock,.headerGold{display:flex;align-items:center;gap:7px;min-width:0}
+.headerClock{padding-right:9px;border-right:1px solid #e2d8c7}
+.headerGadgetIcon{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#1a1b1e;color:#e1bd76;font-size:14px;flex:0 0 27px}
+.headerClock b{display:block;font-size:11px;line-height:1.1;white-space:nowrap;color:#1d211f}
+.headerClock small{display:block;margin-top:2px;font-size:8px;color:#8a7c68;white-space:nowrap}
+.headerGold small{display:block;font-size:7px;letter-spacing:.1em;font-weight:900;color:#80663c;white-space:nowrap}
+.headerGoldRates{display:flex;gap:9px;align-items:center;margin-top:2px}
+.headerGoldRates span{font-size:9px;color:#5f5548;white-space:nowrap}
+.headerGoldRates b{color:#9a6f24;font-weight:900;margin-right:2px}
+.headerRateMuted{color:#968a78!important}
+@media(max-width:1100px){
+ .headerMarketGadget{order:10;width:100%;justify-content:flex-start}
+}
+@media(max-width:560px){
+ .headerMarketGadget{width:100%;overflow:hidden}
+ .headerGoldRates{gap:5px}
+ .headerGoldRates span{font-size:8px}
+ .headerGold small{font-size:6.5px}
+}
+
+.headerRateSource{font-size:7px!important;color:#9a8d7b!important;display:block!important;margin-top:1px}
