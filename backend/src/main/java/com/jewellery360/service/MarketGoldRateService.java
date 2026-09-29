@@ -27,8 +27,7 @@ public class MarketGoldRateService {
     private static final String SOURCE = "GoodReturns - Cuddalore";
     private static final String SOURCE_URL = "https://www.goodreturns.in/gold-rates/cuddalore.html";
     private static final Duration CACHE_FOR = Duration.ofMinutes(15);
-    private static final Pattern RATE = Pattern.compile(
-            "(?i)(24K|22K|18K)\\s*(?:Gold)?\\s*(?:/g|/\\s*gram|per\\s*gram)\\s*₹?\\s*([0-9,]+(?:\\.[0-9]+)?)");
+    private static final Pattern RATE = Pattern.compile("(?i)(24K|22K|18K)\\s*(?:Gold|Carat Gold|Karat Gold)?[^₹\\d]{0,60}₹?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)");
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(6))
@@ -71,20 +70,45 @@ public class MarketGoldRateService {
                 .replace("&nbsp;", " ")
                 .replaceAll("\\s+", " ");
 
-        Matcher matcher = RATE.matcher(text);
+        // GoodReturns currently exposes the Cuddalore rates as:
+        // 24K Gold /g ₹14,880, 22K Gold /g ₹13,640, 18K Gold /g ₹11,410.
+        // Keep each purity anchored to its own label so numbers from the adjacent
+        // table columns cannot be accidentally captured as the rate.
         List<Map<String, Object>> rates = new ArrayList<>();
-        while (matcher.find()) {
-            Map<String, Object> rate = new LinkedHashMap<>();
-            rate.put("karat", matcher.group(1).toUpperCase());
-            rate.put("purity", matcher.group(1).toUpperCase());
-            rate.put("ratePerGram", new BigDecimal(matcher.group(2).replace(",", "")));
-            rate.put("ratePer10Gram", new BigDecimal(matcher.group(2).replace(",", "")).multiply(BigDecimal.TEN));
-            rate.put("active", true);
-            rates.add(rate);
-        }
+        addRate(rates, text, "24K");
+        addRate(rates, text, "22K");
+        addRate(rates, text, "18K");
 
         return Map.of("date", LocalDate.now(), "location", "Cuddalore", "source", SOURCE,
                 "sourceUrl", SOURCE_URL, "rates", rates, "marketRates", rates, "available", !rates.isEmpty());
+    }
+
+    private void addRate(List<Map<String, Object>> rates, String text, String karat) {
+        Pattern p = Pattern.compile("(?i)\\b" + karat + "\\s+Gold\\s*/\\s*g\\s*₹?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)");
+        Matcher m = p.matcher(text);
+        if (!m.find()) {
+            // Fallback for the sentence form used by the page summary.
+            p = Pattern.compile("(?i)" + karat + "(?:\\s+karat)?\\s+gold.*?₹\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s+per gram");
+            m = p.matcher(text);
+        }
+        if (!m.find()) return;
+
+        BigDecimal value;
+        try {
+            value = new BigDecimal(m.group(1).replace(",", ""));
+        } catch (NumberFormatException ex) {
+            return;
+        }
+        // Reject table/header numbers accidentally matched as a rate.
+        if (value.compareTo(BigDecimal.valueOf(1000)) < 0 || value.compareTo(BigDecimal.valueOf(100000)) > 0) return;
+
+        Map<String, Object> rate = new LinkedHashMap<>();
+        rate.put("karat", karat);
+        rate.put("purity", karat);
+        rate.put("ratePerGram", value);
+        rate.put("ratePer10Gram", value.multiply(BigDecimal.TEN));
+        rate.put("active", true);
+        rates.add(rate);
     }
 
     private record Cached(Map<String, Object> value, Instant loadedAt) {}

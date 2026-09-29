@@ -64,12 +64,13 @@ public class DomainCrudController {
 
     @PostMapping("/customers")
     @Transactional
-    public Customer customerCreate(@AuthenticationPrincipal AuthenticatedUser me, @RequestBody JsonNode n) {
+    public Map<String, Object> customerCreate(@AuthenticationPrincipal AuthenticatedUser me, @RequestBody JsonNode n) {
         requireWrite(me, "CUSTOMERS");
         Customer x = convert(n, Customer.class);
         bindContext(me, x);
         scopeCreate(me, x.getCompany(), x.getBranch());
-        return customers.save(x);
+        Customer saved = customers.save(x);
+        return customerResponse(saved);
     }
 
     @PutMapping("/customers/{id}")

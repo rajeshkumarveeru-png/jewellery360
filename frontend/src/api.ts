@@ -98,10 +98,13 @@ export const report=(type:string,from?:string,to?:string)=>api.get('/reports',{p
 export const audit=()=>api.get('/audit');
 
 export const calculateBilling=(x:any)=>api.post('/billing/calculate',x);
+export const calculateMultiBilling=(x:any)=>api.post('/billing/calculate-multi',x);
 export const createBilling=(x:any)=>api.post('/billing',x);
-export const createDomainBilling=(x:any)=>api.post('/phase3/sales',x);
+export const createDomainBilling=(x:any)=>api.post('/billing/domain',x);
 export const cancelDomainBilling=(id:number)=>api.post(`/billing/domain/${id}/cancel`);
 export const invoicePdf=(id:number)=>api.get(`/invoices/${id}/pdf`,{responseType:'blob'});
+export const salePdf=(id:number)=>api.get(`/invoices/sales/${id}/pdf`,{responseType:'blob'});
+export const sendInvoiceWhatsApp=(saleId:number)=>api.post(`/whatsapp/sales/${saleId}`);
 
 // Normalized jewellery-domain APIs. These are the target APIs for the module UI migration;
 // legacy /records endpoints remain temporarily for compatibility with the existing screens.

@@ -42,7 +42,7 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  const [menuMessage,setMenuMessage]=useState('');
  const allowedMenu=roleMenus[user.role]||['Overview'];
  const companyIdForMenu=user.role==='APP_ADMIN' ? Number(localStorage.getItem('j360_context_company'))||null : (user.companyId??null);
- const normalizeMenu=(items:string[])=>{const ordered=items.filter(x=>allowedMenu.includes(x)); if(allowedMenu.includes('Overview')&&!ordered.includes('Overview'))ordered.unshift('Overview'); return [...new Set(ordered)];};
+ const normalizeMenu=(items:string[])=>{const ordered=items.filter(x=>allowedMenu.includes(x)); const unique=[...new Set(ordered)]; for(const locked of ['Overview','Settings']){if(allowedMenu.includes(locked)&&!unique.includes(locked))unique.push(locked);} return unique;};
  useEffect(()=>{
    setMenuDraft(defaultPreferredMenu(user.role));
    if(!companyIdForMenu) return;
@@ -61,6 +61,10 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
    if(item==='Overview'||item==='Settings')return;
    setMenuDraft(v=>v.includes(item)?v.filter(x=>x!==item):[...v,item]);
  };
+ const orderedMenuRows=[
+   ...menuDraft.filter(item=>allowedMenu.includes(item)),
+   ...allowedMenu.filter(item=>!menuDraft.includes(item))
+ ];
  const saveMenu=async()=>{
    if(!companyIdForMenu){setMenuMessage('Select a company context before saving user menu settings.');return;}
    const normalized=normalizeMenu(menuDraft);
@@ -124,8 +128,8 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     <span className="eyebrow">NAVIGATION</span><h2>Menu visibility & order</h2>
     <p className="settingsHelp">Choose which menu sections this user sees and set the order shown in the left navigation. Preferences are stored in the database against this company and user, so they follow the user across browsers and devices.</p>
     <div className="menuPreferenceList">
-      {allowedMenu.map(item=>{const checked=menuDraft.includes(item); const index=menuDraft.indexOf(item); return <div className={`menuPreferenceRow ${checked?'selected':'muted'}`} key={item}>
-        <label><input type="checkbox" checked={checked} disabled={item==='Overview'} onChange={()=>toggleMenu(item)}/><span>{item}</span></label>
+      {orderedMenuRows.map(item=>{const checked=menuDraft.includes(item); const index=menuDraft.indexOf(item); const locked=item==='Overview'||item==='Settings'; return <div className={`menuPreferenceRow ${checked?'selected':'muted'}`} key={item}>
+        <label><input type="checkbox" checked={checked} disabled={locked} onChange={()=>toggleMenu(item)}/><span>{item}</span></label>
         <div className="menuMoveButtons">
           <button type="button" disabled={!checked||index<=0} onClick={()=>moveMenu(index,-1)} aria-label={`Move ${item} up`}>↑</button>
           <button type="button" disabled={!checked||index<0||index>=menuDraft.length-1} onClick={()=>moveMenu(index,1)} aria-label={`Move ${item} down`}>↓</button>

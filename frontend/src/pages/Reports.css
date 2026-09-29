@@ -5,3 +5,14 @@
 /* Responsive rules for this menu. Forms collapse to one column and tables remain horizontally scrollable on phones. */
 @media (max-width: 980px){.moduleGrid,.billingLayout{grid-template-columns:1fr!important}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width: 640px){.formGrid{grid-template-columns:1fr!important}.panel{padding:14px}.panelHead{align-items:flex-start!important;flex-direction:column!important;gap:10px}.tableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tableWrap table{min-width:680px}.buttonRow{display:flex;flex-direction:column;gap:8px}.buttonRow button{width:100%}.reportTabs{overflow-x:auto;display:flex;flex-wrap:nowrap}.reportTabs button{white-space:nowrap}.moduleGrid{gap:14px}}
+
+
+/* Sales report actions: expose the invoice PDF/print and WhatsApp workflow directly on each sale. */
+.reportPage .tableWrap{overflow-x:auto}
+.reportPage table{min-width:920px}
+.reportPage td small{display:block;margin-top:4px;color:#8b8174;font-size:11px}
+.reportActions{display:flex;gap:7px;align-items:center;white-space:nowrap}
+.reportAction{padding:8px 10px!important;font-size:11px!important;font-weight:800}
+.whatsappAction{border-color:#c9a15a!important}
+.reportEmpty{padding:34px 16px;text-align:center;color:#8b8174;font-size:13px}
+@media (max-width:720px){.reportPage table{min-width:980px}.reportActions{flex-direction:column;align-items:stretch}.reportAction{width:100%}}

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -82,10 +83,21 @@ public class BranchController {
         branch.setName(r.name());
         branch.setCode(r.code());
         branch.setPhone(r.phone());
+        branch.setEmail(r.email());
+        branch.setGstin(r.gstin());
+        branch.setWebsite(r.website());
+        branch.setInvoiceTitle(r.invoiceTitle());
+        branch.setInvoiceSubtitle(r.invoiceSubtitle());
+        branch.setInvoiceTerms(r.invoiceTerms());
+        branch.setInvoiceFooter(r.invoiceFooter());
         branch.setAddress(r.address());
         branch.setActive(true);
 
         Branch savedBranch = branches.save(branch);
+        // save() may return the entity with a lazy company proxy; reload through the
+        // EntityGraph-backed repository before serializing the response.
+        savedBranch = branches.findById(savedBranch.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found after save"));
 
         Map<String, Object> response = view(savedBranch);
 
@@ -146,9 +158,19 @@ public class BranchController {
         branch.setName(r.name());
         branch.setCode(r.code());
         branch.setPhone(r.phone());
+        branch.setEmail(r.email());
+        branch.setGstin(r.gstin());
+        branch.setWebsite(r.website());
+        branch.setInvoiceTitle(r.invoiceTitle());
+        branch.setInvoiceSubtitle(r.invoiceSubtitle());
+        branch.setInvoiceTerms(r.invoiceTerms());
+        branch.setInvoiceFooter(r.invoiceFooter());
         branch.setAddress(r.address());
 
         Branch savedBranch = branches.save(branch);
+        // Reload so company is initialized before view()/audit serialization.
+        savedBranch = branches.findById(savedBranch.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found after update"));
 
         Map<String, Object> after = view(savedBranch);
 
@@ -174,16 +196,23 @@ public class BranchController {
 
         Company company = branch.getCompany();
 
-        return Map.of(
-                "id", branch.getId(),
-                "companyId", company.getId(),
-                "companyName", company.getName(),
-                "name", branch.getName(),
-                "code", branch.getCode(),
-                "phone", Objects.toString(branch.getPhone(), ""),
-                "address", Objects.toString(branch.getAddress(), ""),
-                "active", branch.isActive()
-        );
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", branch.getId());
+        response.put("companyId", company.getId());
+        response.put("companyName", company.getName());
+        response.put("name", branch.getName());
+        response.put("code", branch.getCode());
+        response.put("phone", Objects.toString(branch.getPhone(), ""));
+        response.put("email", Objects.toString(branch.getEmail(), ""));
+        response.put("gstin", Objects.toString(branch.getGstin(), ""));
+        response.put("website", Objects.toString(branch.getWebsite(), ""));
+        response.put("invoiceTitle", Objects.toString(branch.getInvoiceTitle(), ""));
+        response.put("invoiceSubtitle", Objects.toString(branch.getInvoiceSubtitle(), ""));
+        response.put("invoiceTerms", Objects.toString(branch.getInvoiceTerms(), ""));
+        response.put("invoiceFooter", Objects.toString(branch.getInvoiceFooter(), ""));
+        response.put("address", Objects.toString(branch.getAddress(), ""));
+        response.put("active", branch.isActive());
+        return response;
     }
 
     public record Request(
@@ -191,6 +220,13 @@ public class BranchController {
             String name,
             String code,
             String phone,
+            String email,
+            String gstin,
+            String website,
+            String invoiceTitle,
+            String invoiceSubtitle,
+            String invoiceTerms,
+            String invoiceFooter,
             String address
     ) {
     }

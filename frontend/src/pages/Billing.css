@@ -34,3 +34,79 @@
 .scannerModal{width:min(620px,100%);background:#fffdf8;border:1px solid #e7dfd0;border-radius:22px;padding:18px;box-shadow:0 28px 80px rgba(0,0,0,.3)}
 .scannerModalHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.scannerModalHead h3{margin:4px 0 0;font-size:20px}.scannerViewport{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:16px;background:#101214}.scannerViewport video{width:100%;height:100%;object-fit:cover}.scannerFrame{position:absolute;inset:18% 12%;border:2px solid rgba(224,189,118,.95);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.12)}.scannerFrame:after{content:'';position:absolute;left:8%;right:8%;top:50%;height:2px;background:#e0bd76;box-shadow:0 0 14px #e0bd76}.scannerHint{position:absolute;left:12px;right:12px;bottom:12px;padding:10px;border-radius:10px;background:rgba(0,0,0,.72);color:#fff;font-size:11px}.scannerCameraSelect{width:100%;margin-top:10px}.scannerError{margin-top:10px;padding:10px;border-radius:10px;background:#fff0ef;color:#9d3028;font-size:11px}.scannerFooter{display:block;margin-top:10px;color:#81786c;font-size:10px}
 @media(max-width:640px){.scannerOverlay{padding:8px}.scannerModal{padding:12px;border-radius:16px}.barcodeScanRow{flex-wrap:wrap}.barcodeScanRow input{flex-basis:100%}.barcodeScanRow button{flex:1}.cameraButton{min-width:0}}
+
+
+/* Clear field labels for jewellery billing */
+.billingForm .fieldLabel{display:flex;flex-direction:column;gap:6px;min-width:0}
+.billingForm .fieldLabel>span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#665a4b}
+.billingForm .fieldLabel em{font-style:normal;color:#9b5a28;font-size:9px;margin-left:4px}
+.billingForm .fieldLabel input,.billingForm .fieldLabel select{width:100%;box-sizing:border-box}
+.billingForm .buttonRow{grid-column:1 / -1}
+
+
+.invoiceCreatedCard{padding:4px 2px}
+.invoiceCreatedCard h2{margin:8px 0 10px;font-size:25px;letter-spacing:.02em}
+.invoiceCreatedCard p{margin:0 0 18px;color:#bcb4aa;line-height:1.55}
+.invoiceCreatedCard small{display:block;margin-top:16px;color:#8f887f;line-height:1.55}
+.invoiceActionRow{display:flex;gap:10px;flex-wrap:wrap}
+.invoiceActionRow button{min-height:42px}
+@media(max-width:640px){.invoiceActionRow{flex-direction:column}.invoiceActionRow button{width:100%}}
+
+/* Searchable jewellery item selector — product/design/tag/barcode/HUID/SKU */
+.itemPickerField{position:relative;z-index:8}
+.itemPicker{position:relative;width:100%}
+.itemPicker>input{width:100%;min-height:43px}
+.itemPickerMenu{position:absolute;left:0;right:0;top:calc(100% + 5px);max-height:360px;overflow:auto;background:#fffefa;border:1px solid #d8c9ad;border-radius:14px;box-shadow:0 20px 45px rgba(33,25,13,.18);z-index:50;padding:6px}
+.itemPickerOption{display:flex!important;flex-direction:column;align-items:flex-start!important;width:100%;border:0!important;border-radius:10px!important;background:transparent!important;color:#211c16!important;padding:11px 12px!important;text-align:left!important;gap:3px!important}
+.itemPickerOption:hover{background:#f7efdf!important}
+.itemPickerOption strong{font-size:12px;font-weight:900;color:#272018}
+.itemPickerOption span{font-size:10px;color:#735b32;line-height:1.35}
+.itemPickerOption small{font-size:9px;color:#8b8173;line-height:1.35}
+.itemPickerEmpty{padding:20px 14px;text-align:center;font-size:11px;color:#8a8174}
+.fieldHint{display:block;font-size:9px;color:#8b8173;line-height:1.4}
+@media(max-width:640px){.itemPickerMenu{position:fixed;left:15px;right:15px;top:auto;max-height:48vh}}
+
+/* Fast customer creation from the billing counter */
+.customerBillingField{grid-column:1 / -1}
+.customerSelectRow{display:flex;gap:8px;align-items:stretch}
+.customerSelectRow select{flex:1;min-width:0}
+.customerAddButton{white-space:nowrap;min-width:140px}
+.inlineCustomerCard{margin-top:8px;padding:12px;border:1px solid #dfcda8;border-radius:14px;background:linear-gradient(135deg,#fffaf0,#f7eedf);box-shadow:0 8px 20px rgba(66,49,20,.06)}
+.inlineCustomerGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inlineCustomerGrid .wide{grid-column:1 / -1}
+.inlineCustomerGrid input{min-width:0}
+.saveCustomerButton{margin-top:9px}
+@media(max-width:720px){.customerSelectRow{flex-direction:column}.customerAddButton{width:100%}.inlineCustomerGrid{grid-template-columns:1fr}.inlineCustomerGrid .wide{grid-column:auto}}
+
+
+/* Searchable customer combobox */
+.customerPicker{position:relative;flex:1;min-width:0}
+.customerPicker>input{width:100%;min-height:43px;box-sizing:border-box}
+.customerPickerMenu{position:absolute;left:0;right:0;top:calc(100% + 5px);max-height:360px;overflow:auto;background:#fffefa;border:1px solid #d8c9ad;border-radius:14px;box-shadow:0 20px 45px rgba(33,25,13,.18);z-index:60;padding:6px}
+.customerPickerOption{display:flex!important;flex-direction:column;align-items:flex-start!important;width:100%;border:0!important;border-radius:10px!important;background:transparent!important;color:#211c16!important;padding:11px 12px!important;text-align:left!important;gap:3px!important}
+.customerPickerOption:hover{background:#f7efdf!important}
+.customerPickerOption strong{font-size:12px;font-weight:900;color:#272018}
+.customerPickerOption span{font-size:10px;color:#735b32;line-height:1.35}
+.customerPickerOption small{font-size:9px;color:#8b8173;line-height:1.35}
+.customerPickerEmpty{padding:20px 14px;text-align:center;font-size:11px;color:#8a8174}
+@media(max-width:720px){.customerPickerMenu{position:fixed;left:15px;right:15px;top:auto;max-height:48vh}}
+
+/* Multi-item jewellery invoice cart */
+.multiItemCard{grid-column:1 / -1;border:1px solid #dfd2bd;border-radius:16px;background:#fffdf8;overflow:hidden;box-shadow:0 8px 22px rgba(48,35,18,.06)}
+.multiItemHead{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;background:linear-gradient(135deg,#faf1df,#fffaf1);border-bottom:1px solid #e7dcc9}
+.multiItemHead>div{display:flex;flex-direction:column;gap:4px}.multiItemHead strong{font-size:15px;color:#241d14}.multiItemHead small{font-size:10px;color:#887b6b}
+.emptyCart{padding:24px;text-align:center;color:#8b8175;font-size:12px}
+.invoiceItemsList{display:flex;flex-direction:column}
+.invoiceItemRow{display:grid;grid-template-columns:minmax(190px,1fr) minmax(500px,2.7fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid #eee5d7;background:#fffefa}
+.invoiceItemRow:last-child{border-bottom:0}.invoiceItemInfo{display:flex;flex-direction:column;gap:4px;padding-top:4px;min-width:0}.invoiceItemInfo b{font-size:12px;color:#211b14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.invoiceItemInfo span{font-size:10px;color:#735b32;line-height:1.35}.invoiceItemInfo small{font-size:9px;color:#8c8172}
+.invoiceItemFields{display:grid;grid-template-columns:repeat(4,minmax(80px,1fr));gap:7px}.invoiceItemFields label{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#756857}.invoiceItemFields input{min-width:0;width:100%;box-sizing:border-box;padding:8px 8px;font-size:11px}
+.removeItemButton{align-self:center;border:1px solid #d8b9ae!important;background:#fff5f2!important;color:#9d4939!important;white-space:nowrap;padding:8px 10px!important;border-radius:9px!important}
+@media(max-width:1100px){.invoiceItemRow{grid-template-columns:1fr}.invoiceItemFields{grid-template-columns:repeat(4,minmax(90px,1fr))}.removeItemButton{justify-self:start}}
+@media(max-width:640px){.multiItemHead{align-items:flex-start;flex-direction:column}.invoiceItemFields{grid-template-columns:repeat(2,minmax(0,1fr))}.invoiceItemRow{padding:12px}.removeItemButton{width:100%}}
+
+/* Invoice-level common gold rate */
+.commonGoldRateField{grid-column:1 / -1;padding:12px 14px;border:1px solid #dfcda8;border-radius:14px;background:linear-gradient(135deg,#fff8e9,#fffdf8);box-shadow:0 7px 18px rgba(66,49,20,.05)}
+.commonGoldRateField>input{font-size:16px;font-weight:800;color:#8b5f13}
+.commonGoldRateField em{font-size:9px}
+.invoiceItemFields{grid-template-columns:repeat(4,minmax(90px,1fr))}
+@media(max-width:1100px){.invoiceItemFields{grid-template-columns:repeat(4,minmax(80px,1fr))}}

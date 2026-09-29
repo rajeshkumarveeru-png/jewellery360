@@ -17,6 +17,11 @@ public class BillingController {
     @PostMapping("/calculate")
     public Map<String,Object> calculate(@RequestBody BillingRequest r){ return calculation(r); }
 
+    @PostMapping("/calculate-multi")
+    public Map<String,Object> calculateMulti(@RequestBody MultiCalculationRequest r){
+        return jewelleryBilling.calculate(r.items(), r.goldRate(), r.gstPercent(), r.discount());
+    }
+
     @PostMapping("/domain")
     public Map<String,Object> createDomain(@AuthenticationPrincipal AuthenticatedUser me,
         @RequestBody JewelleryBillingService.Request r,
@@ -50,10 +55,13 @@ public class BillingController {
         BigDecimal wastage=gold.multiply(n(r.wastagePercent())).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
         BigDecimal subtotal=gold.add(n(r.makingCharge())).add(n(r.stoneCharge())).add(n(r.otherCharges())).add(wastage);
         BigDecimal gst=subtotal.multiply(n(r.gstPercent())).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
-        BigDecimal total=subtotal.add(gst);
-        return Map.of("goldValue",gold,"wastageValue",wastage,"subtotal",subtotal,"gst",gst,"total",total);
+        BigDecimal discount=n(r.discount()).max(BigDecimal.ZERO).min(subtotal.add(gst));
+        BigDecimal total=subtotal.add(gst).subtract(discount).max(BigDecimal.ZERO);
+        return Map.of("goldValue",gold,"wastageValue",wastage,"makingCharge",n(r.makingCharge()),"stoneCharge",n(r.stoneCharge()),"otherCharge",n(r.otherCharges()),"subtotal",subtotal,"gst",gst,"discount",discount,"total",total);
     }
     private BigDecimal n(BigDecimal v){return v==null?BigDecimal.ZERO:v;}
+    public record MultiCalculationRequest(BigDecimal goldRate, List<JewelleryBillingService.ItemRequest> items, BigDecimal gstPercent, BigDecimal discount){}
+
     public record BillingRequest(String invoiceNo,String customer,String tag,String design,String purity,BigDecimal grossWeight,BigDecimal stoneWeight,BigDecimal netWeight,
-        BigDecimal goldRate,BigDecimal wastagePercent,BigDecimal makingCharge,BigDecimal stoneCharge,BigDecimal otherCharges,BigDecimal gstPercent,String paymentMode,java.time.LocalDate date){}
+        BigDecimal goldRate,BigDecimal wastagePercent,BigDecimal makingCharge,BigDecimal stoneCharge,BigDecimal otherCharges,BigDecimal gstPercent,BigDecimal discount,String paymentMode,java.time.LocalDate date){}
 }

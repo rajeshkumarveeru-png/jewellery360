@@ -31,7 +31,7 @@ function HeaderMarketGadget({ready}:{ready:boolean}){
  useEffect(()=>{if(!ready){setRates([]);setMarketRates([]);setMarketSource('');return;} let cancelled=false; const load=()=>headerGoldRates().then(r=>{if(cancelled){return;} setRates(Array.isArray(r.data?.rates)?r.data.rates:[]);setMarketRates(Array.isArray(r.data?.marketRates)?r.data.marketRates:(Array.isArray(r.data?.rates)?r.data.rates:[]));setMarketSource(r.data?.marketSource||'');setRateDate(r.data?.date||'');}).catch(()=>{if(!cancelled){setRates([]);}}); load(); const id=window.setInterval(load,60000); return()=>{cancelled=true;window.clearInterval(id);};},[ready]);
  const day=now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
  const time=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Kolkata'});
- const topRates=(marketRates.length?marketRates:rates).filter(x=>x.active!==false).slice(0,2);
+ const topRates=Array.from(new Map((marketRates.length?marketRates:rates).filter(x=>x.active!==false).map((x:any)=>[String(x.karat||x.purity||'').replace(/[^0-9]/g,''),x])).values()).sort((a:any,b:any)=>Number(String(b.karat||b.purity||'').replace(/[^0-9]/g,''))-Number(String(a.karat||a.purity||'').replace(/[^0-9]/g,''))).slice(0,3);
  return <div className="headerMarketGadget" aria-label="Date, time and today's gold rates">
   <div className="headerClock">
    <span className="headerGadgetIcon">◷</span>
@@ -103,7 +103,7 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
    {tab==='Users'&&<UsersModule user={user} onNotice={refreshNotice}/>}
    {tab==='Approvals'&&<ApprovalsModule onNotice={refreshNotice}/>}
    {tab==='Audit Logs'&&<AuditModule/>}
-   {tab==='Reports'&&<ReportsModule/>}
+   {tab==='Reports'&&<ReportsModule onNotice={refreshNotice}/>}
    {tab==='Billing'&&<BillingModule ready={readyContext} onNotice={refreshNotice}/>}
    {tab==='Jewellery'&&<JewelleryModule ready={readyContext} onNotice={refreshNotice}/>}
    {tab==='Customers'&&<CustomersDomainModule ready={readyContext} onNotice={refreshNotice}/>}

@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-branch-business-profile
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: branch
+      changes:
+        - addColumn:
+            tableName: branch
+            columns:
+              - column: {name: email, type: VARCHAR(150)}
+              - column: {name: gstin, type: VARCHAR(30)}
+              - column: {name: website, type: VARCHAR(180)}
+              - column: {name: invoice_title, type: VARCHAR(180)}
+              - column: {name: invoice_subtitle, type: VARCHAR(250)}
+              - column: {name: invoice_terms, type: VARCHAR(1000)}
+              - column: {name: invoice_footer, type: VARCHAR(1000)}

@@ -4,10 +4,10 @@ import com.jewellery360.domain.*;
 import com.jewellery360.repository.*;
 import com.jewellery360.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.math.*;
 import java.time.LocalDate;
@@ -33,59 +33,149 @@ public class JewelleryBillingService {
     public Map<String,Object> create(AuthenticatedUser me, Request r, Long headerCompanyId, Long headerBranchId) {
         permissions.requireWrite(me, "BILLING");
         Context ctx = context(me, headerCompanyId, headerBranchId);
+        if (r.items() == null || r.items().isEmpty()) throw bad("At least one jewellery item is required");
+
         Customer customer = customers.findById(r.customerId()).orElseThrow(() -> bad("Customer not found"));
         if (!Objects.equals(customer.getCompany().getId(), ctx.company().getId())) throw forbidden("Customer is outside company scope");
         if (ctx.branch().getId() != null && customer.getBranch() != null && !Objects.equals(customer.getBranch().getId(), ctx.branch().getId())) throw forbidden("Customer is outside branch scope");
 
-        JewelleryItem item = items.findById(r.jewelleryItemId()).orElseThrow(() -> bad("Jewellery item not found"));
-        if (!Objects.equals(item.getCompany().getId(), ctx.company().getId()) || !Objects.equals(item.getBranch().getId(), ctx.branch().getId())) throw forbidden("Jewellery item is outside branch scope");
-        if (!"IN_STOCK".equalsIgnoreCase(item.getStatus())) throw bad("Jewellery item is not available for sale: " + item.getStatus());
+        Set<Long> seen = new HashSet<>();
+        List<PreparedLine> lines = new ArrayList<>();
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
+        BigDecimal weightedRateNumerator = BigDecimal.ZERO;
+        BigDecimal commonGoldRate = n(r.goldRate());
 
-        BigDecimal gross = n(r.grossWeight());
-        BigDecimal stone = n(r.stoneWeight());
-        BigDecimal net = r.netWeight() == null ? gross.subtract(stone) : n(r.netWeight());
-        BigDecimal gold = net.multiply(n(r.goldRate()));
-        BigDecimal wastage = gold.multiply(n(r.wastagePercent())).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
-        BigDecimal subtotal = gold.add(wastage).add(n(r.makingCharge())).add(n(r.stoneCharge())).add(n(r.otherCharge()));
-        BigDecimal gst = subtotal.multiply(n(r.gstPercent())).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
-        BigDecimal total = subtotal.add(gst);
+        for (ItemRequest rLine : r.items()) {
+            if (rLine == null || rLine.jewelleryItemId() == null) throw bad("Every invoice line must have a jewellery item");
+            if (!seen.add(rLine.jewelleryItemId())) throw bad("The same jewellery item cannot be added twice to one invoice");
+
+            JewelleryItem item = items.findById(rLine.jewelleryItemId()).orElseThrow(() -> bad("Jewellery item not found: " + rLine.jewelleryItemId()));
+            if (!Objects.equals(item.getCompany().getId(), ctx.company().getId()) || !Objects.equals(item.getBranch().getId(), ctx.branch().getId())) throw forbidden("Jewellery item is outside branch scope: " + rLine.jewelleryItemId());
+            if (!"IN_STOCK".equalsIgnoreCase(item.getStatus())) throw bad("Jewellery item is not available for sale: " + item.getTag().getTagNo());
+
+            BigDecimal gross = n(rLine.grossWeight());
+            BigDecimal stone = n(rLine.stoneWeight());
+            BigDecimal net = rLine.netWeight() == null ? gross.subtract(stone) : n(rLine.netWeight());
+            if (gross.compareTo(BigDecimal.ZERO) <= 0 || net.compareTo(BigDecimal.ZERO) <= 0) throw bad("Invalid weight for item " + item.getTag().getTagNo());
+            BigDecimal effectiveGoldRate = commonGoldRate.compareTo(BigDecimal.ZERO) > 0 ? commonGoldRate : n(rLine.goldRate());
+            if (effectiveGoldRate.compareTo(BigDecimal.ZERO) <= 0) throw bad("Gold rate is required for item " + item.getTag().getTagNo());
+
+            BigDecimal gold = net.multiply(effectiveGoldRate);
+            BigDecimal wastage = gold.multiply(n(rLine.wastagePercent())).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+            BigDecimal lineSubtotal = gold.add(wastage).add(n(rLine.makingCharge())).add(n(rLine.stoneCharge())).add(n(rLine.otherCharge()));
+            subtotal = subtotal.add(lineSubtotal);
+            totalNet = totalNet.add(net);
+            weightedRateNumerator = weightedRateNumerator.add(net.multiply(effectiveGoldRate));
+            lines.add(new PreparedLine(rLine, item, gross, stone, net, effectiveGoldRate, gold, wastage, lineSubtotal));
+        }
+
+        BigDecimal gstPercent = n(r.gstPercent());
+        BigDecimal gst = subtotal.multiply(gstPercent).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+        BigDecimal grossInvoice = subtotal.add(gst);
+        BigDecimal discount = n(r.discount()).max(BigDecimal.ZERO).min(grossInvoice);
+        BigDecimal total = grossInvoice.subtract(discount).max(BigDecimal.ZERO);
+        BigDecimal paymentAmount = n(r.paymentAmount()).max(BigDecimal.ZERO);
+        if (paymentAmount.compareTo(total) > 0) paymentAmount = total;
 
         Sale sale = new Sale();
-        sale.setCompany(ctx.company()); sale.setBranch(ctx.branch()); sale.setCustomer(customer);
-        sale.setInvoiceNo(r.invoiceNo()); sale.setSaleDate(r.saleDate() == null ? LocalDate.now() : r.saleDate());
-        sale.setStatus("COMPLETED"); sale.setGoldRate(n(r.goldRate())); sale.setSubtotal(subtotal);
-        sale.setDiscount(n(r.discount())); sale.setGst(gst); sale.setTotal(total); sale.setPaymentStatus("UNPAID");
+        sale.setCompany(ctx.company());
+        sale.setBranch(ctx.branch());
+        sale.setCustomer(customer);
+        sale.setInvoiceNo(r.invoiceNo());
+        sale.setSaleDate(r.saleDate() == null ? LocalDate.now() : r.saleDate());
+        sale.setStatus("COMPLETED");
+        sale.setGoldRate(totalNet.compareTo(BigDecimal.ZERO) > 0 ? weightedRateNumerator.divide(totalNet, 3, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        sale.setSubtotal(subtotal);
+        sale.setDiscount(discount);
+        sale.setGst(gst);
+        sale.setTotal(total);
+        sale.setPaymentStatus(paymentAmount.compareTo(BigDecimal.ZERO) <= 0 ? "UNPAID" : paymentAmount.compareTo(total) >= 0 ? "PAID" : "PARTIAL");
         sale.setCreatedBy(users.findById(me.getUserId()).orElse(null));
         sale = sales.save(sale);
 
-        SaleItem si = new SaleItem();
-        si.setSale(sale); si.setJewelleryItem(item); si.setTagNo(item.getTag().getTagNo());
-        si.setGrossWeight(gross); si.setStoneWeight(stone); si.setNetWeight(net);
-        si.setPurity(item.getPurity().getName()); si.setGoldRate(n(r.goldRate())); si.setWastageValue(wastage);
-        si.setMakingCharge(n(r.makingCharge())); si.setStoneCharge(n(r.stoneCharge())); si.setOtherCharge(n(r.otherCharge()));
-        si.setGst(gst); si.setTotal(total); saleItems.save(si);
+        for (PreparedLine line : lines) {
+            BigDecimal lineGrossWithGst = line.lineSubtotal().multiply(BigDecimal.valueOf(100).add(gstPercent)).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+            BigDecimal allocatedDiscount = grossInvoice.compareTo(BigDecimal.ZERO) > 0
+                    ? discount.multiply(lineGrossWithGst).divide(grossInvoice, 3, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            BigDecimal lineGst = line.lineSubtotal().multiply(gstPercent).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+            BigDecimal lineTotal = lineGrossWithGst.subtract(allocatedDiscount).max(BigDecimal.ZERO);
 
-        item.setStatus("SOLD"); items.save(item);
-        Stock stock = stocks.findByCompanyId(ctx.company().getId()).stream()
-                .filter(s -> s.getBranch()!=null && Objects.equals(s.getBranch().getId(), ctx.branch().getId()))
-                .filter(s -> s.getJewelleryItem()!=null && Objects.equals(s.getJewelleryItem().getId(), item.getId()))
-                .findFirst().orElse(null);
-        if (stock != null) { stock.setStatus("SOLD"); stocks.save(stock); }
-        StockMovement movement = new StockMovement();
-        movement.setCompany(ctx.company()); movement.setBranch(ctx.branch()); movement.setJewelleryItem(item);
-        movement.setMovementType("SALE"); movement.setQuantity(BigDecimal.ONE); movement.setReferenceType("SALE"); movement.setReferenceId(sale.getId());
-        movement.setMovementDate(sale.getSaleDate()); movement.setCreatedBy(users.findById(me.getUserId()).orElse(null));
-        movements.save(movement);
+            SaleItem si = new SaleItem();
+            si.setSale(sale);
+            si.setJewelleryItem(line.item());
+            si.setTagNo(line.item().getTag().getTagNo());
+            si.setGrossWeight(line.gross());
+            si.setStoneWeight(line.stone());
+            si.setNetWeight(line.net());
+            si.setPurity(line.item().getPurity().getName());
+            si.setGoldRate(line.rate());
+            si.setWastageValue(line.wastage());
+            si.setMakingCharge(n(line.request().makingCharge()));
+            si.setStoneCharge(n(line.request().stoneCharge()));
+            si.setOtherCharge(n(line.request().otherCharge()));
+            si.setGst(lineGst);
+            si.setTotal(lineTotal);
+            saleItems.save(si);
 
-        if (r.paymentAmount() != null && r.paymentAmount().compareTo(BigDecimal.ZERO) > 0) {
-            Payment p = new Payment(); p.setCompany(ctx.company()); p.setBranch(ctx.branch()); p.setCustomer(customer); p.setSale(sale);
-            p.setPaymentNo(r.paymentNo() == null || r.paymentNo().isBlank() ? "PAY-" + System.currentTimeMillis() : r.paymentNo());
-            p.setPaymentType("RECEIPT"); p.setPaymentMode(r.paymentMode() == null ? "CASH" : r.paymentMode()); p.setAmount(r.paymentAmount());
-            p.setPaymentDate(sale.getSaleDate()); p.setCreatedBy(users.findById(me.getUserId()).orElse(null)); payments.save(p);
-            sale.setPaymentStatus(r.paymentAmount().compareTo(total) >= 0 ? "PAID" : "PARTIAL"); sales.save(sale);
+            line.item().setStatus("SOLD");
+            items.save(line.item());
+            Stock stock = stocks.findByCompanyId(ctx.company().getId()).stream()
+                    .filter(s -> s.getBranch() != null && Objects.equals(s.getBranch().getId(), ctx.branch().getId()))
+                    .filter(s -> s.getJewelleryItem() != null && Objects.equals(s.getJewelleryItem().getId(), line.item().getId()))
+                    .findFirst().orElse(null);
+            if (stock != null) { stock.setStatus("SOLD"); stocks.save(stock); }
+
+            StockMovement movement = new StockMovement();
+            movement.setCompany(ctx.company()); movement.setBranch(ctx.branch()); movement.setJewelleryItem(line.item());
+            movement.setMovementType("SALE"); movement.setQuantity(BigDecimal.ONE); movement.setReferenceType("SALE"); movement.setReferenceId(sale.getId());
+            movement.setMovementDate(sale.getSaleDate()); movement.setCreatedBy(users.findById(me.getUserId()).orElse(null));
+            movements.save(movement);
         }
-        audit.log(me, "CREATE", "SALE", sale.getId(), null, Map.of("invoiceNo",sale.getInvoiceNo(),"total",total,"itemId",item.getId()));
-        return Map.of("id",sale.getId(),"invoiceNo",sale.getInvoiceNo(),"subtotal",subtotal,"gst",gst,"total",total,"paymentStatus",sale.getPaymentStatus());
+
+        if (paymentAmount.compareTo(BigDecimal.ZERO) > 0) {
+            Payment p = new Payment();
+            p.setCompany(ctx.company()); p.setBranch(ctx.branch()); p.setCustomer(customer); p.setSale(sale);
+            p.setPaymentNo(r.paymentNo() == null || r.paymentNo().isBlank() ? "PAY-" + System.currentTimeMillis() : r.paymentNo());
+            p.setPaymentType("RECEIPT"); p.setPaymentMode(r.paymentMode() == null ? "CASH" : r.paymentMode()); p.setAmount(paymentAmount);
+            p.setPaymentDate(sale.getSaleDate()); p.setCreatedBy(users.findById(me.getUserId()).orElse(null)); payments.save(p);
+        }
+
+        audit.log(me, "CREATE", "SALE", sale.getId(), null, Map.of("invoiceNo", sale.getInvoiceNo(), "total", total, "itemCount", lines.size()));
+        Map<String,Object> response = new LinkedHashMap<>();
+        response.put("id", sale.getId());
+        response.put("invoiceNo", sale.getInvoiceNo());
+        response.put("itemCount", lines.size());
+        response.put("goldValue", lines.stream().map(PreparedLine::gold).reduce(BigDecimal.ZERO, BigDecimal::add));
+        response.put("wastageValue", lines.stream().map(PreparedLine::wastage).reduce(BigDecimal.ZERO, BigDecimal::add));
+        response.put("subtotal", subtotal);
+        response.put("gst", gst);
+        response.put("discount", discount);
+        response.put("total", total);
+        response.put("paymentStatus", sale.getPaymentStatus());
+        return response;
+    }
+
+    public Map<String,Object> calculate(List<ItemRequest> itemRequests, BigDecimal goldRate, BigDecimal gstPercent, BigDecimal discount) {
+        if (itemRequests == null || itemRequests.isEmpty()) throw bad("At least one jewellery item is required");
+        BigDecimal subtotal = BigDecimal.ZERO, goldValue = BigDecimal.ZERO, wastageValue = BigDecimal.ZERO;
+        BigDecimal commonGoldRate=n(goldRate);
+        for (ItemRequest r : itemRequests) {
+            BigDecimal gross=n(r.grossWeight()), stone=n(r.stoneWeight()), net=r.netWeight()==null?gross.subtract(stone):n(r.netWeight());
+            BigDecimal effectiveGoldRate=commonGoldRate.compareTo(BigDecimal.ZERO)>0?commonGoldRate:n(r.goldRate());
+            if(effectiveGoldRate.compareTo(BigDecimal.ZERO)<=0) throw bad("Gold rate is required");
+            BigDecimal gold=net.multiply(effectiveGoldRate);
+            BigDecimal wastage=gold.multiply(n(r.wastagePercent())).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
+            goldValue=goldValue.add(gold); wastageValue=wastageValue.add(wastage);
+            subtotal=subtotal.add(gold).add(wastage).add(n(r.makingCharge())).add(n(r.stoneCharge())).add(n(r.otherCharge()));
+        }
+        BigDecimal gst=subtotal.multiply(n(gstPercent)).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
+        BigDecimal safeDiscount=n(discount).max(BigDecimal.ZERO).min(subtotal.add(gst));
+        BigDecimal total=subtotal.add(gst).subtract(safeDiscount).max(BigDecimal.ZERO);
+        Map<String,Object> out=new LinkedHashMap<>();
+        out.put("goldValue",goldValue);out.put("wastageValue",wastageValue);out.put("subtotal",subtotal);out.put("gst",gst);out.put("discount",safeDiscount);out.put("total",total);out.put("itemCount",itemRequests.size());
+        return out;
     }
 
     @Transactional
@@ -118,5 +208,7 @@ public class JewelleryBillingService {
     private ResponseStatusException bad(String x){return new ResponseStatusException(HttpStatus.BAD_REQUEST,x);}
     private ResponseStatusException forbidden(String x){return new ResponseStatusException(HttpStatus.FORBIDDEN,x);}
     private record Context(Company company, Branch branch){}
-    public record Request(Long customerId, Long jewelleryItemId, String invoiceNo, LocalDate saleDate, BigDecimal grossWeight, BigDecimal stoneWeight, BigDecimal netWeight, BigDecimal goldRate, BigDecimal wastagePercent, BigDecimal makingCharge, BigDecimal stoneCharge, BigDecimal otherCharge, BigDecimal gstPercent, BigDecimal discount, BigDecimal paymentAmount, String paymentMode, String paymentNo){}
+    private record PreparedLine(ItemRequest request, JewelleryItem item, BigDecimal gross, BigDecimal stone, BigDecimal net, BigDecimal rate, BigDecimal gold, BigDecimal wastage, BigDecimal lineSubtotal){}
+    public record ItemRequest(Long jewelleryItemId, BigDecimal grossWeight, BigDecimal stoneWeight, BigDecimal netWeight, BigDecimal goldRate, BigDecimal wastagePercent, BigDecimal makingCharge, BigDecimal stoneCharge, BigDecimal otherCharge){}
+    public record Request(Long customerId, List<ItemRequest> items, String invoiceNo, LocalDate saleDate, BigDecimal goldRate, BigDecimal gstPercent, BigDecimal discount, BigDecimal paymentAmount, String paymentMode, String paymentNo){}
 }
