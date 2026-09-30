@@ -43,7 +43,7 @@ export default function GoldRatesModule({ready,onNotice}:{ready:boolean;onNotice
   };
 
   const useMarket=()=>{
-    const next:any={};marketRates.forEach(x=>{if(x.karat)next[x.karat]=x.ratePerGram;});
+    const next:any={};marketRates.forEach((x:any)=>{if(x.karat)next[x.karat]=x.ratePerGram;});
     setF((v:any)=>({...v,rates:{...v.rates,...next},rateDate:market.date||today()}));
     onNotice('Current market reference rates loaded into the form.');
   };
