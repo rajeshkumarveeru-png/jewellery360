@@ -77,6 +77,7 @@ export const me=()=>api.get('/users/me');
 
 export const users=(search='')=>api.get('/users',{params: search.trim() ? {search:search.trim()} : undefined});
 export const createUser=(x:any)=>api.post('/users',x);
+export const updateUser=(id:number,x:any)=>api.put(`/users/${id}`,x);
 export const enableUser=(id:number)=>api.post(`/users/${id}/enable`);
 
 export const approvals=()=>api.get('/approvals/pending');
