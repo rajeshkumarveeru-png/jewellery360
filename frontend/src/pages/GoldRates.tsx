@@ -1,165 +1,957 @@
-import {FormEvent, useEffect, useMemo, useState} from 'react';
-import {domainGoldRates, domainPurities, createDomainGoldRate, headerGoldRates} from '../api';
-import {Empty, Table} from '../shared/ui';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  domainGoldRates,
+  domainPurities,
+  createDomainGoldRate,
+  headerGoldRates,
+} from '../api';
+import { Empty, Table } from '../shared/ui';
 import './GoldRates.css';
 
-const localToday = () => {
+type GoldRateRow = {
+  karat: string;
+  ratePerGram: number;
+  [key: string]: unknown;
+};
+
+type PurityRow = {
+  id: number | string;
+  name?: string;
+  karat?: string;
+  [key: string]: unknown;
+};
+
+type SavedGoldRate = {
+  id: number | string;
+  purity?: {
+    id?: number | string;
+    name?: string;
+    karat?: string;
+  };
+  purityId?: number | string;
+  karat?: string;
+  ratePerGram?: number | string;
+  rateDate?: string;
+  source?: string;
+  active?: boolean;
+  [key: string]: unknown;
+};
+
+type MarketResponse = {
+  marketRates?: unknown[];
+  rates?: unknown[];
+  date?: string;
+  rateDate?: string;
+  marketSource?: string;
+  source?: string;
+  data?: {
+    marketRates?: unknown[];
+    rates?: unknown[];
+    date?: string;
+    rateDate?: string;
+    marketSource?: string;
+    source?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+type GoldRateForm = {
+  rateDate: string;
+  rates: Record<string, string | number>;
+};
+
+const localToday = (): string => {
   const d = new Date();
+
   const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
   return `${y}-${m}-${day}`;
 };
 
-const toKarat = (value:any) => {
-  const raw=String(value??'').toUpperCase();
-  const match=raw.match(/(24|22|18|14)/);
+const toKarat = (value: unknown): string => {
+  const raw = String(value ?? '').toUpperCase().trim();
+
+  const match = raw.match(/(24|22|18|14)/);
+
   return match ? `${match[1]}K` : raw;
 };
 
-const normalizeRateRows = (value:any):any[] => {
-  const source=Array.isArray(value)
-    ? value
-    : Array.isArray(value?.marketRates) ? value.marketRates
-    : Array.isArray(value?.rates) ? value.rates
-    : Array.isArray(value?.data?.marketRates) ? value.data.marketRates
-    : Array.isArray(value?.data?.rates) ? value.data.rates
-    : [];
-  return source.map((x:any)=>({
-    ...x,
-    karat:toKarat(x?.karat ?? x?.purity ?? x?.goldKarat ?? x?.name),
-    ratePerGram:Number(x?.ratePerGram ?? x?.rate ?? x?.pricePerGram ?? x?.price ?? 0)
-  })).filter(x=>x.karat && x.ratePerGram>0);
+const normalizeRateRows = (value: unknown): GoldRateRow[] => {
+  const input = value as MarketResponse | unknown[] | null | undefined;
+
+  let source: unknown[] = [];
+
+  if (Array.isArray(input)) {
+    source = input;
+  } else if (input && typeof input === 'object') {
+    const obj = input as MarketResponse;
+
+    if (Array.isArray(obj.marketRates)) {
+      source = obj.marketRates;
+    } else if (Array.isArray(obj.rates)) {
+      source = obj.rates;
+    } else if (Array.isArray(obj.data?.marketRates)) {
+      source = obj.data.marketRates;
+    } else if (Array.isArray(obj.data?.rates)) {
+      source = obj.data.rates;
+    }
+  }
+
+  return source
+      .map((item: unknown): GoldRateRow => {
+        const x =
+            item !== null && typeof item === 'object'
+                ? (item as Record<string, unknown>)
+                : {};
+
+        return {
+          ...x,
+
+          karat: toKarat(
+              x.karat ??
+              x.purity ??
+              x.goldKarat ??
+              x.name ??
+              x.purityName
+          ),
+
+          ratePerGram: Number(
+              x.ratePerGram ??
+              x.rate ??
+              x.pricePerGram ??
+              x.price ??
+              x.value ??
+              0
+          ),
+        };
+      })
+      .filter(
+          (x: GoldRateRow): boolean =>
+              Boolean(x.karat) && x.ratePerGram > 0
+      );
 };
 
-const extractDate=(value:any)=>value?.date||value?.rateDate||value?.data?.date||value?.data?.rateDate||'';
-const extractSource=(value:any)=>value?.marketSource||value?.source||value?.data?.marketSource||value?.data?.source||'GoodReturns - Cuddalore';
+const extractDate = (value: unknown): string => {
+  if (!value || typeof value !== 'object') {
+    return '';
+  }
 
-export default function GoldRatesModule({ready,onNotice}:{ready:boolean;onNotice:(x:string)=>void}){
-  const [rows,setRows]=useState<any[]>([]);
-  const [purities,setPurities]=useState<any[]>([]);
-  const [market,setMarket]=useState<any>({rates:[]});
-  const [marketError,setMarketError]=useState(false);
-  const [f,setF]=useState<any>({rateDate:localToday(),rates:{}});
+  const obj = value as MarketResponse;
 
-  const load=async()=>{
-    if(!ready){setRows([]);setPurities([]);setMarket({rates:[]});return;}
+  return (
+      obj.date ||
+      obj.rateDate ||
+      obj.data?.date ||
+      obj.data?.rateDate ||
+      ''
+  );
+};
+
+const extractSource = (value: unknown): string => {
+  if (!value || typeof value !== 'object') {
+    return 'GoodReturns - Cuddalore';
+  }
+
+  const obj = value as MarketResponse;
+
+  return (
+      obj.marketSource ||
+      obj.source ||
+      obj.data?.marketSource ||
+      obj.data?.source ||
+      'GoodReturns - Cuddalore'
+  );
+};
+
+const normalizeSavedRows = (value: unknown): SavedGoldRate[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value as SavedGoldRate[];
+};
+
+const getSavedRateDate = (row: SavedGoldRate): string => {
+  return String(row.rateDate ?? '');
+};
+
+const getSavedKarat = (row: SavedGoldRate): string => {
+  return toKarat(
+      row.purity?.karat ??
+      row.purity?.name ??
+      row.karat
+  );
+};
+
+const getSavedRate = (row: SavedGoldRate): number => {
+  return Number(row.ratePerGram ?? 0);
+};
+
+export default function GoldRatesModule({
+                                          ready,
+                                          onNotice,
+                                        }: {
+  ready: boolean;
+  onNotice: (message: string) => void;
+}) {
+  const [rows, setRows] = useState<SavedGoldRate[]>([]);
+  const [purities, setPurities] = useState<PurityRow[]>([]);
+
+  const [market, setMarket] = useState<MarketResponse>({
+    marketRates: [],
+  });
+
+  const [marketError, setMarketError] = useState<boolean>(false);
+
+  const [f, setF] = useState<GoldRateForm>({
+    rateDate: localToday(),
+    rates: {},
+  });
+
+  const load = async (): Promise<void> => {
+    if (!ready) {
+      setRows([]);
+      setPurities([]);
+      setMarket({
+        marketRates: [],
+        date: localToday(),
+        source: 'GoodReturns - Cuddalore',
+      });
+      setMarketError(false);
+      return;
+    }
+
     setMarketError(false);
-    const [ratesResult,puritiesResult,marketResult]=await Promise.allSettled([
-      domainGoldRates(),domainPurities(),headerGoldRates()
+
+    const [
+      ratesResult,
+      puritiesResult,
+      marketResult,
+    ] = await Promise.allSettled([
+      domainGoldRates(),
+      domainPurities(),
+      headerGoldRates(),
     ]);
 
-    let saved:any[]=[];
-    if(ratesResult.status==='fulfilled'){
-      saved=Array.isArray(ratesResult.value.data)?ratesResult.value.data:[];
+    // ---------------------------------------------------------
+    // Saved PostgreSQL gold rates
+    // ---------------------------------------------------------
+
+    let saved: SavedGoldRate[] = [];
+
+    if (ratesResult.status === 'fulfilled') {
+      saved = normalizeSavedRows(ratesResult.value.data);
       setRows(saved);
-    }else{
+    } else {
       setRows([]);
     }
-    if(puritiesResult.status==='fulfilled'){
-      setPurities(Array.isArray(puritiesResult.value.data)?puritiesResult.value.data:[]);
-    }else{
+
+    // ---------------------------------------------------------
+    // Purities
+    // ---------------------------------------------------------
+
+    if (puritiesResult.status === 'fulfilled') {
+      const purityData = Array.isArray(
+          puritiesResult.value.data
+      )
+          ? (puritiesResult.value.data as PurityRow[])
+          : [];
+
+      setPurities(purityData);
+    } else {
       setPurities([]);
     }
 
-    if(marketResult.status==='fulfilled'){
-      const raw=marketResult.value.data||{};
-      const normalized=normalizeRateRows(raw);
+    // ---------------------------------------------------------
+    // Live market rate
+    // ---------------------------------------------------------
+
+    let live: GoldRateRow[] = [];
+
+    if (marketResult.status === 'fulfilled') {
+      const raw = marketResult.value.data as unknown;
+
+      live = normalizeRateRows(raw);
+
       setMarket({
-        ...raw,
-        marketRates:normalized,
-        date:extractDate(raw)||localToday(),
-        source:extractSource(raw)
+        ...(raw && typeof raw === 'object'
+            ? (raw as MarketResponse)
+            : {}),
+
+        marketRates: live,
+
+        date:
+            extractDate(raw) ||
+            localToday(),
+
+        source:
+            extractSource(raw),
       });
-      if(!normalized.length) setMarketError(true);
-    }else{
-      setMarket({rates:[]});
+
+      if (!live.length) {
+        setMarketError(true);
+      }
+    } else {
+      setMarket({
+        marketRates: [],
+        date: localToday(),
+        source: 'GoodReturns - Cuddalore',
+      });
+
       setMarketError(true);
     }
 
-    // If the live market service is unavailable, still surface the latest database
-    // gold rates instead of leaving the screen blank. These are clearly labelled as
-    // saved database rates, not as a live market quote.
-    const live = marketResult.status==='fulfilled' ? normalizeRateRows(marketResult.value.data) : [];
-    if(!live.length && saved.length){
-      const latestByKarat:any={};
-      [...saved].sort((a:any,b:any)=>String(b.rateDate||'').localeCompare(String(a.rateDate||''))).forEach((x:any)=>{
-        const k=toKarat(x?.purity?.karat ?? x?.purity?.name ?? x?.karat);
-        if(k && Number(x.ratePerGram)>0 && !latestByKarat[k]) latestByKarat[k]={karat:k,ratePerGram:Number(x.ratePerGram)};
-      });
-      const fallback=Object.values(latestByKarat);
-      if(fallback.length) setMarket({marketRates:fallback,date:String(saved[0]?.rateDate||localToday()),source:'Saved PostgreSQL GoldRate'});
-    }
+    // ---------------------------------------------------------
+    // PostgreSQL fallback
+    //
+    // If the live market feed is unavailable but we have saved
+    // rates, show the latest saved rate clearly as fallback.
+    // ---------------------------------------------------------
 
-    // Populate the entry form from the live market response only. Database fallback
-    // is intentionally not copied into the form because it is not a live quote.
-    if(live.length){
-      const next:any={};
-      live.forEach((x:any)=>{if(x.karat)next[x.karat]=x.ratePerGram;});
-      setF((v:any)=>({...v,rates:{...next,...v.rates}}));
-    }
-  };
+    if (!live.length && saved.length > 0) {
+      const latestByKarat: Record<string, GoldRateRow> = {};
 
-  useEffect(()=>{void load();},[ready]);
+      const sortedSaved = [...saved].sort(
+          (
+              a: SavedGoldRate,
+              b: SavedGoldRate
+          ): number =>
+              getSavedRateDate(b).localeCompare(
+                  getSavedRateDate(a)
+              )
+      );
 
-  const purityByKarat=useMemo(()=>{
-    const m:any={};
-    purities.forEach(x=>{
-      const k=toKarat(x.karat||x.name);
-      if(k)m[k]=x;
-    });
-    return m;
-  },[purities]);
+      sortedSaved.forEach(
+          (row: SavedGoldRate): void => {
+            const karat = getSavedKarat(row);
+            const rate = getSavedRate(row);
 
-  const marketRates=normalizeRateRows(market);
-  const liveMarket=marketRates.length>0 && !String(market?.source||'').includes('Saved PostgreSQL');
+            if (
+                karat &&
+                rate > 0 &&
+                !latestByKarat[karat]
+            ) {
+              latestByKarat[karat] = {
+                karat,
+                ratePerGram: rate,
+              };
+            }
+          }
+      );
 
-  const save=async(e:FormEvent)=>{
-    e.preventDefault();
-    if(!ready){onNotice('Select company and branch context first.');return;}
-    try{
-      const entries=Object.entries(f.rates||{}).filter(([,v])=>Number(v)>0);
-      if(!entries.length){onNotice('Enter at least one gold rate.');return;}
-      for(const [karat,value] of entries){
-        const purity=purityByKarat[toKarat(karat)];
-        if(!purity){onNotice(`Purity ${karat} is not configured.`);return;}
-        await createDomainGoldRate({purityId:purity.id,rateDate:f.rateDate,ratePerGram:Number(value),source:'Manual / Jewellery360',active:true});
+      const fallback: GoldRateRow[] =
+          Object.values(latestByKarat);
+
+      if (fallback.length > 0) {
+        const latestSavedDate =
+            sortedSaved[0]?.rateDate ||
+            localToday();
+
+        setMarket({
+          marketRates: fallback,
+          date: String(latestSavedDate),
+          source: 'Saved PostgreSQL GoldRate',
+        });
+
+        // We have data to display, even though the live
+        // market service is unavailable.
+        setMarketError(false);
       }
-      onNotice('Gold rates saved to PostgreSQL.');
+    }
+
+    // ---------------------------------------------------------
+    // Populate form ONLY from live market data
+    // ---------------------------------------------------------
+
+    if (live.length > 0) {
+      const next: Record<string, number> = {};
+
+      live.forEach(
+          (row: GoldRateRow): void => {
+            if (row.karat) {
+              next[row.karat] = row.ratePerGram;
+            }
+          }
+      );
+
+      setF(
+          (
+              previous: GoldRateForm
+          ): GoldRateForm => ({
+            ...previous,
+
+            rates: {
+              ...next,
+              ...previous.rates,
+            },
+
+            rateDate:
+                extractDate(
+                    marketResult.status === 'fulfilled'
+                        ? marketResult.value.data
+                        : undefined
+                ) || previous.rateDate,
+          })
+      );
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, [ready]);
+
+  // -----------------------------------------------------------
+  // Purity lookup
+  // -----------------------------------------------------------
+
+  const purityByKarat = useMemo(
+      (): Record<string, PurityRow> => {
+        const result: Record<string, PurityRow> = {};
+
+        purities.forEach(
+            (purity: PurityRow): void => {
+              const karat = toKarat(
+                  purity.karat ||
+                  purity.name
+              );
+
+              if (karat) {
+                result[karat] = purity;
+              }
+            }
+        );
+
+        return result;
+      },
+      [purities]
+  );
+
+  // -----------------------------------------------------------
+  // Current market rates
+  // -----------------------------------------------------------
+
+  const marketRates: GoldRateRow[] =
+      normalizeRateRows(market);
+
+  const liveMarket: boolean =
+      marketRates.length > 0 &&
+      !String(
+          market.source || ''
+      ).includes(
+          'Saved PostgreSQL'
+      );
+
+  // -----------------------------------------------------------
+  // Save manual gold rates
+  // -----------------------------------------------------------
+
+  const save = async (
+      e: FormEvent
+  ): Promise<void> => {
+    e.preventDefault();
+
+    if (!ready) {
+      onNotice(
+          'Select company and branch context first.'
+      );
+      return;
+    }
+
+    try {
+      const entries = Object.entries(
+          f.rates || {}
+      ).filter(
+          (
+              [, value]: [
+                string,
+                    string | number
+              ]
+          ): boolean =>
+              Number(value) > 0
+      );
+
+      if (!entries.length) {
+        onNotice(
+            'Enter at least one gold rate.'
+        );
+        return;
+      }
+
+      for (
+          const [
+            karat,
+            value,
+          ] of entries
+          ) {
+        const purity =
+            purityByKarat[
+                toKarat(karat)
+                ];
+
+        if (!purity) {
+          onNotice(
+              `Purity ${karat} is not configured.`
+          );
+          return;
+        }
+
+        await createDomainGoldRate({
+          purityId: purity.id,
+          rateDate: f.rateDate,
+          ratePerGram: Number(value),
+          source:
+              'Manual / Jewellery360',
+          active: true,
+        });
+      }
+
+      onNotice(
+          'Gold rates saved to PostgreSQL.'
+      );
+
       await load();
-    }catch(e:any){onNotice(e?.response?.data?.message||'Unable to save gold rates');}
+    } catch (error: unknown) {
+      const message =
+          error &&
+          typeof error === 'object' &&
+          'response' in error
+              ? (
+                  error as {
+                    response?: {
+                      data?: {
+                        message?: string;
+                      };
+                    };
+                  }
+              ).response?.data?.message
+              : undefined;
+
+      onNotice(
+          message ||
+          'Unable to save gold rates'
+      );
+    }
   };
 
-  const useMarket=()=>{
-    if(!liveMarket){onNotice('Live Cuddalore market rate is not available right now.');return;}
-    const next:any={};marketRates.forEach((x:any)=>{if(x.karat)next[x.karat]=x.ratePerGram;});
-    setF((v:any)=>({...v,rates:{...v.rates,...next},rateDate:market.date||localToday()}));
-    onNotice('Current Cuddalore market rates loaded into the form.');
+  // -----------------------------------------------------------
+  // Use current live market rate
+  // -----------------------------------------------------------
+
+  const useMarket = (): void => {
+    if (!liveMarket) {
+      onNotice(
+          'Live Cuddalore market rate is not available right now.'
+      );
+      return;
+    }
+
+    const next: Record<string, number> = {};
+
+    marketRates.forEach(
+        (row: GoldRateRow): void => {
+          if (row.karat) {
+            next[row.karat] =
+                row.ratePerGram;
+          }
+        }
+    );
+
+    setF(
+        (
+            previous: GoldRateForm
+        ): GoldRateForm => ({
+          ...previous,
+
+          rates: {
+            ...previous.rates,
+            ...next,
+          },
+
+          rateDate:
+              market.date ||
+              localToday(),
+        })
+    );
+
+    onNotice(
+        'Current Cuddalore market rates loaded into the form.'
+    );
   };
 
-  return <section className="menuPage menu-gold-rates-rates">
-    <div className="goldRateTopGrid">
-      <div className="panel goldRateFormPanel">
-        <div className="panelHead"><div><span className="eyebrow">GOLD & RATES</span><h2>Save Gold Rates</h2></div><span className="pill success">LIVE DATABASE</span></div>
-        <form className="formGrid" onSubmit={save}>
-          <input type="date" required value={f.rateDate} onChange={e=>setF({...f,rateDate:e.target.value})}/>
-          {['24K','22K','18K','14K'].map(k=><input key={k} type="number" step="0.001" placeholder={`${k} rate / g`} value={f.rates?.[k]??''} onChange={e=>setF({...f,rates:{...f.rates,[k]:e.target.value}})}/>) }
-          <div className="buttonRow"><button type="button" className="secondary" onClick={useMarket} disabled={!liveMarket}>Use current market rate</button><button className="primary">Save Gold Rates</button></div>
-        </form>
-      </div>
-      <div className="panel marketRatePanel">
-        <div className="panelHead"><div><span className="eyebrow">MARKET REFERENCE</span><h2>Today's Cuddalore rate</h2></div><div className="marketHeadActions"><span className="pill">{market.date||localToday()}</span><button type="button" className="ghost" onClick={load}>Refresh</button></div></div>
-        {marketRates.length?<>
-          <div className="marketRateCards">{marketRates.map((x:any)=><div className="marketRateCard" key={x.karat}><span>{x.karat}</span><strong>₹{Number(x.ratePerGram).toLocaleString('en-IN',{maximumFractionDigits:2})}</strong><small>per gram</small></div>)}</div>
-          <div className={`marketAvailability ${liveMarket?'live':'fallback'}`}>{liveMarket?'● Live market reference':'● Latest saved PostgreSQL rate — market feed unavailable'}</div>
-        </>:<Empty text={marketError?'Cuddalore market rate could not be fetched from the configured market service. Check the backend market-rate endpoint / external source.':'Market rate temporarily unavailable.'}/>} 
-        <small className="marketSource">Indicative reference only · {market.source||'GoodReturns - Cuddalore'}</small>
-      </div>
-    </div>
-    <div className="panel savedRatesPanel">
-      <div className="panelHead"><div><span className="eyebrow">POSTGRESQL</span><h2>{rows.length} saved rate records</h2></div><button className="ghost" onClick={load}>Refresh</button></div>
-      <Table><thead><tr><th>Purity</th><th>Rate / g</th><th>Rate / 10g</th><th>Date</th><th>Source</th><th>Status</th></tr></thead><tbody>{rows.map((x:any)=><tr key={x.id}><td><b>{x.purity?.name||x.purity?.karat||'—'}</b></td><td>₹{Number(x.ratePerGram||0).toLocaleString('en-IN',{maximumFractionDigits:3})}</td><td>₹{(Number(x.ratePerGram||0)*10).toLocaleString('en-IN',{maximumFractionDigits:3})}</td><td>{x.rateDate}</td><td>{x.source||'—'}</td><td><span className="pill success">{x.active?'ACTIVE':'INACTIVE'}</span></td></tr>)}</tbody></Table>
-      {!rows.length&&<Empty text="No saved gold-rate records yet. Save a rate above to create a real PostgreSQL GoldRate record."/>}
-    </div>
-  </section>;
+  return (
+      <section className="menuPage menu-gold-rates-rates">
+
+        {/* =====================================================
+          TOP GRID
+      ===================================================== */}
+
+        <div className="goldRateTopGrid">
+
+          {/* ===================================================
+            SAVE GOLD RATES
+        =================================================== */}
+
+          <div className="panel goldRateFormPanel">
+
+            <div className="panelHead">
+
+              <div>
+              <span className="eyebrow">
+                GOLD & RATES
+              </span>
+
+                <h2>
+                  Save Gold Rates
+                </h2>
+              </div>
+
+              <span className="pill success">
+              LIVE DATABASE
+            </span>
+
+            </div>
+
+            <form
+                className="formGrid"
+                onSubmit={save}
+            >
+
+              {/* Date */}
+
+              <input
+                  type="date"
+                  required
+                  value={f.rateDate}
+                  onChange={(
+                      e
+                  ) =>
+                      setF(
+                          (
+                              previous: GoldRateForm
+                          ): GoldRateForm => ({
+                            ...previous,
+                            rateDate:
+                            e.target.value,
+                          })
+                      )
+                  }
+              />
+
+              {/* Gold rates */}
+
+              {[
+                '24K',
+                '22K',
+                '18K',
+                '14K',
+              ].map(
+                  (
+                      karat: string
+                  ) => (
+                      <input
+                          key={karat}
+                          type="number"
+                          step="0.001"
+                          placeholder={`${karat} rate / g`}
+                          value={
+                              f.rates?.[karat] ??
+                              ''
+                          }
+                          onChange={(
+                              e
+                          ) =>
+                              setF(
+                                  (
+                                      previous: GoldRateForm
+                                  ): GoldRateForm => ({
+                                    ...previous,
+
+                                    rates: {
+                                      ...previous.rates,
+                                      [karat]:
+                                      e.target.value,
+                                    },
+                                  })
+                              )
+                          }
+                      />
+                  )
+              )}
+
+              {/* Actions */}
+
+              <div className="buttonRow">
+
+                <button
+                    type="button"
+                    className="secondary"
+                    onClick={useMarket}
+                    disabled={!liveMarket}
+                >
+                  Use current market rate
+                </button>
+
+                <button
+                    type="submit"
+                    className="primary"
+                >
+                  Save Gold Rates
+                </button>
+
+              </div>
+
+            </form>
+          </div>
+
+          {/* ===================================================
+            MARKET RATE
+        =================================================== */}
+
+          <div className="panel marketRatePanel">
+
+            <div className="panelHead">
+
+              <div>
+              <span className="eyebrow">
+                MARKET REFERENCE
+              </span>
+
+                <h2>
+                  Today's Cuddalore rate
+                </h2>
+              </div>
+
+              <div className="marketHeadActions">
+
+              <span className="pill">
+                {market.date ||
+                    localToday()}
+              </span>
+
+                <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => void load()}
+                >
+                  Refresh
+                </button>
+
+              </div>
+
+            </div>
+
+            {marketRates.length > 0 ? (
+                <>
+                  <div className="marketRateCards">
+
+                    {marketRates.map(
+                        (
+                            row: GoldRateRow
+                        ) => (
+                            <div
+                                className="marketRateCard"
+                                key={row.karat}
+                            >
+
+                      <span>
+                        {row.karat}
+                      </span>
+
+                              <strong>
+                                ₹
+                                {Number(
+                                    row.ratePerGram
+                                ).toLocaleString(
+                                    'en-IN',
+                                    {
+                                      maximumFractionDigits: 2,
+                                    }
+                                )}
+                              </strong>
+
+                              <small>
+                                per gram
+                              </small>
+
+                            </div>
+                        )
+                    )}
+
+                  </div>
+
+                  <div
+                      className={`marketAvailability ${
+                          liveMarket
+                              ? 'live'
+                              : 'fallback'
+                      }`}
+                  >
+                    {liveMarket
+                        ? '● Live market reference'
+                        : '● Latest saved PostgreSQL rate — market feed unavailable'}
+                  </div>
+                </>
+            ) : (
+                <Empty
+                    text={
+                      marketError
+                          ? 'Cuddalore market rate could not be fetched from the configured market service. Check the backend market-rate endpoint / external source.'
+                          : 'Market rate temporarily unavailable.'
+                    }
+                />
+            )}
+
+            <small className="marketSource">
+              Indicative reference only ·{' '}
+              {market.source ||
+                  'GoodReturns - Cuddalore'}
+            </small>
+
+          </div>
+        </div>
+
+        {/* =====================================================
+          SAVED POSTGRESQL RATES
+      ===================================================== */}
+
+        <div className="panel savedRatesPanel">
+
+          <div className="panelHead">
+
+            <div>
+            <span className="eyebrow">
+              POSTGRESQL
+            </span>
+
+              <h2>
+                {rows.length} saved rate records
+              </h2>
+            </div>
+
+            <button
+                type="button"
+                className="ghost"
+                onClick={() => void load()}
+            >
+              Refresh
+            </button>
+
+          </div>
+
+          <Table>
+
+            <thead>
+            <tr>
+              <th>
+                Purity
+              </th>
+
+              <th>
+                Rate / g
+              </th>
+
+              <th>
+                Rate / 10g
+              </th>
+
+              <th>
+                Date
+              </th>
+
+              <th>
+                Source
+              </th>
+
+              <th>
+                Status
+              </th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            {rows.map(
+                (
+                    row: SavedGoldRate
+                ) => {
+
+                  const rate =
+                      getSavedRate(row);
+
+                  return (
+                      <tr
+                          key={row.id}
+                      >
+
+                        <td>
+                          <b>
+                            {row.purity?.name ||
+                                row.purity?.karat ||
+                                row.karat ||
+                                '—'}
+                          </b>
+                        </td>
+
+                        <td>
+                          ₹
+                          {rate.toLocaleString(
+                              'en-IN',
+                              {
+                                maximumFractionDigits: 3,
+                              }
+                          )}
+                        </td>
+
+                        <td>
+                          ₹
+                          {(
+                              rate * 10
+                          ).toLocaleString(
+                              'en-IN',
+                              {
+                                maximumFractionDigits: 3,
+                              }
+                          )}
+                        </td>
+
+                        <td>
+                          {row.rateDate ||
+                              '—'}
+                        </td>
+
+                        <td>
+                          {row.source ||
+                              '—'}
+                        </td>
+
+                        <td>
+                      <span className="pill success">
+                        {row.active
+                            ? 'ACTIVE'
+                            : 'INACTIVE'}
+                      </span>
+                        </td>
+
+                      </tr>
+                  );
+                }
+            )}
+
+            </tbody>
+
+          </Table>
+
+          {!rows.length && (
+              <Empty
+                  text="No saved gold-rate records yet. Save a rate above to create a real PostgreSQL GoldRate record."
+              />
+          )}
+
+        </div>
+
+      </section>
+  );
 }
