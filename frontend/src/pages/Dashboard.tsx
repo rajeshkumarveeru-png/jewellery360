@@ -77,12 +77,21 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
    return()=>window.removeEventListener('j360-menu-preferences-changed',refreshMenu);
  },[user.id,user.role,contextCompany]);
  useEffect(()=>{if(!menu.includes(tab))setTab(menu[0]||'Overview');},[menu,tab]);
+ useEffect(()=>{
+   const id=window.requestAnimationFrame(()=>{
+     const root=document.querySelector('.workspace');
+     const active=root?.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+     if(active && active.offsetParent!==null && document.activeElement===document.body) active.focus();
+   });
+   return()=>window.cancelAnimationFrame(id);
+ },[tab]);
  const selectCompany=(id:number|null)=>{setContextCompany(id);setContextBranch(null);if(id)localStorage.setItem('j360_context_company',String(id));else localStorage.removeItem('j360_context_company');localStorage.removeItem('j360_context_branch');};
  const selectBranch=(id:number|null)=>{setContextBranch(id);if(id)localStorage.setItem('j360_context_branch',String(id));else localStorage.removeItem('j360_context_branch');};
  const readyContext=user.role!=='APP_ADMIN'||!!contextCompany&&!!contextBranch;
  const refreshNotice=(s:string)=>{setNotice(s);window.setTimeout(()=>setNotice(''),3500);};
 
- return <div className="app" style={{background:c.bg,color:c.ink}}>
+ const moduleClass=`module-${tab.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}`;
+ return <div className={`app theme-${theme.toLowerCase()} ${moduleClass}`} style={{background:c.bg,color:c.ink}}>
   <aside><div className="sideBrand"><div className="sideLogo">J360</div><div><b>Jewellery360</b><small>{user.role.replaceAll('_',' ')}</small></div></div>
    <div className="nav">{menu.map((x:string)=><button key={x} className={tab===x?'active':''} onClick={()=>setTab(x)}><NavIcon name={x}/>{x}</button>)}</div>
    <button className="signout" onClick={logout}>↪ Sign out</button>

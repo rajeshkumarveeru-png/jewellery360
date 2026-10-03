@@ -250,3 +250,664 @@ td small,.approval small,.activity small{font-size:11px;color:#778391;line-heigh
 .authCard .registrationRoleNote{margin:0;padding:11px 12px;border:1px solid #eadcc2;border-radius:10px;background:#fbf6ea;color:#6e5a36;font-size:12px;line-height:1.5}
 .authCard .registrationRoleNote strong{color:#8b641f}
 .authCard .msgError{border:1px solid #ead0ca;background:#fff4f1;color:#963e34}
+
+
+/* =========================================================
+   Jewellery360 Ultra-Pro Enterprise Design System v3
+   Global tokens + glass surfaces + micro-interactions + module accents
+   ========================================================= */
+:root{
+  --j360-bg:#eef2f5;
+  --j360-surface:rgba(255,255,255,.78);
+  --j360-surface-strong:rgba(255,255,255,.92);
+  --j360-surface-soft:rgba(246,249,252,.72);
+  --j360-border:rgba(125,140,156,.22);
+  --j360-border-strong:rgba(125,140,156,.34);
+  --j360-text:#15202b;
+  --j360-text-2:#344252;
+  --j360-muted:#718092;
+  --j360-shadow:0 18px 55px rgba(24,35,47,.08);
+  --j360-shadow-hover:0 22px 65px rgba(24,35,47,.13);
+  --j360-radius:20px;
+  --j360-radius-sm:12px;
+  --j360-accent:#b8893e;
+  --j360-accent-2:#e0bb72;
+  --j360-accent-rgb:184,137,62;
+  --j360-success:#2f8a61;
+  --j360-danger:#c4544b;
+  --j360-focus:rgba(184,137,62,.22);
+  --j360-ease:cubic-bezier(.22,.8,.24,1);
+}
+
+/* Theme-specific tokens. The existing theme selector remains compatible. */
+.theme-luxury_gold{--j360-bg:#f4eee3;--j360-accent:#b8893e;--j360-accent-2:#e0bb72;--j360-accent-rgb:184,137,62}
+.theme-classic_ivory{--j360-bg:#faf7ef;--j360-accent:#8a6a3c;--j360-accent-2:#c9a86a;--j360-accent-rgb:138,106,60}
+.theme-modern_light{--j360-bg:#edf3f7;--j360-accent:#4779a8;--j360-accent-2:#7eb4df;--j360-accent-rgb:71,121,168}
+.theme-premium_dark{--j360-bg:#0e151d;--j360-surface:rgba(25,34,45,.72);--j360-surface-strong:rgba(29,40,52,.92);--j360-surface-soft:rgba(19,29,39,.76);--j360-border:rgba(255,255,255,.10);--j360-border-strong:rgba(255,255,255,.18);--j360-text:#f6f3ed;--j360-text-2:#d6dde5;--j360-muted:#96a4b2;--j360-shadow:0 20px 60px rgba(0,0,0,.26);--j360-shadow-hover:0 25px 75px rgba(0,0,0,.34)}
+
+/* Module identity: a small accent shift helps users orient themselves without recoloring the whole product. */
+.workspace.module-billing,.workspace.module-payments{--j360-accent:#2e8a68;--j360-accent-2:#76c9a7;--j360-accent-rgb:46,138,104}
+.workspace.module-jewellery,.workspace.module-inventory,.workspace.module-purchases{--j360-accent:#4779a8;--j360-accent-2:#86b8e1;--j360-accent-rgb:71,121,168}
+.workspace.module-customers,.workspace.module-services{--j360-accent:#7a61a8;--j360-accent-2:#b39cda;--j360-accent-rgb:122,97,168}
+.workspace.module-gold-rates,.workspace.module-old-gold{--j360-accent:#b8893e;--j360-accent-2:#e0bb72;--j360-accent-rgb:184,137,62}
+.workspace.module-reports,.workspace.module-audit-logs{--j360-accent:#4c7187;--j360-accent-2:#88b4c9;--j360-accent-rgb:76,113,135}
+.workspace.module-users,.workspace.module-branches,.workspace.module-companies,.workspace.module-approvals{--j360-accent:#a56b4c;--j360-accent-2:#d6a184;--j360-accent-rgb:165,107,76}
+.workspace.module-whatsapp{--j360-accent:#2f8b67;--j360-accent-2:#7bd0a8;--j360-accent-rgb:47,139,103}
+
+html{scroll-behavior:smooth}
+body{background:var(--j360-bg);color:var(--j360-text);transition:background .35s ease,color .35s ease}
+button,input,select,textarea{transition:border-color .2s ease,box-shadow .2s ease,background .2s ease,color .2s ease,transform .2s var(--j360-ease),filter .2s ease}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:0;box-shadow:0 0 0 3px var(--j360-focus),0 0 0 1px var(--j360-accent)!important}
+button:disabled{cursor:not-allowed;opacity:.55;transform:none!important}
+
+.app{background:var(--j360-bg)!important;color:var(--j360-text);transition:background .4s ease}
+.app aside{
+  background:linear-gradient(180deg,#0c1722 0%,#0a131c 55%,#0b1118 100%);
+  border-right:1px solid rgba(255,255,255,.08);
+  box-shadow:14px 0 45px rgba(10,18,27,.10);
+}
+.sideBrand{border-bottom-color:rgba(255,255,255,.09)!important}
+.sideLogo{position:relative;overflow:hidden;background:linear-gradient(145deg,var(--j360-accent-2),var(--j360-accent));box-shadow:0 12px 35px rgba(var(--j360-accent-rgb),.28)}
+.sideBrand b{letter-spacing:.01em}
+.nav button{position:relative;border:1px solid transparent;transition:all .22s var(--j360-ease)!important}
+.nav button:hover{transform:translateX(3px)!important;background:rgba(255,255,255,.07)!important}
+.nav button.active{background:linear-gradient(135deg,var(--j360-accent),color-mix(in srgb,var(--j360-accent) 72%,#111))!important;border-color:rgba(255,255,255,.24)!important;box-shadow:0 10px 30px rgba(var(--j360-accent-rgb),.28)!important}
+.nav button.active::after{content:"";position:absolute;right:8px;top:9px;bottom:9px;width:2px;border-radius:99px;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.8)}
+
+.workspace{position:relative;isolation:isolate;padding:30px 38px 70px;overflow:hidden}
+.workspace::before{content:"";position:absolute;z-index:-1;pointer-events:none;width:520px;height:520px;right:-240px;top:-180px;background:radial-gradient(circle,rgba(var(--j360-accent-rgb),.11),transparent 68%);filter:blur(5px)}
+.workspace>header{position:relative;z-index:2}
+.workspace header h1{color:var(--j360-text);font-weight:850}
+.workspace header .eyebrow{color:var(--j360-accent)}
+
+.headerTools{gap:10px}
+.headerTools select,.contextBadge{
+  border:1px solid var(--j360-border-strong)!important;
+  background:var(--j360-surface-strong)!important;
+  backdrop-filter:blur(18px) saturate(1.15);
+  -webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 8px 25px rgba(22,34,46,.07)!important;
+}
+.contextBadge{color:var(--j360-text-2)}
+
+.headerMarketGadget{
+  position:relative;
+  border:1px solid rgba(var(--j360-accent-rgb),.34)!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,250,239,.58))!important;
+  backdrop-filter:blur(22px) saturate(1.2);
+  -webkit-backdrop-filter:blur(22px) saturate(1.2);
+  box-shadow:0 18px 48px rgba(var(--j360-accent-rgb),.10)!important;
+}
+.headerMarketGadget::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.35) 45%,transparent 58%);transform:translateX(-120%);animation:ultra-sweep 5.5s ease-in-out infinite 1.5s;opacity:.6}
+.headerClock,.headerGold{position:relative;z-index:1}
+.headerGadgetIcon{box-shadow:0 8px 20px rgba(0,0,0,.16)!important}
+.headerGoldRates span b{color:var(--j360-accent)!important}
+
+.panel,.kpi,.heroPanel,.invoicePreview,.contextRequired,.barcodeScannerCard,.commonGoldRateField,.authCard{
+  position:relative;
+  overflow:hidden;
+}
+.panel,.kpi{
+  background:var(--j360-surface)!important;
+  border:1px solid var(--j360-border)!important;
+  box-shadow:var(--j360-shadow)!important;
+  backdrop-filter:blur(18px) saturate(1.08);
+  -webkit-backdrop-filter:blur(18px) saturate(1.08);
+  transition:transform .25s var(--j360-ease),box-shadow .25s ease,border-color .25s ease,background .25s ease;
+}
+.panel:hover{border-color:rgba(var(--j360-accent-rgb),.24)!important;box-shadow:var(--j360-shadow-hover)!important}
+.kpi:hover{transform:translateY(-3px);border-color:rgba(var(--j360-accent-rgb),.30)!important;box-shadow:var(--j360-shadow-hover)!important}
+.panel::before,.kpi::before,.heroPanel::before,.invoicePreview::before,.authCard::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(125deg,rgba(255,255,255,.18),transparent 26%,transparent 72%,rgba(var(--j360-accent-rgb),.045));opacity:.75
+}
+.panelHead,.formGrid,.panel>table,.panel>.tableWrap,.panel>p,.panel>h2,.panel>.eyebrow,.panel>.empty,.panel>.reportTabs,.panel>.userSearch,.panel>.setting,.panel>.roleRow,.panel>.menuPreferenceList,.panel>.settingsStatus,.panel>.waFormGrid,.panel>.settingsDefaults,.panel>button{position:relative;z-index:1}
+
+.heroPanel{border:1px solid rgba(255,255,255,.12)!important;box-shadow:0 24px 65px rgba(15,23,32,.18)!important}
+.heroPanel::after{content:"";position:absolute;top:-40%;left:-25%;width:24%;height:180%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);transform:rotate(18deg);animation:ultra-sweep 6s ease-in-out infinite 2s;pointer-events:none}
+
+.formGrid input,.formGrid select,.formGrid textarea,.authCard input,.authCard select,.userSearch input,.headerTools select{
+  background:rgba(255,255,255,.82)!important;
+  border-color:var(--j360-border-strong)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 3px 12px rgba(27,40,52,.035)!important;
+}
+.formGrid input:hover,.formGrid select:hover,.formGrid textarea:hover,.userSearch input:hover{border-color:rgba(var(--j360-accent-rgb),.38)!important}
+.formGrid input:focus,.formGrid select:focus,.formGrid textarea:focus,.userSearch input:focus{border-color:var(--j360-accent)!important;box-shadow:0 0 0 4px rgba(var(--j360-accent-rgb),.11),0 8px 24px rgba(var(--j360-accent-rgb),.08)!important}
+
+.primary,.panel button:not(.ghost),.approval button:not(.ghost),.reportTabs button.active,.settingsSave{
+  position:relative;isolation:isolate;overflow:hidden;
+  background:linear-gradient(135deg,var(--j360-accent),color-mix(in srgb,var(--j360-accent) 72%,#111))!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  box-shadow:0 10px 24px rgba(var(--j360-accent-rgb),.20)!important;
+  transition:transform .22s var(--j360-ease),box-shadow .22s ease,filter .22s ease!important;
+}
+.primary::after,.panel button:not(.ghost)::after,.approval button:not(.ghost)::after,.settingsSave::after,.reportTabs button.active::after{
+  content:"";position:absolute;z-index:-1;top:-70%;left:-35%;width:22%;height:240%;transform:rotate(20deg) translateX(-420%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.52),transparent);opacity:.85;animation:button-sweep 5.5s ease-in-out infinite 1.2s
+}
+.primary:hover,.panel button:not(.ghost):hover,.approval button:not(.ghost):hover,.settingsSave:hover,.reportTabs button.active:hover{transform:translateY(-2px)!important;box-shadow:0 15px 32px rgba(var(--j360-accent-rgb),.27)!important;filter:saturate(1.06) brightness(1.03)}
+.primary:active,.panel button:not(.ghost):active,.approval button:not(.ghost):active{transform:translateY(0)!important}
+.secondary{border-color:rgba(var(--j360-accent-rgb),.30)!important;background:rgba(var(--j360-accent-rgb),.07)!important;color:var(--j360-accent)!important}
+.secondary:hover{transform:translateY(-2px);background:rgba(var(--j360-accent-rgb),.12)!important}
+.ghost{position:relative;border-radius:10px!important}
+.ghost:hover{background:rgba(var(--j360-accent-rgb),.08)!important;color:var(--j360-accent)!important;transform:translateY(-1px)}
+
+/* Active/processing trace. Add class="is-processing" to any interactive surface when async work is in progress. */
+.is-processing{overflow:hidden!important;border-color:rgba(var(--j360-accent-rgb),.55)!important}
+.is-processing::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(90deg,transparent,var(--j360-accent),transparent);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:trace-border 1.25s linear infinite;pointer-events:none}
+
+.pill{background:rgba(var(--j360-accent-rgb),.08)!important;border-color:rgba(var(--j360-accent-rgb),.20)!important;color:var(--j360-accent)!important}
+.pill.success{background:rgba(47,138,97,.10)!important;border-color:rgba(47,138,97,.22)!important;color:#24714e!important}
+.empty{border-radius:14px}
+.empty div{color:var(--j360-accent)!important;text-shadow:0 0 20px rgba(var(--j360-accent-rgb),.24)}
+
+/* Tables become calmer and easier to scan. */
+thead th,th{background:rgba(var(--j360-accent-rgb),.055)!important;color:var(--j360-text-2)!important}
+tbody tr{transition:background .18s ease,transform .18s ease}
+tbody tr:hover td{background:rgba(var(--j360-accent-rgb),.045)!important}
+
+.toast{background:rgba(13,22,31,.92)!important;border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(18px);box-shadow:0 20px 55px rgba(0,0,0,.25)!important;animation:toast-in .35s var(--j360-ease)}
+.contextRequired{background:rgba(255,249,235,.72)!important;border-color:rgba(var(--j360-accent-rgb),.25)!important;backdrop-filter:blur(15px)}
+
+/* Billing deserves a calmer, task-first visual hierarchy. */
+.module-billing .billingForm{gap:14px}
+.module-billing .barcodeScannerCard{border:1px solid rgba(var(--j360-accent-rgb),.22)!important;background:linear-gradient(135deg,rgba(var(--j360-accent-rgb),.09),rgba(255,255,255,.72))!important;box-shadow:0 12px 30px rgba(var(--j360-accent-rgb),.08)!important}
+.module-billing .invoicePreview{border-color:rgba(255,255,255,.12)!important;box-shadow:0 24px 60px rgba(7,14,20,.20)!important}
+
+/* Mobile: keep the same visual system while making primary actions sticky/visible. */
+@media(max-width:820px){
+  .workspace{padding:20px 14px 48px}
+  .workspace>header{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+  .headerMarketGadget{min-width:0!important;width:100%!important}
+  .panel{border-radius:16px!important}
+  .panel:hover,.kpi:hover{transform:none}
+}
+@media(max-width:560px){
+  .workspace{padding:14px 10px 42px}
+  .panel{padding:16px!important}
+  .panelHead{margin-bottom:14px}
+  .formGrid{gap:10px}
+  .formGrid .primary,.formGrid .secondary,.userFormActions .primary,.userFormActions .secondary{min-height:48px}
+  .headerMarketGadget{position:relative}
+  .headerClock{flex-basis:132px!important}
+  .headerClock b{font-size:18px!important}
+  .headerGoldRates{gap:7px!important}
+  .headerGoldRates span{font-size:9px!important}
+  .headerGoldRates span b{font-size:14px!important}
+}
+
+@keyframes ultra-sweep{0%,62%{transform:translateX(-120%) rotate(18deg)}78%,100%{transform:translateX(560%) rotate(18deg)}}
+@keyframes button-sweep{0%,58%{transform:rotate(20deg) translateX(-420%)}72%,100%{transform:rotate(20deg) translateX(620%)}}
+@keyframes trace-border{to{transform:rotate(360deg)}}
+@keyframes toast-in{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition-duration:.01ms!important}}
+
+/* =========================================================
+   Ultra-Pro usability pass — Simple Counter UX
+   ========================================================= */
+.signout{
+  position:relative;
+  margin:18px 0 0;
+  min-height:46px!important;
+  width:100%;
+  justify-content:flex-start;
+  padding:10px 13px!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.035)!important;
+  color:#d2d8df!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+}
+.signout::before{content:'↪';display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:rgba(255,255,255,.08);color:#e1bc70;font-size:14px}
+.signout:hover{transform:translateY(-1px)!important;background:rgba(197,150,72,.12)!important;border-color:rgba(224,189,118,.28)!important;box-shadow:0 8px 22px rgba(0,0,0,.18)!important;color:#fff!important}
+.signout:active{transform:none!important}
+
+/* Avoid styling every button like a primary action. */
+.panel button.ghost,.panel button.modeToggle,.panel button.itemDetailsButton,.panel button.removeItemButton,
+.billingMainPanel button.secondary,.billingMainPanel button.cameraButton{box-shadow:none!important;filter:none!important}
+
+/* Simple billing counter */
+.billingSimpleMode .billingMainPanel{padding:22px}
+.billingTitleRow{align-items:flex-start!important}
+.billingSubtext{display:block;margin-top:4px;color:#7b8792;font-size:11px}
+.billingModeTools{display:flex;align-items:center;gap:8px}
+.modeToggle{
+  min-height:36px!important;padding:8px 12px!important;border-radius:10px!important;
+  border:1px solid #d7cbb8!important;background:#fffaf0!important;color:#76582b!important;
+  font-size:11px!important;font-weight:800!important;cursor:pointer;
+  transition:transform .18s ease,background .18s ease,border-color .18s ease!important;
+}
+.modeToggle:hover{transform:translateY(-1px);background:#f7edd9!important;border-color:#cda967!important}
+.billingQuickMeta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 2px 2px;color:#87909b;font-size:10px}
+.billingQuickMeta b{color:#3b4652;font-weight:800;margin-left:5px}
+.billingTwoColumn{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,.8fr);gap:10px}
+.billingTwoColumn .customerBillingField{grid-column:auto}
+.billingTwoColumn .commonGoldRateField{grid-column:auto;margin:0}
+.billingScannerSimple{grid-column:1/-1;min-height:70px;padding:12px 14px!important}
+.billingScannerSimple>div:first-child{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;min-width:230px!important}
+.billingStep{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#f2e5ca;color:#8b641f;font-size:12px;font-weight:900}
+.billingScannerSimple .barcodeScanRow{max-width:560px;min-width:0;display:block}
+.billingScannerSimple .barcodeScanRow input{min-height:42px}
+.simpleCart{box-shadow:none!important;border-color:#e3d8c6!important}
+.simpleCart .multiItemHead{padding:12px 14px;background:#fcf8ef}
+.simpleCart .invoiceItemRow{grid-template-columns:minmax(210px,1.2fr) minmax(190px,.8fr) auto;align-items:center;padding:12px 14px}
+.simpleItemCore{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.simpleItemCore label,.simpleAdvancedFields label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#756857}
+.simpleItemCore input{margin-top:4px}
+.simpleItemActions{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.itemDetailsButton{min-height:34px!important;padding:7px 10px!important;border:1px solid #d9cbb5!important;border-radius:9px!important;background:#fffaf1!important;color:#73572c!important;font-size:10px!important;font-weight:800!important}
+.itemDetailsButton:hover{background:#f7eddc!important;border-color:#c9a96f!important}
+.simpleAdvancedFields{grid-column:1/-1!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));padding-top:10px;border-top:1px dashed #e1d5c3;margin-top:2px}
+.simpleAdvancedFields input{margin-top:4px}
+.billingOptional{grid-column:1/-1;border:1px solid #e4dac9;border-radius:12px;background:#fffdf9}
+.billingOptional summary{cursor:pointer;padding:10px 13px;color:#6e5b3d;font-size:11px;font-weight:800;list-style:none}
+.billingOptional summary::-webkit-details-marker{display:none}
+.billingOptional summary::after{content:'＋';float:right;color:#a47a35}
+.billingOptional[open] summary::after{content:'−'}
+.billingOptionalGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:0 13px 13px}
+.billingActions{grid-column:1/-1;justify-content:flex-end;position:sticky;bottom:10px;z-index:12;padding:8px;background:rgba(255,253,249,.88);backdrop-filter:blur(12px);border:1px solid rgba(214,204,188,.8);border-radius:13px;box-shadow:0 10px 30px rgba(48,35,18,.10)}
+.calculateButton{min-width:150px}
+.createInvoiceButton{min-width:210px}
+.invoicePreview{top:14px!important}
+.invoicePreview .muted{max-width:300px}
+
+/* Simple jewellery master screen */
+.jewelleryCreatePanel .jewellerySimpleHint{display:block;color:#7c8791;font-size:11px;margin:-7px 0 14px;line-height:1.5}
+.jewelleryModeToggle{grid-column:1/-1;justify-self:start}
+.module-jewellery .reportTabs button{min-height:38px}
+.module-jewellery .reportTabs button.active{box-shadow:0 7px 18px rgba(var(--j360-accent-rgb),.14)!important}
+.module-jewellery .jewelleryCreatePanel .formGrid{max-width:680px}
+.module-jewellery .jewelleryCreatePanel input,.module-jewellery .jewelleryCreatePanel select,.module-jewellery .jewelleryCreatePanel textarea{min-height:44px}
+.module-jewellery .jewelleryCreatePanel .primary{max-width:260px}
+.module-jewellery .panel table{font-size:11px}
+
+@media(max-width:900px){
+ .billingTwoColumn{grid-template-columns:1fr}
+ .billingTwoColumn .customerBillingField,.billingTwoColumn .commonGoldRateField{grid-column:1/-1}
+ .simpleAdvancedFields{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .billingOptionalGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+ .billingSimpleMode .billingMainPanel{padding:14px}
+ .billingModeTools{width:100%;justify-content:space-between}
+ .billingScannerSimple>div:first-child{min-width:0!important}
+ .billingScannerSimple{gap:10px}
+ .billingScannerSimple .barcodeScanRow{max-width:none;display:block}
+ .billingScannerSimple .barcodeScanRow input{flex-basis:auto}
+ .billingScannerSimple .barcodeScanRow button{flex:none}
+ .simpleCart .invoiceItemRow{grid-template-columns:1fr}
+ .simpleItemCore{grid-template-columns:1fr 1fr}
+ .simpleItemActions{justify-content:stretch}
+ .simpleItemActions button{flex:1}
+ .simpleAdvancedFields{grid-template-columns:1fr 1fr}
+ .billingOptionalGrid{grid-template-columns:1fr}
+ .billingActions{position:sticky;bottom:6px;display:grid;grid-template-columns:1fr 1.35fr}
+ .calculateButton,.createInvoiceButton{min-width:0;width:100%}
+ .signout{font-size:0!important;justify-content:center;padding:8px!important}
+ .signout::before{margin:0}
+}
+
+/* Button hierarchy cleanup — never let utility buttons inherit primary gold styling. */
+.billingMainPanel .removeItemButton,
+.removeItemButton{
+  background:#fff5f2!important;
+  color:#a34737!important;
+  border:1px solid #e4c2b8!important;
+  box-shadow:none!important;
+}
+.billingMainPanel .removeItemButton:hover,
+.removeItemButton:hover{background:#fbe8e2!important;border-color:#d8a99c!important;color:#8d3326!important;transform:translateY(-1px)!important}
+.billingMainPanel .secondary:disabled,
+.billingMainPanel button:disabled{
+  opacity:.48!important;
+  cursor:not-allowed!important;
+  transform:none!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.billingMainPanel .calculateButton{background:#fffaf1!important;color:#76582b!important;border:1px solid #d8c29a!important}
+.billingMainPanel .calculateButton:hover{background:#f7edd9!important;color:#65491f!important}
+.billingMainPanel .createInvoiceButton{background:linear-gradient(135deg,#b98a3c,#916625)!important;color:#fff!important}
+.invoiceActionRow .secondary{background:rgba(47,138,97,.10)!important;color:#27724f!important;border:1px solid rgba(47,138,97,.22)!important}
+.invoiceActionRow .ghost{background:#ffffff0b!important;color:#ddd7ce!important;border:1px solid #ffffff16!important}
+
+/* =========================================================
+   Counter UX v2 — visible billing controls + glass navigation
+   ========================================================= */
+.app aside{
+  overflow:hidden;
+}
+.app .nav{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  padding:14px 4px;
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+  border:1px solid rgba(255,255,255,.055);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.app .nav::-webkit-scrollbar{display:none;width:0;height:0}
+.app .nav button{
+  position:relative;
+  min-height:42px;
+  border:1px solid transparent!important;
+  background:rgba(255,255,255,.025)!important;
+  color:#c4c8cf!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;
+}
+.app .nav button::after{
+  content:'';
+  position:absolute;
+  left:9px;right:9px;bottom:3px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(224,189,118,.55),transparent);
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.app .nav button:hover{
+  transform:translateX(2px) translateY(-1px)!important;
+  background:rgba(255,255,255,.075)!important;
+  border-color:rgba(255,255,255,.10)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.07);
+  color:#fff!important;
+}
+.app .nav button:hover::after{opacity:.65}
+.app .nav button.active{
+  background:linear-gradient(135deg,rgba(181,138,58,.92),rgba(137,96,30,.82))!important;
+  border-color:rgba(255,255,255,.16)!important;
+  box-shadow:0 10px 25px rgba(181,138,58,.18),inset 0 1px 0 rgba(255,255,255,.16)!important;
+  color:#fff!important;
+}
+.app .nav button.active::after{opacity:1}
+.app .navIcon{filter:drop-shadow(0 1px 3px rgba(0,0,0,.22))}
+.app .signout{
+  flex:0 0 auto;
+  margin-top:auto!important;
+  margin-bottom:0!important;
+  background:rgba(255,255,255,.045)!important;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.09)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* Billing: everything needed to complete one multi-item invoice is visible. */
+.billingSimpleMode .billingModeTools .modeToggle{display:none!important}
+.simpleCart .invoiceItemRow{
+  grid-template-columns:minmax(180px,1.05fr) minmax(180px,.75fr) auto!important;
+}
+.simpleAdvancedFields.alwaysVisibleFields{
+  display:grid!important;
+  grid-column:1/-1!important;
+  opacity:1!important;
+  max-height:none!important;
+  visibility:visible!important;
+}
+.billingOptional.alwaysVisiblePayment{
+  display:block!important;
+  overflow:visible!important;
+}
+.billingOptionalTitle{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 13px;
+  border-bottom:1px solid #e7dcc9;
+  background:linear-gradient(135deg,#fcf7ec,#fffdf9);
+}
+.billingOptionalTitle span{font-size:11px;font-weight:850;color:#6e5b3d}
+.billingOptionalTitle small{font-size:9px;color:#8b8174}
+@media(max-width:900px){
+  .simpleCart .invoiceItemRow{grid-template-columns:1fr!important}
+}
+@media(max-width:820px){
+  .app .nav{overflow-x:auto;overflow-y:hidden;flex:1;min-height:auto;padding:4px;background:transparent;border:0}
+  .app .signout{margin-top:0!important}
+}
+
+/* Ultra-simple counter refinements */
+.nav{scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:10px 7px;backdrop-filter:blur(18px) saturate(1.12);-webkit-backdrop-filter:blur(18px) saturate(1.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 32px rgba(0,0,0,.08)}
+.nav::-webkit-scrollbar{display:none;width:0;height:0}
+.nav button{background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.045)!important;color:#c5cbd2!important}
+.nav button:hover{background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.055))!important;color:#fff!important;border-color:rgba(255,255,255,.13)!important;transform:translateX(3px)!important;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.nav button.active{background:linear-gradient(135deg,var(--j360-accent),color-mix(in srgb,var(--j360-accent) 68%,#111))!important;color:#fff!important;border-color:rgba(255,255,255,.24)!important}
+.signout{border:1px solid rgba(255,255,255,.09)!important;border-top:1px solid rgba(255,255,255,.09)!important;background:rgba(255,255,255,.045)!important;border-radius:12px!important;color:#d0d5dc!important;min-height:42px;transition:all .22s var(--j360-ease)!important}
+.signout:hover{background:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.06))!important;color:#fff!important;border-color:rgba(255,255,255,.22)!important;transform:translateY(-2px)!important;box-shadow:0 10px 24px rgba(0,0,0,.18)!important}
+.signout:active{transform:translateY(0)!important}
+
+/* Keep disabled scan/new-customer labels readable. */
+.barcodeScanRow .secondary:disabled,.customerAddButton:disabled{opacity:1!important;background:#eee5d4!important;color:#6f5425!important;border-color:#cdbb96!important;box-shadow:none!important}
+.barcodeScanRow .secondary:not(:disabled){background:linear-gradient(135deg,#b58a3a,#8e6725)!important;color:#fff!important;border-color:#d5b66f!important}
+.customerAddButton{background:linear-gradient(135deg,#c69a4a,#9b7229)!important;color:#fff!important;border-color:#d5b66f!important;text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.customerAddButton:hover{filter:brightness(1.05);transform:translateY(-2px)}
+.cameraButton{color:#fff!important}
+
+/* Editable invoice metadata stays visible in the simple billing workflow. */
+.billingDocumentMeta{grid-column:1/-1;display:grid;grid-template-columns:minmax(220px,1.35fr) minmax(170px,.8fr) minmax(150px,.65fr);gap:10px;padding:2px 0 3px}
+.billingDocumentMeta label{display:flex;flex-direction:column;gap:5px}
+.billingDocumentMeta label>span{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#756653}
+.billingDocumentMeta input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--j360-border-strong);border-radius:11px;background:rgba(255,255,255,.88);color:var(--j360-text);font-weight:750;outline:none}
+.billingDocumentMeta input:focus{border-color:var(--j360-accent);box-shadow:0 0 0 3px rgba(var(--j360-accent-rgb),.11)}
+
+/* Jewellery: default is a one-screen Quick Add. Master setup is deliberately tucked away. */
+.jewelleryTopBar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:14px;padding:13px 15px;border:1px solid var(--j360-border);border-radius:16px;background:rgba(255,255,255,.52);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(40,30,15,.05)}
+.jewelleryTopBar h2{margin:4px 0 2px;font-size:20px}.jewelleryTopBar small{color:var(--j360-text-2);font-size:10px}.jewelleryTopActions{display:flex;gap:8px;align-items:center}.jewelleryMasterTabs{margin-bottom:12px}
+.page-jewellery .jewelleryCreatePanel{max-width:620px}.page-jewellery .jewelleryCreatePanel .jewellerySimpleHint{display:block;margin:3px 0 13px;line-height:1.45;color:var(--j360-text-2)}
+.page-jewellery:not(:has(.jewelleryMasterTabs)) .moduleGrid{grid-template-columns:minmax(360px,.8fr) minmax(0,1.6fr)}
+@media(max-width:900px){.billingDocumentMeta{grid-template-columns:1fr 1fr}.billingDocumentMeta label:first-child{grid-column:1/-1}.jewelleryTopBar{align-items:flex-start;flex-direction:column}.jewelleryTopActions{width:100%}.jewelleryTopActions button{flex:1}.page-jewellery:not(:has(.jewelleryMasterTabs)) .moduleGrid{grid-template-columns:1fr!important}}
+@media(max-width:560px){.billingDocumentMeta{grid-template-columns:1fr}.billingDocumentMeta label:first-child{grid-column:auto}.billingDocumentMeta input{min-height:44px}}
+
+/* =========================================================
+   Ultra-Pro interaction pass — consistent hover/focus states
+   ========================================================= */
+button,
+a,[role="button"]{transition:transform .18s cubic-bezier(.22,.61,.36,1),background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,filter .18s ease;}
+.primary:not(:disabled):hover,
+.secondary:not(:disabled):hover,
+.ghost:not(:disabled):hover,
+.panel button:not(:disabled):hover,
+.reportTabs button:not(:disabled):hover,
+.buttonRow button:not(:disabled):hover{
+  transform:translateY(-2px)!important;
+  filter:brightness(1.035);
+}
+.primary:not(:disabled):hover{box-shadow:0 9px 22px rgba(181,138,58,.26)!important}
+.secondary:not(:disabled):hover{background:#f2e8d4!important;border-color:#c6a968!important;color:#5f451d!important;box-shadow:0 7px 18px rgba(85,60,20,.12)!important}
+.ghost:not(:disabled):hover{background:rgba(181,138,58,.10)!important;color:#76551d!important;border-radius:9px!important}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid rgba(181,138,58,.72);outline-offset:2px}
+button:disabled{cursor:not-allowed}
+
+/* Strong, visible navigation interaction even when nested/global styles exist. */
+.app aside .nav button:not(:disabled):hover{
+  background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.065))!important;
+  color:#fff!important;
+  border-color:rgba(224,189,118,.28)!important;
+  transform:translateX(4px) translateY(-1px)!important;
+  box-shadow:0 10px 24px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.09)!important;
+}
+.app aside .nav button:not(:disabled):hover .navIcon{color:#f1d28f!important;transform:scale(1.08)}
+.app aside .signout:not(:disabled):hover{
+  background:linear-gradient(135deg,rgba(224,189,118,.24),rgba(255,255,255,.075))!important;
+  color:#fff!important;
+  border-color:rgba(224,189,118,.40)!important;
+  transform:translateY(-2px)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.app aside .signout:not(:disabled):hover .navIcon{color:#f1d28f!important;transform:scale(1.08)}
+
+/* =========================================================
+   Smart Billing style barcode / tag scan field
+   The scan action is a right-side segment INSIDE the field,
+   matching the Smart Billing POS pattern.
+   ========================================================= */
+.smartScanField{
+  position:relative!important;
+  width:100%!important;
+  min-width:0!important;
+  display:block!important;
+}
+.smartScanField input{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:44px!important;
+  height:44px!important;
+  padding:0 92px 0 14px!important;
+  box-sizing:border-box!important;
+  border:1px solid var(--j360-border-strong)!important;
+  border-radius:10px!important;
+  background:rgba(255,255,255,.86)!important;
+}
+.smartScanField .fieldScanButton{
+  position:absolute!important;
+  top:1px!important;
+  right:1px!important;
+  bottom:1px!important;
+  width:82px!important;
+  min-width:82px!important;
+  max-width:82px!important;
+  margin:0!important;
+  padding:0 10px!important;
+  border:0!important;
+  border-left:1px solid #e5dfd4!important;
+  border-radius:0 9px 9px 0!important;
+  background:rgba(255,255,255,.94)!important;
+  color:#334155!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+.smartScanField .fieldScanButton:hover:not(:disabled){
+  background:#f7f2e8!important;
+  color:#9a6e28!important;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.smartScanField .fieldScanButton:active:not(:disabled){
+  background:#eee5d6!important;
+  transform:none!important;
+}
+.smartScanField .fieldScanButton:focus-visible{
+  outline:2px solid rgba(181,138,58,.55)!important;
+  outline-offset:-2px!important;
+}
+.smartScanField .fieldScanButton:disabled{
+  opacity:.58!important;
+  cursor:wait!important;
+}
+.scanFieldIcon{
+  display:inline-grid!important;
+  place-items:center!important;
+  width:17px!important;
+  height:17px!important;
+  font-size:16px!important;
+  line-height:1!important;
+  color:currentColor!important;
+}
+.scanFieldText{display:inline-block!important}
+.scanFieldHint{
+  grid-column:1/-1;
+  margin-top:6px;
+  color:#887d6d;
+  font-size:9px;
+  line-height:1.35;
+}
+.billingSmartScanField{width:100%!important}
+.billingSmartScanField input{min-height:42px!important;height:42px!important}
+
+@media(max-width:640px){
+  .smartScanField input{
+    min-height:46px!important;
+    height:46px!important;
+    padding-right:88px!important;
+  }
+  .smartScanField .fieldScanButton{
+    width:78px!important;
+    min-width:78px!important;
+    max-width:78px!important;
+  }
+}
+
+/* =========================================================
+   Ultra-Pro glass sweep + flash trace — focused surfaces
+   ========================================================= */
+.ultraGlassGrid{position:relative;overflow:hidden;isolation:isolate}
+.ultraGlassGrid::before{
+  content:"";
+  position:absolute;
+  top:-30%;
+  left:-75%;
+  width:42%;
+  height:160%;
+  transform:skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),rgba(255,255,255,.06),transparent);
+  pointer-events:none;
+  z-index:2;
+  opacity:0;
+}
+.ultraGlassGrid::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  padding:1px;
+  background:linear-gradient(115deg,transparent 0%,rgba(224,189,118,.38) 24%,transparent 48%,rgba(255,255,255,.22) 72%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  opacity:0;
+  pointer-events:none;
+  z-index:3;
+}
+.ultraGlassGrid:hover::before,
+.ultraGlassGrid:focus-within::before{animation:glassSweep .75s cubic-bezier(.22,.61,.36,1) forwards}
+.ultraGlassGrid:hover::after,
+.ultraGlassGrid:focus-within::after{animation:flashTrace .85s ease-out forwards}
+@keyframes glassSweep{0%{left:-75%;opacity:0}12%{opacity:1}100%{left:145%;opacity:0}}
+@keyframes flashTrace{0%{opacity:0}18%{opacity:.95}55%{opacity:.35}100%{opacity:0}}
+
+/* The sidebar itself gets a single premium sweep when the user enters it. */
+.app aside .nav{position:relative;overflow:hidden;isolation:isolate}
+.app aside .nav::after{
+  content:"";
+  position:absolute;
+  top:-35%;
+  left:-90%;
+  width:28%;
+  height:170%;
+  transform:skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+  pointer-events:none;
+  animation:navGlassSweep 1.2s .2s ease-out both;
+}
+@keyframes navGlassSweep{0%{left:-90%;opacity:0}15%{opacity:1}100%{left:155%;opacity:0}}
+
+/* One compact scanner control — no separate Scan + Camera buttons. */
+.billingSmartScanField{width:min(430px,100%);margin-left:auto}
+.billingSmartScanField input{min-height:43px!important;background:rgba(255,255,255,.92)!important}
+.billingSmartScanField .fieldScanButton:disabled{opacity:.75!important;cursor:wait!important}
+@media(max-width:720px){.billingSmartScanField{width:100%;margin-left:0}}
+
+/* Preserve a clean two-field tag creation layout. */
+.page-jewellery .smartScanField{min-width:0}
+.page-jewellery .smartScanField input{box-sizing:border-box}
+
+@media (prefers-reduced-motion:reduce){
+  .ultraGlassGrid::before,.ultraGlassGrid::after,.app aside .nav::after{animation:none!important}
+}

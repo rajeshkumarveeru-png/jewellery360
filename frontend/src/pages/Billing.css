@@ -24,7 +24,7 @@
 .barcodeScannerCard small{font-size:12px;opacity:.68}
 .barcodeScanRow{display:flex;align-items:center;gap:8px;min-width:min(460px,100%)}
 .barcodeScanRow input{flex:1;min-width:0}
-.barcodeScanRow button{min-width:92px}
+.barcodeScanRow button{min-width:0}
 @media(max-width:720px){
  .barcodeScannerCard{flex-direction:column;align-items:stretch}
  .barcodeScanRow{width:100%;min-width:0}
