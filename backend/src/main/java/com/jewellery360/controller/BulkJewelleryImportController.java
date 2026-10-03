@@ -170,7 +170,7 @@ Gold Chain,,Chains,,22K,,,"18.500","0.000","18.500",,0,1200,0
                 tagMap.put("TAG:" + norm(tagNo), tag);
             }
 
-            PurityMaster purity = purityMap.get(norm(r.purity));
+            PurityMaster purity = purityMap.get(normPurity(r.purity));
             if (purity == null) {
                 throw bad("Row " + r.rowNumber + ": purity '" + r.purity + "' is not configured in Purity Master.");
             }
@@ -251,7 +251,7 @@ Gold Chain,,Chains,,22K,,,"18.500","0.000","18.500",,0,1200,0
             if (!batchTags.add(norm(tagNo)) && !blank(r.tagNo)) errors.add("Duplicate Tag No in this file.");
             if (!batchBarcodes.add(norm(barcode)) && !blank(r.barcode)) errors.add("Duplicate Barcode in this file.");
 
-            if (!blank(r.purity) && !purityMap.containsKey(norm(r.purity)))
+            if (!blank(r.purity) && !purityMap.containsKey(normPurity(r.purity)))
                 errors.add("Purity '" + r.purity + "' is not configured in Purity Master.");
 
             JewelleryProduct existingProduct = productMap.get(norm(sku));
@@ -363,8 +363,60 @@ Gold Chain,,Chains,,22K,,,"18.500","0.000","18.500",,0,1200,0
 
     private Map<String, PurityMaster> purityMap(Long companyId) {
         Map<String, PurityMaster> m = new HashMap<>();
-        for (PurityMaster x : purities.findByCompanyId(companyId)) m.put(norm(x.getName()), x);
+
+        for (PurityMaster x : purities.findByCompanyId(companyId)) {
+            // Exact configured name remains the first-class match.
+            putPurityAlias(m, x.getName(), x);
+
+            // Make Excel imports customer-friendly: 22K can match a master
+            // named "22 Karat", "22K Gold", etc.
+            putPurityAlias(m, x.getKarat(), x);
+
+            // Also allow common fineness representations such as 916,
+            // 0.916 and 91.6%.
+            if (x.getFineness() != null) {
+                BigDecimal f = x.getFineness();
+                putPurityAlias(m, f.stripTrailingZeros().toPlainString(), x);
+                putPurityAlias(m, f.multiply(BigDecimal.valueOf(1000))
+                        .stripTrailingZeros().toPlainString(), x);
+                putPurityAlias(m, f.multiply(BigDecimal.valueOf(100))
+                        .stripTrailingZeros().toPlainString() + "%", x);
+            }
+        }
+
         return m;
+    }
+
+    private void putPurityAlias(Map<String, PurityMaster> map, String alias, PurityMaster purity) {
+        if (alias == null || alias.isBlank()) return;
+        map.putIfAbsent(normPurity(alias), purity);
+    }
+
+    private String normPurity(String value) {
+        if (value == null) return "";
+
+        String s = value.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "")
+                .replace("karat", "k")
+                .replace("carat", "k")
+                .replaceAll("gold", "");
+
+        // 22K / 22k / 22-karat / 22 karat -> 22k
+        if (s.matches("^\\d+(?:\\.\\d+)?[-_ ]?k$")) {
+            return s.replaceAll("[-_ ]", "");
+        }
+
+        // 22 -> 22k when the value is clearly a karat value.
+        try {
+            BigDecimal n = new BigDecimal(s.replace("%", ""));
+            if (n.compareTo(BigDecimal.ONE) > 0 && n.compareTo(BigDecimal.valueOf(24)) <= 0) {
+                return n.stripTrailingZeros().toPlainString() + "k";
+            }
+        } catch (Exception ignored) {
+            // Keep the original normalized value for non-numeric purity names.
+        }
+
+        return norm(s);
     }
 
     private static String text(JsonNode n, String... keys) {

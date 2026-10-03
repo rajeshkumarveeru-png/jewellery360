@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-seed-default-purities
+      author: jewellery360
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              INSERT INTO purity_master (company_id, name, karat, fineness, description, active)
+              SELECT c.id, v.name, v.karat, v.fineness, v.description, TRUE
+              FROM company c
+              CROSS JOIN (VALUES
+                ('22K', '22K', 0.916, '916 Gold'),
+                ('24K', '24K', 0.999, '999 Fine Gold'),
+                ('20K', '20K', 0.835, '835 Gold'),
+                ('18K', '18K', 0.750, '750 Gold'),
+                ('14K', '14K', 0.585, '585 Gold')
+              ) AS v(name, karat, fineness, description)
+              WHERE c.active = TRUE
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM purity_master p
+                  WHERE p.company_id = c.id
+                    AND LOWER(TRIM(p.name)) = LOWER(TRIM(v.name))
+                );

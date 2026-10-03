@@ -39,15 +39,19 @@ public class JewelleryMasterDataInitializer {
                 List<Branch> companyBranches = branches.findByCompanyId(company.getId()).stream()
                         .filter(Branch::isActive)
                         .toList();
-                if (companyBranches.isEmpty()) continue;
-
-                Branch branch = companyBranches.get(0);
-
+                // Purity master belongs to the company, not to a branch.
+                // Seed it before checking for an active branch so a newly created
+                // company still has usable purity options even when branch setup
+                // is completed later.
                 PurityMaster purity22 = purity(company, "22K", "22K", new BigDecimal("0.916"), "916 Gold");
                 PurityMaster purity24 = purity(company, "24K", "24K", new BigDecimal("0.999"), "999 Fine Gold");
                 purity(company, "20K", "20K", new BigDecimal("0.835"), "835 Gold");
                 purity(company, "18K", "18K", new BigDecimal("0.750"), "750 Gold");
                 purity(company, "14K", "14K", new BigDecimal("0.585"), "585 Gold");
+
+                if (companyBranches.isEmpty()) continue;
+
+                Branch branch = companyBranches.get(0);
 
                 JewelleryCategory rings = category(company, "Gold Rings", "RING");
                 JewelleryCategory chains = category(company, "Gold Chains", "CHAIN");
