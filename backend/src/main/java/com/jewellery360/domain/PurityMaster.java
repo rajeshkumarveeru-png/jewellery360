@@ -16,6 +16,7 @@ public class PurityMaster {
     @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="company_id") private Company company;
     @Column(nullable=false,length=50) private String name;
     @Column(length=10) private String karat;
+    @Column(length=500) private String description;
     @Column(nullable=false,precision=19,scale=3) private BigDecimal fineness;
     @Column(nullable=false) private boolean active = true;
 }

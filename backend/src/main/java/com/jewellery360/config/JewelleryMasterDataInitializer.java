@@ -43,10 +43,11 @@ public class JewelleryMasterDataInitializer {
 
                 Branch branch = companyBranches.get(0);
 
-                PurityMaster purity22 = purity(company, "22K", "22K", new BigDecimal("0.916"));
-                PurityMaster purity24 = purity(company, "24K", "24K", new BigDecimal("0.999"));
-                purity(company, "18K", "18K", new BigDecimal("0.750"));
-                purity(company, "14K", "14K", new BigDecimal("0.585"));
+                PurityMaster purity22 = purity(company, "22K", "22K", new BigDecimal("0.916"), "916 Gold");
+                PurityMaster purity24 = purity(company, "24K", "24K", new BigDecimal("0.999"), "999 Fine Gold");
+                purity(company, "20K", "20K", new BigDecimal("0.835"), "835 Gold");
+                purity(company, "18K", "18K", new BigDecimal("0.750"), "750 Gold");
+                purity(company, "14K", "14K", new BigDecimal("0.585"), "585 Gold");
 
                 JewelleryCategory rings = category(company, "Gold Rings", "RING");
                 JewelleryCategory chains = category(company, "Gold Chains", "CHAIN");
@@ -79,16 +80,25 @@ public class JewelleryMasterDataInitializer {
         };
     }
 
-    private PurityMaster purity(Company company, String name, String karat, BigDecimal fineness) {
+    private PurityMaster purity(Company company, String name, String karat,
+                                 BigDecimal fineness, String description) {
         return purities.findByCompanyId(company.getId()).stream()
                 .filter(x -> name.equalsIgnoreCase(x.getName()))
                 .findFirst()
+                .map(x -> {
+                    if (x.getDescription() == null || x.getDescription().isBlank()) {
+                        x.setDescription(description);
+                        return purities.save(x);
+                    }
+                    return x;
+                })
                 .orElseGet(() -> {
                     PurityMaster x = new PurityMaster();
                     x.setCompany(company);
                     x.setName(name);
                     x.setKarat(karat);
                     x.setFineness(fineness);
+                    x.setDescription(description);
                     x.setActive(true);
                     return purities.save(x);
                 });

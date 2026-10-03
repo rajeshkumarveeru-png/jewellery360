@@ -6,3 +6,19 @@
 @media(max-width:980px){.goldRateTopGrid{grid-template-columns:1fr}.marketRateCards{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:640px){.marketRateCards{grid-template-columns:1fr}.goldRateFormPanel .buttonRow{flex-direction:column}.goldRateFormPanel button{width:100%}.savedRatesPanel .tableWrap{overflow-x:auto}.savedRatesPanel table{min-width:760px}}
 .marketHeadActions{display:flex;align-items:center;gap:8px}.marketAvailability{margin-top:12px;font-size:11px;font-weight:800}.marketAvailability.live{color:#237a4b}.marketAvailability.fallback{color:#9a6f24}@media(max-width:640px){.marketHeadActions{width:100%;justify-content:space-between}}
+
+.goldRatesSectionTabs{display:flex;gap:8px;margin:0 0 16px;padding:6px;border:1px solid #e8dfcf;border-radius:14px;background:rgba(255,255,255,.62);width:max-content;box-shadow:0 8px 24px rgba(45,35,20,.06)}
+.goldRatesSectionTabs button{border:0;background:transparent;border-radius:10px;padding:10px 18px;font-weight:800;letter-spacing:.02em;color:#756b5d;cursor:pointer}
+.goldRatesSectionTabs button.active{background:linear-gradient(135deg,#b98526,#d29a32);color:#fff;box-shadow:0 5px 14px rgba(154,111,36,.22)}
+.purityMasterPage{width:100%}
+.purityMasterTop{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:16px;padding:4px 2px}
+.purityMasterTop h2{margin:5px 0 4px}.purityMasterTop p{margin:0;color:#81786d;font-size:12px;max-width:720px;line-height:1.55}
+.purityMasterSummary{min-width:130px;padding:14px 18px;border:1px solid #e8dfcf;border-radius:16px;background:linear-gradient(145deg,#fffdf8,#f7f0e2);text-align:center}
+.purityMasterSummary strong{display:block;font-size:25px;color:#9a6f24}.purityMasterSummary span{font-size:10px;color:#8b8173;font-weight:800}
+.purityMasterGrid{display:grid;grid-template-columns:minmax(320px,.72fr) minmax(0,1.6fr);gap:16px}
+.purityFormPanel,.purityListPanel{min-width:0}
+.purityActiveToggle{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e8dfcf;border-radius:12px;background:#fffdf9}
+.purityActiveToggle input{width:17px;height:17px;accent-color:#b98526}.purityActiveToggle span{display:flex;flex-direction:column;gap:2px}.purityActiveToggle small{font-size:10px;color:#8b8173}
+.purityActions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.purityActions .small{padding:6px 9px;font-size:10px}.purityActions .danger{color:#a24b3b}
+@media(max-width:980px){.purityMasterGrid{grid-template-columns:1fr}.purityMasterTop{align-items:flex-start}.purityMasterSummary{min-width:100px}}
+@media(max-width:640px){.goldRatesSectionTabs{width:100%}.goldRatesSectionTabs button{flex:1}.purityMasterTop{flex-direction:column}.purityMasterSummary{width:100%;box-sizing:border-box}.purityListPanel .tableWrap{overflow-x:auto}.purityListPanel table{min-width:760px}}

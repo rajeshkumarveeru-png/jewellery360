@@ -1,0 +1,15 @@
+.bulkImportOverlay{position:fixed;inset:0;z-index:1000;background:rgba(10,12,18,.58);backdrop-filter:blur(12px);display:grid;place-items:center;padding:24px}
+.bulkImportModal{width:min(980px,96vw);max-height:92vh;overflow:auto;border:1px solid rgba(255,255,255,.2);border-radius:28px;background:var(--panel,#fff);box-shadow:0 30px 90px rgba(0,0,0,.35);padding:26px}
+.bulkImportHead{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+.bulkImportHead h2{margin:5px 0 6px}.bulkImportHead p{margin:0;opacity:.7;max-width:680px}
+.bulkImportSteps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.bulkStep{border:1px solid rgba(100,100,100,.16);border-radius:18px;padding:16px;display:grid;gap:7px;background:rgba(255,255,255,.35)}
+.bulkStep>b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(180,140,40,.18)}
+.bulkStep small{opacity:.65;line-height:1.4}.bulkStep .secondary{justify-self:start}
+.bulkDrop{display:grid;place-items:center;gap:7px;border:2px dashed rgba(120,120,120,.3);border-radius:22px;padding:32px 20px;text-align:center;cursor:pointer;background:rgba(255,255,255,.25)}
+.bulkDrop input{display:none}.bulkDrop span{opacity:.6;font-size:13px}
+.bulkSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.bulkSummary>div{padding:16px;border-radius:18px;background:rgba(120,120,120,.08);display:grid;gap:3px}.bulkSummary b{font-size:25px}.bulkSummary span{font-size:12px;opacity:.65}.bulkSummary .hasError{background:rgba(200,60,60,.1)}
+.bulkErrors{border:1px solid rgba(200,70,70,.25);border-radius:18px;padding:16px;background:rgba(200,70,70,.05)}.bulkErrorList{max-height:230px;overflow:auto;margin-top:10px}.bulkErrorList>div{display:flex;gap:12px;padding:8px 0;border-top:1px solid rgba(120,120,120,.12);font-size:13px}.bulkErrorList b{min-width:58px}.bulkReady{padding:15px 17px;border-radius:16px;background:rgba(50,160,100,.1);margin:16px 0}
+.bulkImportFoot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+@media(max-width:760px){.bulkImportOverlay{padding:10px}.bulkImportModal{padding:18px;border-radius:22px}.bulkImportSteps{grid-template-columns:1fr}.bulkSummary{grid-template-columns:1fr 1fr}.bulkImportHead{display:block}.bulkImportHead>.ghost{margin-top:12px}}

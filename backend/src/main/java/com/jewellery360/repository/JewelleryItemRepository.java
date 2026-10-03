@@ -12,6 +12,7 @@ List<JewelleryItem> findByCompanyId(Long companyId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from JewelleryItem i where i.id = :id")
     Optional<JewelleryItem> findByIdForUpdate(@Param("id") Long id);
+    boolean existsByTagIdAndIdNot(Long tagId, Long id);
     @Override
     @EntityGraph(attributePaths = {"company", "branch", "product", "product.category", "product.category.company", "product.design", "product.design.category", "product.design.category.company", "tag", "tag.company", "tag.branch", "purity", "purity.company"})
     Optional<JewelleryItem> findById(Long id);

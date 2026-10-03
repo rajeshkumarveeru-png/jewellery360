@@ -42,3 +42,7 @@ databaseChangeLog:
   - include:
       file: db/changelog/012-tax-configuration.yml
       relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/013-purity-master-enhancement.yml
+      relativeToChangelogFile: false

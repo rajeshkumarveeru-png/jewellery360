@@ -203,14 +203,141 @@ public class DomainCrudController {
 
     @PutMapping("/jewellery/items/{id}")
     @Transactional
-    public JewelleryItem itemUpdate(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id, @RequestBody JsonNode n) {
+    public JewelleryItem itemUpdate(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @PathVariable Long id,
+            @RequestBody JsonNode n) {
+
         requireUpdate(me, "JEWELLERY");
-        JewelleryItem x = get(items, id);
+
+        // Lock the row while an admin is editing it so two concurrent
+        // updates cannot silently overwrite the same inventory item.
+        JewelleryItem x = items.findByIdForUpdate(id)
+                .orElseThrow(() -> bad("Jewellery stock item not found"));
+
         checkScope(me, x.getCompany(), x.getBranch());
-        merge(n, x);
-        if (n.hasNonNull("productId")) x.setProduct(products.findById(n.get("productId").asLong()).orElseThrow());
-        if (n.hasNonNull("tagId")) x.setTag(tags.findById(n.get("tagId").asLong()).orElseThrow());
-        if (n.hasNonNull("purityId")) x.setPurity(purities.findById(n.get("purityId").asLong()).orElseThrow());
+
+        // Historical inventory must not be edited after it leaves stock.
+        if (!"IN_STOCK".equalsIgnoreCase(String.valueOf(x.getStatus()))) {
+            throw bad("Only available stock can be edited.");
+        }
+
+        if (n.hasNonNull("productId")) {
+            JewelleryProduct product = products.findById(
+                    requiredId(n, "productId")
+            ).orElseThrow(() -> bad("Product not found"));
+
+            if (!Objects.equals(product.getCompany().getId(), x.getCompany().getId())) {
+                throw forbidden("Product belongs to another company");
+            }
+
+            x.setProduct(product);
+        }
+
+        if (n.hasNonNull("tagId")) {
+            JewelleryTag tag = tags.findById(
+                    requiredId(n, "tagId")
+            ).orElseThrow(() -> bad("Tag not found"));
+
+            if (!Objects.equals(tag.getCompany().getId(), x.getCompany().getId())) {
+                throw forbidden("Tag belongs to another company");
+            }
+
+            if (tag.getBranch() == null ||
+                    !Objects.equals(tag.getBranch().getId(), x.getBranch().getId())) {
+                throw forbidden("Tag belongs to another branch");
+            }
+
+            if (items.existsByTagIdAndIdNot(tag.getId(), x.getId())) {
+                throw conflict("Tag is already assigned to another jewellery item.");
+            }
+
+            x.setTag(tag);
+        }
+
+        if (n.hasNonNull("purityId")) {
+            PurityMaster purity = purities.findById(
+                    requiredId(n, "purityId")
+            ).orElseThrow(() -> bad("Purity not found"));
+
+            if (!Objects.equals(purity.getCompany().getId(), x.getCompany().getId())) {
+                throw forbidden("Purity belongs to another company");
+            }
+
+            x.setPurity(purity);
+        }
+
+        if (n.has("grossWeight") && !n.get("grossWeight").isNull()) {
+            x.setGrossWeight(n.get("grossWeight").decimalValue());
+        }
+
+        if (n.has("stoneWeight") && !n.get("stoneWeight").isNull()) {
+            x.setStoneWeight(n.get("stoneWeight").decimalValue());
+        }
+
+        if (n.has("netWeight") && !n.get("netWeight").isNull()) {
+            x.setNetWeight(n.get("netWeight").decimalValue());
+        }
+
+        if (n.has("huid")) {
+            x.setHuid(n.get("huid").isNull() ? null : n.get("huid").asText().trim());
+        }
+
+        if (n.has("wastagePercent") && !n.get("wastagePercent").isNull()) {
+            x.setWastagePercent(n.get("wastagePercent").decimalValue());
+        }
+
+        if (n.has("makingCharge") && !n.get("makingCharge").isNull()) {
+            x.setMakingCharge(n.get("makingCharge").decimalValue());
+        }
+
+        if (n.has("stoneValue") && !n.get("stoneValue").isNull()) {
+            x.setStoneValue(n.get("stoneValue").decimalValue());
+        }
+
+        if (x.getGrossWeight() == null ||
+                x.getGrossWeight().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw bad("Gross weight must be greater than 0.");
+        }
+
+        if (x.getStoneWeight() == null) {
+            x.setStoneWeight(java.math.BigDecimal.ZERO);
+        }
+
+        if (x.getStoneWeight().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw bad("Stone weight cannot be negative.");
+        }
+
+        if (x.getStoneWeight().compareTo(x.getGrossWeight()) > 0) {
+            throw bad("Stone weight cannot exceed gross weight.");
+        }
+
+        if (x.getNetWeight() == null ||
+                x.getNetWeight().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw bad("Net weight cannot be negative.");
+        }
+
+        if (x.getNetWeight().compareTo(x.getGrossWeight()) > 0) {
+            throw bad("Net weight cannot exceed gross weight.");
+        }
+
+        if (x.getWastagePercent() == null ||
+                x.getWastagePercent().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw bad("Wastage cannot be negative.");
+        }
+
+        if (x.getMakingCharge() == null ||
+                x.getMakingCharge().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw bad("Making charge cannot be negative.");
+        }
+
+        if (x.getStoneValue() == null ||
+                x.getStoneValue().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw bad("Stone value cannot be negative.");
+        }
+
+        x.setUpdatedAt(java.time.Instant.now());
+
         return items.save(x);
     }
 
@@ -261,7 +388,83 @@ public class DomainCrudController {
         PurityMaster x = convert(n, PurityMaster.class);
         bindContext(me, x);
         scopeCreate(me, x.getCompany(), null);
+
+        String name = x.getName() == null ? "" : x.getName().trim();
+        if (name.isBlank()) throw bad("Purity name is required");
+        if (x.getFineness() == null
+                || x.getFineness().compareTo(java.math.BigDecimal.ZERO) <= 0
+                || x.getFineness().compareTo(java.math.BigDecimal.ONE) > 0) {
+            throw bad("Fineness must be greater than 0 and up to 1.000");
+        }
+
+        if (purities.existsByCompanyIdAndNameIgnoreCase(x.getCompany().getId(), name)) {
+            throw conflict("Purity name already exists for this company: " + name);
+        }
+
+        x.setName(name);
+        if (x.getKarat() != null) x.setKarat(x.getKarat().trim());
+        if (x.getDescription() != null) x.setDescription(x.getDescription().trim());
         return purities.save(x);
+    }
+
+    @PutMapping("/purities/{id}")
+    @Transactional
+    public PurityMaster purityUpdate(@AuthenticationPrincipal AuthenticatedUser me,
+                                     @PathVariable Long id,
+                                     @RequestBody JsonNode n) {
+        requireUpdate(me, "GOLD & RATES");
+
+        PurityMaster x = get(purities, id);
+        checkScope(me, x.getCompany(), null);
+
+        if (n.hasNonNull("name")) {
+            String name = n.get("name").asText().trim();
+            if (name.isBlank()) throw bad("Purity name is required");
+            if (purities.existsByCompanyIdAndNameIgnoreCaseAndIdNot(
+                    x.getCompany().getId(), name, id)) {
+                throw conflict("Purity name already exists for this company: " + name);
+            }
+            x.setName(name);
+        }
+
+        if (n.has("karat")) {
+            x.setKarat(n.get("karat").isNull() ? null : n.get("karat").asText().trim());
+        }
+
+        if (n.hasNonNull("fineness")) {
+            java.math.BigDecimal fineness = new java.math.BigDecimal(n.get("fineness").asText());
+            if (fineness.compareTo(java.math.BigDecimal.ZERO) <= 0
+                    || fineness.compareTo(java.math.BigDecimal.ONE) > 0) {
+                throw bad("Fineness must be greater than 0 and up to 1.000");
+            }
+            x.setFineness(fineness);
+        }
+
+        if (n.has("description")) {
+            x.setDescription(n.get("description").isNull()
+                    ? null
+                    : n.get("description").asText().trim());
+        }
+
+        if (n.has("active")) {
+            x.setActive(n.get("active").asBoolean());
+        }
+
+        return purities.save(x);
+    }
+
+    @DeleteMapping("/purities/{id}")
+    @Transactional
+    public void purityDelete(@AuthenticationPrincipal AuthenticatedUser me,
+                              @PathVariable Long id) {
+        requireDelete(me, "GOLD & RATES");
+        PurityMaster x = get(purities, id);
+        checkScope(me, x.getCompany(), null);
+
+        // Soft delete so existing jewellery items and historical gold rates
+        // continue to retain their purity reference.
+        x.setActive(false);
+        purities.save(x);
     }
 
     @GetMapping("/suppliers")

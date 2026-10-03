@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-purity-master-enhancement
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: purity_master
+      changes:
+        - addColumn:
+            tableName: purity_master
+            columns:
+              - column:
+                  name: description
+                  type: VARCHAR(500)

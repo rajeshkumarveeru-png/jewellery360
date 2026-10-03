@@ -111,6 +111,8 @@ export const sendInvoiceWhatsApp=(saleId:number)=>api.post(`/whatsapp/sales/${sa
 // legacy /records endpoints remain temporarily for compatibility with the existing screens.
 export const domainCustomers=()=>api.get('/domain/customers');
 export const createDomainCustomer=(x:any)=>api.post('/domain/customers',x);
+export const bulkJewelleryImportPreview=(rows:any[])=>api.post('/domain/jewellery/import/preview',rows);
+export const bulkJewelleryImportCommit=(rows:any[])=>api.post('/domain/jewellery/import/commit',rows);
 export const domainCategories=()=>api.get('/domain/jewellery/categories');
 export const createDomainCategory=(x:any)=>api.post('/domain/jewellery/categories',x);
 export const domainDesigns=()=>api.get('/domain/jewellery/designs');
@@ -121,8 +123,11 @@ export const domainTags=()=>api.get('/domain/jewellery/tags');
 export const createDomainTag=(x:any)=>api.post('/domain/jewellery/tags',x);
 export const domainItems=()=>api.get('/domain/jewellery/items');
 export const createDomainItem=(x:any)=>api.post('/domain/jewellery/items',x);
+export const updateDomainItem=(id:number,x:any)=>api.put(`/domain/jewellery/items/${id}`,x);
 export const domainPurities=()=>api.get('/domain/purities');
 export const createDomainPurity=(x:any)=>api.post('/domain/purities',x);
+export const updateDomainPurity=(id:number,x:any)=>api.put(`/domain/purities/${id}`,x);
+export const deleteDomainPurity=(id:number)=>api.delete(`/domain/purities/${id}`);
 export const domainGoldRates=()=>api.get('/domain/gold-rates');
 export const createDomainGoldRate=(x:any)=>api.post('/domain/gold-rates',x);
 export const domainSuppliers=()=>api.get('/domain/suppliers');

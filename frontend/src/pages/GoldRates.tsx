@@ -7,6 +7,7 @@ import {
 } from '../api';
 import { Empty, Table } from '../shared/ui';
 import './GoldRates.css';
+import PurityMaster from './PurityMaster';
 
 type GoldRateRow = {
   karat: string;
@@ -197,6 +198,7 @@ export default function GoldRatesModule({
   ready: boolean;
   onNotice: (message: string) => void;
 }) {
+  const [sectionTab, setSectionTab] = useState<'RATES' | 'PURITY'>('RATES');
   const [rows, setRows] = useState<SavedGoldRate[]>([]);
   const [purities, setPurities] = useState<PurityRow[]>([]);
 
@@ -583,12 +585,32 @@ export default function GoldRatesModule({
 
   return (
       <section className="menuPage menu-gold-rates-rates">
+        <div className="goldRatesSectionTabs" role="tablist" aria-label="Gold and rates sections">
+          <button
+              type="button"
+              className={sectionTab === 'RATES' ? 'active' : ''}
+              onClick={() => setSectionTab('RATES')}
+          >
+            Gold Rates
+          </button>
+          <button
+              type="button"
+              className={sectionTab === 'PURITY' ? 'active' : ''}
+              onClick={() => setSectionTab('PURITY')}
+          >
+            Purity Master
+          </button>
+        </div>
 
-        {/* =====================================================
-          TOP GRID
-      ===================================================== */}
+        {sectionTab === 'PURITY' ? (
+          <PurityMaster ready={ready} onNotice={onNotice} />
+        ) : (
+          <>
+            {/* =====================================================
+              TOP GRID
+          ===================================================== */}
 
-        <div className="goldRateTopGrid">
+            <div className="goldRateTopGrid">
 
           {/* ===================================================
             SAVE GOLD RATES
@@ -642,12 +664,17 @@ export default function GoldRatesModule({
 
               {/* Gold rates */}
 
-              {[
-                '24K',
-                '22K',
-                '18K',
-                '14K',
-              ].map(
+              {(purities
+                  .filter((purity: PurityRow): boolean => purity.active !== false)
+                  .map((purity: PurityRow): string => toKarat(purity.karat || purity.name))
+                  .filter(Boolean)
+                  .length
+                  ? purities
+                      .filter((purity: PurityRow): boolean => purity.active !== false)
+                      .map((purity: PurityRow): string => toKarat(purity.karat || purity.name))
+                      .filter(Boolean)
+                  : ['24K', '22K', '20K', '18K', '14K']
+              ).map(
                   (
                       karat: string
                   ) => (
@@ -950,8 +977,9 @@ export default function GoldRatesModule({
               />
           )}
 
-        </div>
-
+            </div>
+          </>
+        )}
       </section>
   );
 }
