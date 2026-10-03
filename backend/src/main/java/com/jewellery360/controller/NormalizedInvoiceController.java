@@ -190,25 +190,44 @@ public class NormalizedInvoiceController {
 
             if (last) {
                 y -= 18;
-                p.roundRect(M, y - 132, 315, 132, 0.98f, 0.97f, 0.94f, 0.83f, 0.76f, 0.63f);
-                p.text(M + 12, y - 18, 8, true, "PRICE BREAKUP", 0.52f, 0.39f, 0.20f);
+                float breakupH = 160;
+                p.roundRect(M, y - breakupH, 315, breakupH, 0.98f, 0.97f, 0.94f, 0.83f, 0.76f, 0.63f);
+                p.text(M + 12, y - 18, 8, true, "PRICE & TAX BREAKUP", 0.52f, 0.39f, 0.20f);
                 float by = y - 36;
-                p.row(M + 12, M + 300, by, "Gold value", goldValue(rows), false); by -= 16;
-                p.row(M + 12, M + 300, by, "Wastage", wastage(rows), false); by -= 16;
-                p.row(M + 12, M + 300, by, "Making charge", sumMaking(rows), false); by -= 16;
-                p.row(M + 12, M + 300, by, "Stone charge", sumStone(rows), false); by -= 16;
-                p.row(M + 12, M + 300, by, "Other charges", sumOther(rows), false); by -= 16;
-                p.row(M + 12, M + 300, by, "GST", s.getGst(), false);
+                p.row(M + 12, M + 300, by, "Gold value", goldValue(rows), false); by -= 15;
+                p.row(M + 12, M + 300, by, "Wastage", wastage(rows), false); by -= 15;
+                p.row(M + 12, M + 300, by, "Making charge", sumMaking(rows), false); by -= 15;
+                p.row(M + 12, M + 300, by, "Stone charge", sumStone(rows), false); by -= 15;
+                p.row(M + 12, M + 300, by, "Other charges", sumOther(rows), false); by -= 15;
+                p.row(M + 12, M + 300, by, "Subtotal", s.getSubtotal(), true); by -= 17;
+
+                if ("CGST_SGST".equalsIgnoreCase(s.getTaxMode())) {
+                    p.row(M + 12, M + 300, by, "CGST @ " + money(s.getCgstRate()) + "%", s.getGst().multiply(s.getCgstRate()).divide(s.getCgstRate().add(s.getSgstRate()).signum() == 0 ? BigDecimal.ONE : s.getCgstRate().add(s.getSgstRate()), 3, java.math.RoundingMode.HALF_UP), false);
+                    by -= 15;
+                    p.row(M + 12, M + 300, by, "SGST @ " + money(s.getSgstRate()) + "%", s.getGst().multiply(s.getSgstRate()).divide(s.getCgstRate().add(s.getSgstRate()).signum() == 0 ? BigDecimal.ONE : s.getCgstRate().add(s.getSgstRate()), 3, java.math.RoundingMode.HALF_UP), false);
+                } else if ("NONE".equalsIgnoreCase(s.getTaxMode())) {
+                    p.row(M + 12, M + 300, by, "Tax", BigDecimal.ZERO, false);
+                } else {
+                    p.row(M + 12, M + 300, by, "GST @ " + money(s.getTaxRate()) + "%", s.getGst(), false);
+                }
 
                 float tx = 369;
-                p.roundRect(tx, y - 132, W - M - tx, 132, 0.97f, 0.90f, 0.72f, 0.70f, 0.48f, 0.16f);
+                p.roundRect(tx, y - breakupH, W - M - tx, breakupH, 0.97f, 0.90f, 0.72f, 0.70f, 0.48f, 0.16f);
                 p.text(tx + 14, y - 18, 8, true, "AMOUNT PAYABLE", 0.34f, 0.23f, 0.08f);
                 p.text(tx + 14, y - 48, 24, true, "Rs. " + money(s.getTotal()), 0.44f, 0.28f, 0.06f);
-                p.text(tx + 14, y - 70, 8, false, "Subtotal: Rs. " + money(s.getSubtotal()), 0.25f, 0.22f, 0.16f);
-                p.text(tx + 14, y - 86, 8, false, "Discount: Rs. " + money(s.getDiscount()), 0.25f, 0.22f, 0.16f);
-                p.text(tx + 14, y - 102, 8, false, "Payment status: " + nullToDash(s.getPaymentStatus()), 0.25f, 0.22f, 0.16f);
-                p.text(tx + 14, y - 118, 7, false, "Gold rate captured at billing time", 0.43f, 0.37f, 0.25f);
-                y -= 150;
+                p.text(tx + 14, y - 72, 8, false, "Subtotal: Rs. " + money(s.getSubtotal()), 0.25f, 0.22f, 0.16f);
+                if ("CGST_SGST".equalsIgnoreCase(s.getTaxMode())) {
+                    p.text(tx + 14, y - 88, 8, false, "CGST: Rs. " + money(s.getGst().multiply(s.getCgstRate()).divide(s.getCgstRate().add(s.getSgstRate()).signum() == 0 ? BigDecimal.ONE : s.getCgstRate().add(s.getSgstRate()), 3, java.math.RoundingMode.HALF_UP)), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 104, 8, false, "SGST: Rs. " + money(s.getGst().multiply(s.getSgstRate()).divide(s.getCgstRate().add(s.getSgstRate()).signum() == 0 ? BigDecimal.ONE : s.getCgstRate().add(s.getSgstRate()), 3, java.math.RoundingMode.HALF_UP)), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 120, 8, false, "Tax total: Rs. " + money(s.getGst()), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 136, 8, false, "Discount: Rs. " + money(s.getDiscount()), 0.25f, 0.22f, 0.16f);
+                } else {
+                    p.text(tx + 14, y - 88, 8, false, ("NONE".equalsIgnoreCase(s.getTaxMode()) ? "Tax: Rs. 0.00" : "GST @ " + money(s.getTaxRate()) + "%: Rs. " + money(s.getGst())), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 104, 8, false, "Discount: Rs. " + money(s.getDiscount()), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 120, 8, false, "Payment status: " + nullToDash(s.getPaymentStatus()), 0.25f, 0.22f, 0.16f);
+                    p.text(tx + 14, y - 136, 7, false, "Gold rate captured at billing time", 0.43f, 0.37f, 0.25f);
+                }
+                y -= breakupH + 18;
 
                 p.text(M, y, 8, true, "CUSTOMER ACKNOWLEDGEMENT", 0.52f, 0.39f, 0.20f);
                 p.line(M, y - 34, M + 220, y - 34, 0.70f, 0.66f, 0.58f);

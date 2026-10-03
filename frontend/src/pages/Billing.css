@@ -110,3 +110,15 @@
 .commonGoldRateField em{font-size:9px}
 .invoiceItemFields{grid-template-columns:repeat(4,minmax(90px,1fr))}
 @media(max-width:1100px){.invoiceItemFields{grid-template-columns:repeat(4,minmax(80px,1fr))}}
+
+
+/* Automatic market-rate field */
+.goldRateAutoField{position:relative;display:flex;align-items:center;width:100%;}
+.goldRateAutoField input{width:100%;padding-right:118px!important;font-weight:800;color:#9a691f!important;background:#fffdf8!important;cursor:default;}
+.goldRateStatus{position:absolute;right:9px;top:50%;transform:translateY(-50%);padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;pointer-events:none;}
+.goldRateStatus.live{color:#176b48;background:#e9f7ef;border:1px solid #bfe5cf;}
+.goldRateStatus.fallback{color:#8a5c16;background:#fff4dc;border:1px solid #ead09d;}
+.billingTaxSummary{min-height:44px;display:flex;flex-direction:column;justify-content:center;padding:0 12px;border:1px solid #dfd2bf;border-radius:10px;background:#faf6ee;}
+.billingTaxSummary b{font-size:12px;color:#3a3026;}
+.billingTaxSummary small{font-size:10px;color:#7b7165;margin-top:3px;}
+@media(max-width:760px){.goldRateAutoField input{padding-right:108px!important}.billingTaxSummary{min-height:46px}}

@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-sale-tax-configuration
+      author: jewellery360
+      preConditions:
+        - onFail: HALT
+        - onError: HALT
+        - tableExists:
+            tableName: sale
+      changes:
+        - addColumn:
+            tableName: sale
+            columns:
+              - column: {name: tax_mode, type: VARCHAR(20), defaultValue: GST, constraints: {nullable: false}}
+              - column: {name: tax_rate, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cgst_rate, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: sgst_rate, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}

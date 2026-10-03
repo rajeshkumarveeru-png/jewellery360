@@ -27,6 +27,10 @@ public class Sale {
     @Column(nullable=false,precision=19,scale=3) private BigDecimal subtotal = BigDecimal.ZERO;
     @Column(nullable=false,precision=19,scale=3) private BigDecimal discount = BigDecimal.ZERO;
     @Column(nullable=false,precision=19,scale=3) private BigDecimal gst = BigDecimal.ZERO;
+    @Column(nullable=false,length=20) private String taxMode = "GST";
+    @Column(nullable=false,precision=19,scale=3) private BigDecimal taxRate = BigDecimal.ZERO;
+    @Column(nullable=false,precision=19,scale=3) private BigDecimal cgstRate = BigDecimal.ZERO;
+    @Column(nullable=false,precision=19,scale=3) private BigDecimal sgstRate = BigDecimal.ZERO;
     @Column(nullable=false,precision=19,scale=3) private BigDecimal total = BigDecimal.ZERO;
     @Column(nullable=false,length=30) private String paymentStatus = "UNPAID";
     @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="created_by_id") private AppUser createdBy;

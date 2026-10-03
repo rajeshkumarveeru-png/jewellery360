@@ -38,3 +38,7 @@ databaseChangeLog:
   - include:
       file: db/changelog/011-branch-business-profile.yml
       relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/012-tax-configuration.yml
+      relativeToChangelogFile: false

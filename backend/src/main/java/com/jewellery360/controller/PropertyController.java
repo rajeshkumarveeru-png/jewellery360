@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -32,6 +33,43 @@ public class PropertyController {
         Company company = resolveCompany(me, companyId);
         companyProperties.initializeWhatsAppDefaults(company);
         return response(company);
+    }
+
+    @GetMapping("/tax")
+    @Transactional
+    public Map<String, Object> getTax(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestParam(required = false) Long companyId) {
+        Company company = resolveCompany(me, companyId);
+        CompanyPropertyService.TaxSettings tax = companyProperties.getTaxSettings(company);
+        return taxResponse(company, tax);
+    }
+
+    @PutMapping("/tax")
+    @Transactional
+    public Map<String, Object> updateTax(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestParam(required = false) Long companyId,
+            @RequestBody TaxRequest body) {
+        Company company = resolveCompany(me, companyId);
+        companyProperties.initializeTaxDefaults(company);
+
+        String mode = body.mode() == null ? "GST" : body.mode().trim().toUpperCase();
+        if (!"GST".equals(mode) && !"CGST_SGST".equals(mode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tax mode must be GST or CGST_SGST");
+        }
+
+        BigDecimal rate = safeRate(body.rate(), "GST rate");
+        BigDecimal cgstRate = safeRate(body.cgstRate(), "CGST rate");
+        BigDecimal sgstRate = safeRate(body.sgstRate(), "SGST rate");
+
+        companyProperties.setTaxProperty(company, CompanyPropertyService.TAX_ENABLED, Boolean.toString(body.enabled()));
+        companyProperties.setTaxProperty(company, CompanyPropertyService.TAX_MODE, mode);
+        companyProperties.setTaxProperty(company, CompanyPropertyService.TAX_RATE, rate.toPlainString());
+        companyProperties.setTaxProperty(company, CompanyPropertyService.TAX_CGST_RATE, cgstRate.toPlainString());
+        companyProperties.setTaxProperty(company, CompanyPropertyService.TAX_SGST_RATE, sgstRate.toPlainString());
+
+        return taxResponse(company, companyProperties.getTaxSettings(company));
     }
 
     @PutMapping("/whatsapp")
@@ -89,6 +127,29 @@ public class PropertyController {
 
     private String clean(String value) { return value == null ? "" : value.trim(); }
     private String defaultIfBlank(String value, String fallback) { return value == null || value.isBlank() ? fallback : value.trim(); }
+
+    private Map<String, Object> taxResponse(Company company, CompanyPropertyService.TaxSettings tax) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("companyId", company.getId());
+        result.put("companyName", company.getName());
+        result.put("enabled", tax.enabled());
+        result.put("mode", tax.mode());
+        result.put("rate", tax.rate());
+        result.put("cgstRate", tax.cgstRate());
+        result.put("sgstRate", tax.sgstRate());
+        result.put("totalRate", tax.totalRate());
+        return result;
+    }
+
+    private java.math.BigDecimal safeRate(java.math.BigDecimal value, String label) {
+        java.math.BigDecimal n = value == null ? java.math.BigDecimal.ZERO : value;
+        if (n.signum() < 0 || n.compareTo(new java.math.BigDecimal("100")) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, label + " must be between 0 and 100");
+        }
+        return n.setScale(3, java.math.RoundingMode.HALF_UP);
+    }
+
+    public record TaxRequest(boolean enabled, String mode, java.math.BigDecimal rate, java.math.BigDecimal cgstRate, java.math.BigDecimal sgstRate) {}
 
     public record WhatsAppRequest(
             boolean enabled,

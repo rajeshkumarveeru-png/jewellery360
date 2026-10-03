@@ -28,11 +28,13 @@ public class JewelleryBillingService {
     private final AppUserRepository users;
     private final AuditService audit;
     private final PermissionService permissions;
+    private final CompanyPropertyService companyProperties;
 
     @Transactional
     public Map<String,Object> create(AuthenticatedUser me, Request r, Long headerCompanyId, Long headerBranchId) {
         permissions.requireWrite(me, "BILLING");
         Context ctx = context(me, headerCompanyId, headerBranchId);
+        CompanyPropertyService.TaxSettings taxSettings = companyProperties.getTaxSettings(ctx.company());
         if (r.items() == null || r.items().isEmpty()) throw bad("At least one jewellery item is required");
 
         Customer customer = customers.findById(r.customerId()).orElseThrow(() -> bad("Customer not found"));
@@ -70,8 +72,17 @@ public class JewelleryBillingService {
             lines.add(new PreparedLine(rLine, item, gross, stone, net, effectiveGoldRate, gold, wastage, lineSubtotal));
         }
 
-        BigDecimal gstPercent = n(r.gstPercent());
-        BigDecimal gst = subtotal.multiply(gstPercent).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+        // Tax configuration is company-controlled and is the source of truth for
+        // the saved invoice. The client gstPercent is intentionally ignored here
+        // so a cashier cannot accidentally override the company tax configuration.
+        BigDecimal taxRate = taxSettings.totalRate();
+        BigDecimal gst = subtotal.multiply(taxRate).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+        BigDecimal cgst = "CGST_SGST".equalsIgnoreCase(taxSettings.mode())
+                ? subtotal.multiply(taxSettings.cgstRate()).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal sgst = "CGST_SGST".equalsIgnoreCase(taxSettings.mode())
+                ? subtotal.multiply(taxSettings.sgstRate()).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
         BigDecimal grossInvoice = subtotal.add(gst);
         BigDecimal discount = n(r.discount()).max(BigDecimal.ZERO).min(grossInvoice);
         BigDecimal total = grossInvoice.subtract(discount).max(BigDecimal.ZERO);
@@ -89,17 +100,21 @@ public class JewelleryBillingService {
         sale.setSubtotal(subtotal);
         sale.setDiscount(discount);
         sale.setGst(gst);
+        sale.setTaxMode(taxSettings.enabled() ? taxSettings.mode() : "NONE");
+        sale.setTaxRate(taxSettings.enabled() ? taxSettings.rate() : BigDecimal.ZERO);
+        sale.setCgstRate(taxSettings.enabled() && "CGST_SGST".equalsIgnoreCase(taxSettings.mode()) ? taxSettings.cgstRate() : BigDecimal.ZERO);
+        sale.setSgstRate(taxSettings.enabled() && "CGST_SGST".equalsIgnoreCase(taxSettings.mode()) ? taxSettings.sgstRate() : BigDecimal.ZERO);
         sale.setTotal(total);
         sale.setPaymentStatus(paymentAmount.compareTo(BigDecimal.ZERO) <= 0 ? "UNPAID" : paymentAmount.compareTo(total) >= 0 ? "PAID" : "PARTIAL");
         sale.setCreatedBy(users.findById(me.getUserId()).orElse(null));
         sale = sales.save(sale);
 
         for (PreparedLine line : lines) {
-            BigDecimal lineGrossWithGst = line.lineSubtotal().multiply(BigDecimal.valueOf(100).add(gstPercent)).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+            BigDecimal lineGrossWithGst = line.lineSubtotal().multiply(BigDecimal.valueOf(100).add(taxRate)).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
             BigDecimal allocatedDiscount = grossInvoice.compareTo(BigDecimal.ZERO) > 0
                     ? discount.multiply(lineGrossWithGst).divide(grossInvoice, 3, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
-            BigDecimal lineGst = line.lineSubtotal().multiply(gstPercent).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
+            BigDecimal lineGst = line.lineSubtotal().multiply(taxRate).divide(BigDecimal.valueOf(100), 3, RoundingMode.HALF_UP);
             BigDecimal lineTotal = lineGrossWithGst.subtract(allocatedDiscount).max(BigDecimal.ZERO);
 
             SaleItem si = new SaleItem();
@@ -151,6 +166,13 @@ public class JewelleryBillingService {
         response.put("wastageValue", lines.stream().map(PreparedLine::wastage).reduce(BigDecimal.ZERO, BigDecimal::add));
         response.put("subtotal", subtotal);
         response.put("gst", gst);
+        response.put("taxMode", taxSettings.enabled() ? taxSettings.mode() : "NONE");
+        response.put("taxRate", taxSettings.enabled() ? taxSettings.rate() : BigDecimal.ZERO);
+        response.put("cgstRate", taxSettings.enabled() ? taxSettings.cgstRate() : BigDecimal.ZERO);
+        response.put("sgstRate", taxSettings.enabled() ? taxSettings.sgstRate() : BigDecimal.ZERO);
+        response.put("cgst", cgst);
+        response.put("sgst", sgst);
+        response.put("taxEnabled", taxSettings.enabled());
         response.put("discount", discount);
         response.put("total", total);
         response.put("paymentStatus", sale.getPaymentStatus());
@@ -158,6 +180,15 @@ public class JewelleryBillingService {
     }
 
     public Map<String,Object> calculate(List<ItemRequest> itemRequests, BigDecimal goldRate, BigDecimal gstPercent, BigDecimal discount) {
+        // Legacy calculation endpoint fallback. The authenticated multi-item
+        // endpoint below uses company tax settings.
+        CompanyPropertyService.TaxSettings tax = new CompanyPropertyService.TaxSettings(
+                true, "GST", n(gstPercent), BigDecimal.ZERO, BigDecimal.ZERO);
+        return calculate(itemRequests, goldRate, tax, discount);
+    }
+
+    public Map<String,Object> calculate(List<ItemRequest> itemRequests, BigDecimal goldRate,
+                                        CompanyPropertyService.TaxSettings tax, BigDecimal discount) {
         if (itemRequests == null || itemRequests.isEmpty()) throw bad("At least one jewellery item is required");
         BigDecimal subtotal = BigDecimal.ZERO, goldValue = BigDecimal.ZERO, wastageValue = BigDecimal.ZERO;
         BigDecimal commonGoldRate=n(goldRate);
@@ -170,12 +201,35 @@ public class JewelleryBillingService {
             goldValue=goldValue.add(gold); wastageValue=wastageValue.add(wastage);
             subtotal=subtotal.add(gold).add(wastage).add(n(r.makingCharge())).add(n(r.stoneCharge())).add(n(r.otherCharge()));
         }
-        BigDecimal gst=subtotal.multiply(n(gstPercent)).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
+        BigDecimal taxRate = tax.totalRate();
+        BigDecimal gst=subtotal.multiply(taxRate).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP);
+        BigDecimal cgst=tax.enabled() && "CGST_SGST".equalsIgnoreCase(tax.mode())
+                ? subtotal.multiply(tax.cgstRate()).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        BigDecimal sgst=tax.enabled() && "CGST_SGST".equalsIgnoreCase(tax.mode())
+                ? subtotal.multiply(tax.sgstRate()).divide(BigDecimal.valueOf(100),3,RoundingMode.HALF_UP) : BigDecimal.ZERO;
         BigDecimal safeDiscount=n(discount).max(BigDecimal.ZERO).min(subtotal.add(gst));
         BigDecimal total=subtotal.add(gst).subtract(safeDiscount).max(BigDecimal.ZERO);
         Map<String,Object> out=new LinkedHashMap<>();
-        out.put("goldValue",goldValue);out.put("wastageValue",wastageValue);out.put("subtotal",subtotal);out.put("gst",gst);out.put("discount",safeDiscount);out.put("total",total);out.put("itemCount",itemRequests.size());
+        out.put("goldValue",goldValue);
+        out.put("wastageValue",wastageValue);
+        out.put("subtotal",subtotal);
+        out.put("gst",gst);
+        out.put("taxMode",tax.enabled()?tax.mode():"NONE");
+        out.put("taxRate",tax.enabled()?tax.rate():BigDecimal.ZERO);
+        out.put("cgstRate",tax.enabled()?tax.cgstRate():BigDecimal.ZERO);
+        out.put("sgstRate",tax.enabled()?tax.sgstRate():BigDecimal.ZERO);
+        out.put("cgst",cgst);
+        out.put("sgst",sgst);
+        out.put("taxEnabled",tax.enabled());
+        out.put("discount",safeDiscount);
+        out.put("total",total);
+        out.put("itemCount",itemRequests.size());
         return out;
+    }
+
+    public CompanyPropertyService.TaxSettings taxSettings(AuthenticatedUser me, Long headerCompanyId, Long headerBranchId) {
+        Context ctx = context(me, headerCompanyId, headerBranchId);
+        return companyProperties.getTaxSettings(ctx.company());
     }
 
     @Transactional

@@ -133,6 +133,7 @@ public class ApprovalController {
                 // Create the complete company-scoped WhatsApp property set at approval time.
                 // Secrets intentionally start blank and must be supplied by an administrator.
                 companyProperties.initializeWhatsAppDefaults(r.getCompany());
+                companyProperties.initializeTaxDefaults(r.getCompany());
                 // Every approved Company Admin starts with a DB-backed menu preference.
                 userProperties.initializeDefaultMenuPreference(r.getCompany(), r.getTargetUser());
             }

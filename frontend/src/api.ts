@@ -180,3 +180,5 @@ export const getUserMenuPreferences=(companyId?:number|null)=>api.get('/properti
 export const saveUserMenuPreferences=(menu:string[],companyId?:number|null)=>api.put('/properties/user/menu',{menu},{params:companyId?{companyId}:undefined});
 export const getWhatsAppSettings=(companyId?:number|null)=>api.get('/properties/whatsapp',{params:companyId?{companyId}:undefined});
 export const saveWhatsAppSettings=(x:any,companyId?:number|null)=>api.put('/properties/whatsapp',x,{params:companyId?{companyId}:undefined});
+export const getTaxSettings=(companyId?:number|null)=>api.get('/properties/tax',{params:companyId?{companyId}:undefined});
+export const saveTaxSettings=(x:any,companyId?:number|null)=>api.put('/properties/tax',x,{params:companyId?{companyId}:undefined});

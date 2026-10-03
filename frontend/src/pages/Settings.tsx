@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {getWhatsAppSettings, saveWhatsAppSettings, getUserMenuPreferences, saveUserMenuPreferences, getFriendlyApiError} from '../api';
+import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getFriendlyApiError} from '../api';
 import {Role,User,ThemeKey} from '../shared/types';
 import {roleMenus,defaultPreferredMenu} from '../shared/config';
 import './Settings.css';
@@ -14,6 +14,23 @@ type WhatsAppSettingsState = {
   webhookVerifyTokenPresent:boolean;
   invoiceTemplateName:string;
   templateLanguage:string;
+};
+
+
+type TaxSettingsState = {
+  enabled:boolean;
+  mode:'GST'|'CGST_SGST';
+  rate:string;
+  cgstRate:string;
+  sgstRate:string;
+};
+
+const emptyTax:TaxSettingsState={
+  enabled:true,
+  mode:'GST',
+  rate:'3.00',
+  cgstRate:'1.50',
+  sgstRate:'1.50'
 };
 
 const emptyWhatsApp:WhatsAppSettingsState={
@@ -31,6 +48,11 @@ const emptyWhatsApp:WhatsAppSettingsState={
 export default function SettingsModule({user,theme,setTheme}:{user:User;theme:ThemeKey;setTheme:(x:ThemeKey)=>void}){
  const matrix:Record<Role,string[]>=roleMenus;
  const [wa,setWa]=useState<WhatsAppSettingsState>(emptyWhatsApp);
+ const [tax,setTax]=useState<TaxSettingsState>(emptyTax);
+ const [taxLoading,setTaxLoading]=useState(false);
+ const [taxSaving,setTaxSaving]=useState(false);
+ const [taxMessage,setTaxMessage]=useState('');
+ const [taxError,setTaxError]=useState('');
  const [loading,setLoading]=useState(false);
  const [saving,setSaving]=useState(false);
  const [message,setMessage]=useState('');
@@ -93,6 +115,46 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
      .finally(()=>setLoading(false));
  },[companyId]);
 
+ useEffect(()=>{
+   setTax(emptyTax); setTaxMessage(''); setTaxError('');
+   if(!companyId) return;
+   setTaxLoading(true);
+   getTaxSettings(companyId)
+     .then(r=>setTax({
+       enabled:Boolean(r.data?.enabled ?? true),
+       mode:r.data?.mode==='CGST_SGST'?'CGST_SGST':'GST',
+       rate:String(r.data?.rate ?? '3.00'),
+       cgstRate:String(r.data?.cgstRate ?? '1.50'),
+       sgstRate:String(r.data?.sgstRate ?? '1.50')
+     }))
+     .catch(e=>setTaxError(getFriendlyApiError(e,'Unable to load tax settings.')))
+     .finally(()=>setTaxLoading(false));
+ },[companyId]);
+
+ const saveTax=async()=>{
+   if(!companyId) return;
+   setTaxSaving(true); setTaxMessage(''); setTaxError('');
+   try{
+     const payload={
+       enabled:tax.enabled,
+       mode:tax.mode,
+       rate:Number(tax.rate||0),
+       cgstRate:Number(tax.cgstRate||0),
+       sgstRate:Number(tax.sgstRate||0)
+     };
+     const r=await saveTaxSettings(payload,companyId);
+     setTax({
+       enabled:Boolean(r.data?.enabled),
+       mode:r.data?.mode==='CGST_SGST'?'CGST_SGST':'GST',
+       rate:String(r.data?.rate ?? 0),
+       cgstRate:String(r.data?.cgstRate ?? 0),
+       sgstRate:String(r.data?.sgstRate ?? 0)
+     });
+     setTaxMessage('Tax settings saved. New invoices will use this configuration automatically.');
+   }catch(e){setTaxError(getFriendlyApiError(e,'Unable to save tax settings.'));}
+   finally{setTaxSaving(false);}
+ };
+
  const save=async()=>{
    if(!companyId) return;
    setSaving(true);setMessage('');setError('');
@@ -122,6 +184,22 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     <div className="setting"><div><b>Theme</b><small>Stored as a UI preference in this browser.</small></div><select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold</option><option value="CLASSIC_IVORY">Classic Ivory</option><option value="PREMIUM_DARK">Premium Dark</option><option value="MODERN_LIGHT">Modern Light</option></select></div>
     <div className="setting"><div><b>Business identity</b><small>{user.companyName||'Platform'} · {user.branchName||'No branch selected'}</small></div></div>
     <div className="setting"><div><b>Company property storage</b><small>WhatsApp configuration is stored per company in the <code>property</code> table. APP_ADMIN must select a company context before editing it.</small></div></div>
+   </div>
+
+   <div className="panel taxSettingsPanel">
+    <span className="eyebrow">TAX & GST</span><h2>Invoice tax configuration</h2>
+    <p className="settingsHelp">Set this once for the company. Cashiers do not need to enter GST on every bill. The same configuration is used for invoice calculations and PDFs.</p>
+    {!companyId&&<div className="settingsNotice">Select a company context to manage tax settings.</div>}
+    {taxLoading&&<div className="settingsNotice">Loading tax configuration…</div>}
+    {taxError&&<div className="settingsError">{taxError}</div>}
+    {taxMessage&&<div className="settingsSuccess">{taxMessage}</div>}
+    {companyId&&!taxLoading&&<div className="taxSettingsForm">
+      <label className="toggleField"><span><b>Enable tax on invoices</b><small>When disabled, invoices are calculated without GST/CGST/SGST.</small></span><input type="checkbox" checked={tax.enabled} onChange={e=>setTax({...tax,enabled:e.target.checked})}/></label>
+      <label><span>Tax mode</span><select value={tax.mode} disabled={!tax.enabled} onChange={e=>setTax({...tax,mode:e.target.value as TaxSettingsState['mode']})}><option value="GST">GST</option><option value="CGST_SGST">CGST + SGST</option></select></label>
+      {tax.mode==='GST'?<label><span>GST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.rate} disabled={!tax.enabled} onChange={e=>setTax({...tax,rate:e.target.value})}/></label>:<div className="taxSplitGrid"><label><span>CGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.cgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,cgstRate:e.target.value})}/></label><label><span>SGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.sgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,sgstRate:e.target.value})}/></label></div>}
+      <div className="taxPreview"><b>Invoice preview</b>{!tax.enabled?<span>No tax</span>:tax.mode==='GST'?<span>GST @ {Number(tax.rate||0).toFixed(2)}%</span>:<span>CGST @ {Number(tax.cgstRate||0).toFixed(2)}% + SGST @ {Number(tax.sgstRate||0).toFixed(2)}% = {(Number(tax.cgstRate||0)+Number(tax.sgstRate||0)).toFixed(2)}%</span>}</div>
+      <button className="settingsSave" type="button" disabled={taxSaving} onClick={saveTax}>{taxSaving?'Saving…':'Save tax settings'}</button>
+    </div>}
    </div>
 
    <div className="panel menuPreferencesPanel">

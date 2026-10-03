@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jewellery360.security.AuthenticatedUser;
 import com.jewellery360.service.RecordService;
 import com.jewellery360.service.JewelleryBillingService;
+import com.jewellery360.service.CompanyPropertyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +19,29 @@ public class BillingController {
     public Map<String,Object> calculate(@RequestBody BillingRequest r){ return calculation(r); }
 
     @PostMapping("/calculate-multi")
-    public Map<String,Object> calculateMulti(@RequestBody MultiCalculationRequest r){
-        return jewelleryBilling.calculate(r.items(), r.goldRate(), r.gstPercent(), r.discount());
+    public Map<String,Object> calculateMulti(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestBody MultiCalculationRequest r,
+            @RequestHeader(value="X-Company-Id",required=false) Long companyId,
+            @RequestHeader(value="X-Branch-Id",required=false) Long branchId){
+        CompanyPropertyService.TaxSettings tax = jewelleryBilling.taxSettings(me, companyId, branchId);
+        return jewelleryBilling.calculate(r.items(), r.goldRate(), tax, r.discount());
+    }
+
+    @GetMapping("/config")
+    public Map<String,Object> config(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestHeader(value="X-Company-Id",required=false) Long companyId,
+            @RequestHeader(value="X-Branch-Id",required=false) Long branchId) {
+        CompanyPropertyService.TaxSettings tax = jewelleryBilling.taxSettings(me, companyId, branchId);
+        return Map.of(
+                "taxEnabled", tax.enabled(),
+                "taxMode", tax.mode(),
+                "taxRate", tax.rate(),
+                "cgstRate", tax.cgstRate(),
+                "sgstRate", tax.sgstRate(),
+                "totalTaxRate", tax.totalRate()
+        );
     }
 
     @PostMapping("/domain")
