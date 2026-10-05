@@ -171,7 +171,8 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
        email:String(r.data?.email||''),
        gstin:String(r.data?.gstin||''),
        printFormat:(['A4','80MM','50MM'].includes(r.data?.printFormat)?r.data.printFormat:'A4') as BusinessState['printFormat'],
-       skuPrefix:String(r.data?.skuPrefix||'')
+       skuPrefix:String(r.data?.skuPrefix||''),
+       invoiceTemplate:INVOICE_DESIGNS.some(d=>d.key===String(r.data?.invoiceTemplate||'').toUpperCase())?String(r.data.invoiceTemplate).toUpperCase():'CLASSIC'
      }))
      .catch(e=>setBizError(getFriendlyApiError(e,'Unable to load business settings.')))
      .finally(()=>setBizLoading(false));
