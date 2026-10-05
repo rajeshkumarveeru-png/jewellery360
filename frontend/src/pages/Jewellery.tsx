@@ -16,6 +16,8 @@ import {
   createDomainItem,
   updateDomainItem,
   domainPurities,
+  nextSku,
+  nextTag,
 } from '../api';
 
 import { Table, Empty } from '../shared/ui';
@@ -87,6 +89,30 @@ export default function JewelleryModule({
     void load();
   }, [ready]);
 
+  // Tenant-isolated auto SKU / tag number: the server numbers sequentially per company (01, 02, ... or PREFIX01).
+  const fillSku = async () => {
+    try {
+      const r = await nextSku();
+      setF((v: any) => ({ ...v, sku: r.data?.sku || v.sku }));
+    } catch {
+      /* the backend generates the SKU on save when the field is left blank */
+    }
+  };
+  const fillTag = async () => {
+    try {
+      const r = await nextTag();
+      setF((v: any) => ({ ...v, tagNo: r.data?.tagNo || v.tagNo }));
+    } catch {
+      /* the backend generates the tag number on save when the field is left blank */
+    }
+  };
+  useEffect(() => {
+    if (!ready) return;
+    if (tab === 'PRODUCTS' && !f.sku) void fillSku();
+    if (tab === 'TAGS' && !f.tagNo && !f.barcode) void fillTag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, ready, f.sku, f.tagNo, f.barcode]);
+
   const save = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -125,8 +151,13 @@ export default function JewelleryModule({
       }
 
       if (tab === 'TAGS') {
+        let generatedTag = '';
+        if (!String(f.barcode || f.tagNo || '').trim()) {
+          generatedTag = String((await nextTag()).data?.tagNo || '');
+        }
+
         const code = String(
-          f.barcode || f.tagNo || ''
+          f.barcode || f.tagNo || generatedTag
         ).trim();
 
         const tagNo = String(
@@ -525,17 +556,22 @@ export default function JewelleryModule({
                     }
                   />
 
-                  <input
-                    required
-                    placeholder="SKU"
-                    value={f.sku || ''}
-                    onChange={(e) =>
-                      setF({
-                        ...f,
-                        sku: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="autoField">
+                    <input
+                      placeholder="SKU (auto-generated, editable)"
+                      aria-label="SKU"
+                      value={f.sku || ''}
+                      onChange={(e) =>
+                        setF({
+                          ...f,
+                          sku: e.target.value,
+                        })
+                      }
+                    />
+                    <button type="button" className="ghost autoButton" onClick={() => void fillSku()} title="Generate the next free SKU for your company">
+                      Auto SKU
+                    </button>
+                  </div>
 
                   <select
                     required
@@ -603,17 +639,23 @@ export default function JewelleryModule({
               {/* ================= TAGS ================= */}
               {tab === 'TAGS' && (
                 <>
-                  <input
-                    required
-                    placeholder="Tag number"
-                    value={f.tagNo || ''}
-                    onChange={(e) =>
-                      setF({
-                        ...f,
-                        tagNo: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="autoField">
+                    <input
+                      required
+                      placeholder="Tag number (auto-generated, editable)"
+                      aria-label="Tag number"
+                      value={f.tagNo || ''}
+                      onChange={(e) =>
+                        setF({
+                          ...f,
+                          tagNo: e.target.value,
+                        })
+                      }
+                    />
+                    <button type="button" className="ghost autoButton" onClick={() => void fillTag()} title="Generate the next free tag number for your company">
+                      Auto tag
+                    </button>
+                  </div>
 
                   <div className="smartScanField">
 

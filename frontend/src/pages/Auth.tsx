@@ -9,9 +9,12 @@ import {
 } from '../api';
 import {Role,User,ThemeKey,RecordItem,Company,Branch} from '../shared/types';
 import {Table,Empty,Field} from '../shared/ui';
+import {brandInitials,getBrandName} from '../shared/brand';
 import './Auth.css';
 export default function Auth({mode,setMode,onLogin}:{mode:string;setMode:(x:any)=>void;onLogin:(t:string)=>void}){
  const [f,setF]=useState<any>({method:'OTP'});
+ // The company name last used in this browser is the brand of the portal (falls back to the product name).
+ const brand=getBrandName();
  const [msg,setMsg]=useState('');
  const [regErrors,setRegErrors]=useState<Record<string,string>>({});
 
@@ -121,8 +124,8 @@ export default function Auth({mode,setMode,onLogin}:{mode:string;setMode:(x:any)
    }
  };
 
- return <main className="auth"><section className="brand"><div className="logo">J360</div><span className="eyebrow">JEWELLERY ERP PLATFORM</span><h1>Jewellery360</h1><p>Premium jewellery showroom management · Billing · Inventory · Customers · Operations</p><div className="brandPills"><span>Multi-company</span><span>Branch control</span><span>JWT secured</span><span>Audit ready</span></div></section>
- <form className="authCard" onSubmit={submit} noValidate><span className="eyebrow dark">SECURE ACCESS</span><h2>{mode==='login'?'Sign in':mode==='register'?'Create company':'Reset password'}</h2>
+ return <main className="auth"><section className="brand"><div className="logo" aria-hidden="true">{brandInitials(brand)}</div><span className="eyebrow">JEWELLERY ERP PLATFORM</span><h1>{brand}</h1><p>Premium jewellery showroom management · Billing · Inventory · Customers · Operations</p><div className="brandPills"><span>Multi-company</span><span>Branch control</span><span>JWT secured</span><span>Audit ready</span></div></section>
+ <form className="authCard singleColumnForm" onSubmit={submit} noValidate><span className="eyebrow dark">SECURE ACCESS</span><h2>{mode==='login'?'Sign in':mode==='register'?'Create company':'Reset password'}</h2>
  {mode==='login'&&<><Field placeholder="Username, email or phone number" onChange={v=>setF({...f,identifier:v})}/><Field type="password" placeholder="Password" onChange={v=>setF({...f,password:v})}/></>}
  {mode==='register'&&<>
    <Field placeholder="Company name" autoComplete="organization" error={regErrors.companyName} onBlur={()=>validateOne('companyName')} onChange={v=>updateRegister('companyName',v)}/>

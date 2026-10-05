@@ -72,6 +72,70 @@ public class PropertyController {
         return taxResponse(company, companyProperties.getTaxSettings(company));
     }
 
+    /** Business profile: company name (read only), business phone, corporate e-mail, GSTIN, print layout and SKU prefix. */
+    @GetMapping("/business")
+    @Transactional
+    public Map<String, Object> getBusiness(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestParam(required = false) Long companyId) {
+        Company company = resolveCompany(me, companyId);
+        return businessResponse(company, companyProperties.getBusinessProfile(company));
+    }
+
+    @PutMapping("/business")
+    @Transactional
+    public Map<String, Object> updateBusiness(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestParam(required = false) Long companyId,
+            @RequestBody BusinessRequest body) {
+        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a company administrator can change business settings");
+        }
+        Company company = resolveCompany(me, companyId);
+        companyProperties.initializeBusinessDefaults(company);
+
+        // Global brand: the company name set here is what the header, login portal and PDF receipts show.
+        String newName = clean(body.companyName());
+        if (!newName.isEmpty()) {
+            if (newName.length() < 2 || newName.length() > 150) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company name must be between 2 and 150 characters");
+            }
+            if (!newName.equalsIgnoreCase(company.getName()) && companies.existsByNameIgnoreCase(newName)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Another company already uses this name");
+            }
+            company.setName(newName);
+            companies.save(company);
+        }
+
+        String phone = clean(body.phone());
+        if (!phone.isEmpty() && !phone.matches("^[+0-9][0-9 ()-]{6,19}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Business phone must contain 7-20 digits (optional + prefix)");
+        }
+        String email = clean(body.email());
+        if (!email.isEmpty() && !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Corporate e-mail is not a valid address");
+        }
+        String gstin = clean(body.gstin()).toUpperCase();
+        if (!gstin.isEmpty() && !gstin.matches("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "GSTIN must be 15 characters, e.g. 33ABCDE1234F1Z5");
+        }
+        String format = defaultIfBlank(body.printFormat(), "A4").toUpperCase();
+        if (!"A4".equals(format) && !"50MM".equals(format) && !"80MM".equals(format)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Print layout must be A4, 50MM or 80MM");
+        }
+        String skuPrefix = clean(body.skuPrefix()).toUpperCase();
+        if (!skuPrefix.isEmpty() && !skuPrefix.matches("^[A-Z0-9][A-Z0-9-]{0,11}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SKU prefix may contain letters, digits and hyphen (max 12 characters)");
+        }
+
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_PHONE, phone);
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_EMAIL, email);
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_GSTIN, gstin);
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.PRINT_FORMAT, format);
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.SKU_PREFIX, skuPrefix);
+        return businessResponse(company, companyProperties.getBusinessProfile(company));
+    }
+
     @PutMapping("/whatsapp")
     @Transactional
     public Map<String, Object> updateWhatsApp(
@@ -141,6 +205,18 @@ public class PropertyController {
         return result;
     }
 
+    private Map<String, Object> businessResponse(Company company, CompanyPropertyService.BusinessProfile profile) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("companyId", company.getId());
+        result.put("companyName", profile.companyName());
+        result.put("phone", profile.phone());
+        result.put("email", profile.email());
+        result.put("gstin", profile.gstin());
+        result.put("printFormat", profile.printFormat());
+        result.put("skuPrefix", profile.skuPrefix());
+        return result;
+    }
+
     private java.math.BigDecimal safeRate(java.math.BigDecimal value, String label) {
         java.math.BigDecimal n = value == null ? java.math.BigDecimal.ZERO : value;
         if (n.signum() < 0 || n.compareTo(new java.math.BigDecimal("100")) > 0) {
@@ -148,6 +224,8 @@ public class PropertyController {
         }
         return n.setScale(3, java.math.RoundingMode.HALF_UP);
     }
+
+    public record BusinessRequest(String companyName, String phone, String email, String gstin, String printFormat, String skuPrefix) {}
 
     public record TaxRequest(boolean enabled, String mode, java.math.BigDecimal rate, java.math.BigDecimal cgstRate, java.math.BigDecimal sgstRate) {}
 

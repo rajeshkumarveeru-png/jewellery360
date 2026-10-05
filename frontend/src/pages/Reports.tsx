@@ -9,13 +9,17 @@ import {
 } from '../api';
 import {Role,User,ThemeKey,RecordItem,Company,Branch} from '../shared/types';
 import {Table,Empty,Field} from '../shared/ui';
+import {DateRangePicker,defaultPresets,toIso} from '../shared/widgets';
 import './Reports.css';
 export default function ReportsModule({onNotice}:{onNotice:(x:string)=>void}){
  const [type,setType]=useState('SALES');
+ const initialRange=defaultPresets().find(p=>p.key==='30d')!.range();
+ const [from,setFrom]=useState(initialRange[0]);
+ const [to,setTo]=useState(initialRange[1]);
  const [r,setR]=useState<any>(null);
  const [busyId,setBusyId]=useState<number|null>(null);
- const load=()=>phase3Report(type).then(x=>setR(x.data)).catch(()=>setR(null));
- useEffect(()=>{ void load(); },[type]);
+ const load=()=>phase3Report(type,type==='SALES'?from:undefined,type==='SALES'?to:undefined).then(x=>setR(x.data)).catch(()=>setR(null));
+ useEffect(()=>{ void load(); },[type,from,to]);
  const openSalePdf=async(id:number)=>{
    const popup=window.open('about:blank','_blank');
    try{
@@ -45,6 +49,7 @@ export default function ReportsModule({onNotice}:{onNotice:(x:string)=>void}){
  };
  const money=(v:any)=>`₹${Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
  return <div className="reportPage">
+   <div className="reportToolbar">{type==='SALES'&&<DateRangePicker from={from} to={to} maxDate={toIso(new Date())} onChange={(a,b)=>{setFrom(a);setTo(b);}} label="From / To date"/>}{type!=='SALES'&&<small className="muted">Date filtering applies to the Sales report.</small>}</div>
    <div className="reportTabs">{['SALES','STOCK','GOLD','PROFIT','CUSTOMERS'].map(x=><button key={x} className={type===x?'active':''} onClick={()=>setType(x)}>{x}</button>)}</div>
    <div className="kpiGrid"><div className="kpi"><span>Records</span><strong>{r?.count||0}</strong></div><div className="kpi"><span>Amount</span><strong>{money(r?.total)}</strong></div><div className="kpi"><span>In stock</span><strong>{r?.inStock??'—'}</strong></div></div>
    <div className="panel"><div className="panelHead"><div><span className="eyebrow">REPORTS</span><h2>{type} report</h2></div><button className="ghost" onClick={load}>Refresh</button></div>

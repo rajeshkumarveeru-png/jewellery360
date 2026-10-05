@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
-import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getFriendlyApiError} from '../api';
+import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getBusinessSettings, saveBusinessSettings, getFriendlyApiError} from '../api';
+import {rememberBrandName} from '../shared/brand';
 import {Role,User,ThemeKey} from '../shared/types';
 import {roleMenus,defaultPreferredMenu} from '../shared/config';
 import './Settings.css';
@@ -25,6 +26,16 @@ type TaxSettingsState = {
   sgstRate:string;
 };
 
+type BusinessState={companyName:string;phone:string;email:string;gstin:string;printFormat:'A4'|'80MM'|'50MM';skuPrefix:string};
+const emptyBusiness:BusinessState={companyName:'',phone:'',email:'',gstin:'',printFormat:'A4',skuPrefix:''};
+const GSTIN_RE=/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PRINT_OPTIONS:{value:BusinessState['printFormat'];label:string;hint:string}[]=[
+  {value:'A4',label:'A4 paper',hint:'Full tax invoice with price breakup, signatures and terms.'},
+  {value:'80MM',label:'80 mm thermal',hint:'Compact counter receipt for 80 mm thermal printers.'},
+  {value:'50MM',label:'50 mm thermal',hint:'Narrow receipt for 50 mm thermal printers.'}
+];
+
 const emptyTax:TaxSettingsState={
   enabled:true,
   mode:'GST',
@@ -49,6 +60,11 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  const matrix:Record<Role,string[]>=roleMenus;
  const [wa,setWa]=useState<WhatsAppSettingsState>(emptyWhatsApp);
  const [tax,setTax]=useState<TaxSettingsState>(emptyTax);
+ const [biz,setBiz]=useState<BusinessState>(emptyBusiness);
+ const [bizLoading,setBizLoading]=useState(false);
+ const [bizSaving,setBizSaving]=useState(false);
+ const [bizMessage,setBizMessage]=useState('');
+ const [bizError,setBizError]=useState('');
  const [taxLoading,setTaxLoading]=useState(false);
  const [taxSaving,setTaxSaving]=useState(false);
  const [taxMessage,setTaxMessage]=useState('');
@@ -131,6 +147,47 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
      .finally(()=>setTaxLoading(false));
  },[companyId]);
 
+ useEffect(()=>{
+   setBiz(emptyBusiness); setBizMessage(''); setBizError('');
+   if(!companyId) return;
+   setBizLoading(true);
+   getBusinessSettings(companyId)
+     .then(r=>setBiz({
+       companyName:String(r.data?.companyName||''),
+       phone:String(r.data?.phone||''),
+       email:String(r.data?.email||''),
+       gstin:String(r.data?.gstin||''),
+       printFormat:(['A4','80MM','50MM'].includes(r.data?.printFormat)?r.data.printFormat:'A4') as BusinessState['printFormat'],
+       skuPrefix:String(r.data?.skuPrefix||'')
+     }))
+     .catch(e=>setBizError(getFriendlyApiError(e,'Unable to load business settings.')))
+     .finally(()=>setBizLoading(false));
+ },[companyId]);
+
+ const bizIssues=(()=>{
+   const out:Record<string,string>={};
+   if(biz.companyName.trim().length<2) out.companyName='Company name is required (at least 2 characters).';
+   if(biz.phone.trim()&&!/^[+0-9][0-9 ()-]{6,19}$/.test(biz.phone.trim())) out.phone='Enter a valid phone number.';
+   if(biz.email.trim()&&!EMAIL_RE.test(biz.email.trim())) out.email='Enter a valid e-mail address.';
+   if(biz.gstin.trim()&&!GSTIN_RE.test(biz.gstin.trim().toUpperCase())) out.gstin='GSTIN must be 15 characters, e.g. 33ABCDE1234F1Z5.';
+   if(biz.skuPrefix.trim()&&!/^[A-Za-z0-9][A-Za-z0-9-]{0,11}$/.test(biz.skuPrefix.trim())) out.skuPrefix='Use letters, digits or hyphen (max 12).';
+   return out;
+ })();
+ const canEditBusiness=user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN';
+
+ const saveBiz=async()=>{
+   if(!companyId||Object.keys(bizIssues).length) return;
+   setBizSaving(true); setBizMessage(''); setBizError('');
+   try{
+     const r=await saveBusinessSettings({companyName:biz.companyName.trim(),phone:biz.phone.trim(),email:biz.email.trim(),gstin:biz.gstin.trim().toUpperCase(),printFormat:biz.printFormat,skuPrefix:biz.skuPrefix.trim().toUpperCase()},companyId);
+     setBiz({companyName:String(r.data?.companyName||biz.companyName),phone:String(r.data?.phone||''),email:String(r.data?.email||''),gstin:String(r.data?.gstin||''),printFormat:(r.data?.printFormat||biz.printFormat) as BusinessState['printFormat'],skuPrefix:String(r.data?.skuPrefix||'')});
+     rememberBrandName(String(r.data?.companyName||biz.companyName));
+     window.dispatchEvent(new Event('j360-brand-changed'));
+     setBizMessage('Business settings saved. The company name, GSTIN, contact details and print layout now apply to new invoices and receipts.');
+   }catch(e){setBizError(getFriendlyApiError(e,'Unable to save business settings.'));}
+   finally{setBizSaving(false);}
+ };
+
  const saveTax=async()=>{
    if(!companyId) return;
    setTaxSaving(true); setTaxMessage(''); setTaxError('');
@@ -186,6 +243,27 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     <div className="setting"><div><b>Company property storage</b><small>WhatsApp configuration is stored per company in the <code>property</code> table. APP_ADMIN must select a company context before editing it.</small></div></div>
    </div>
 
+   <div className="panel businessSettingsPanel domain-accent">
+    <span className="eyebrow">BUSINESS PROFILE</span><h2>Company identity & documents</h2>
+    <p className="settingsHelp">These details are printed on invoices and receipts. The company name is your brand: it appears in the sidebar, header, login portal and PDFs.</p>
+    {!companyId&&<div className="settingsNotice">Select a company context to manage the business profile.</div>}
+    {bizLoading&&<div className="settingsNotice">Loading business profile…</div>}
+    {bizError&&<div className="settingsError" role="alert">{bizError}</div>}
+    {bizMessage&&<div className="settingsSuccess" role="status">{bizMessage}</div>}
+    {companyId&&!bizLoading&&<form className="singleColumnForm settingsForm" onSubmit={e=>{e.preventDefault();void saveBiz();}} noValidate>
+      <label className={bizIssues.companyName?'hasIssue':''}><span>Company name</span><input value={biz.companyName} disabled={!canEditBusiness} onChange={e=>setBiz({...biz,companyName:e.target.value})} autoComplete="organization"/>{bizIssues.companyName&&<em>{bizIssues.companyName}</em>}</label>
+      <label className={bizIssues.phone?'hasIssue':''}><span>Business phone</span><input type="tel" inputMode="tel" value={biz.phone} disabled={!canEditBusiness} onChange={e=>setBiz({...biz,phone:e.target.value})} placeholder="+91 98765 43210"/>{bizIssues.phone&&<em>{bizIssues.phone}</em>}</label>
+      <label className={bizIssues.email?'hasIssue':''}><span>Corporate e-mail</span><input type="email" value={biz.email} disabled={!canEditBusiness} onChange={e=>setBiz({...biz,email:e.target.value})} placeholder="accounts@yourjewellers.in"/>{bizIssues.email&&<em>{bizIssues.email}</em>}</label>
+      <label className={bizIssues.gstin?'hasIssue':''}><span>GSTIN</span><input value={biz.gstin} disabled={!canEditBusiness} maxLength={15} onChange={e=>setBiz({...biz,gstin:e.target.value.toUpperCase()})} placeholder="33ABCDE1234F1Z5"/>{bizIssues.gstin&&<em>{bizIssues.gstin}</em>}</label>
+      <label><span>Print layout</span>
+        <select value={biz.printFormat} disabled={!canEditBusiness} onChange={e=>setBiz({...biz,printFormat:e.target.value as BusinessState['printFormat']})}>{PRINT_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
+        <small>{PRINT_OPTIONS.find(o=>o.value===biz.printFormat)?.hint}</small>
+      </label>
+      <label className={bizIssues.skuPrefix?'hasIssue':''}><span>SKU / tag prefix (optional)</span><input value={biz.skuPrefix} disabled={!canEditBusiness} maxLength={12} onChange={e=>setBiz({...biz,skuPrefix:e.target.value.toUpperCase()})} placeholder="e.g. GR- (leave blank to start at 01)"/>{bizIssues.skuPrefix?<em>{bizIssues.skuPrefix}</em>:<small>Your own sequence: next product would be <b>{(biz.skuPrefix||'').toUpperCase()}01</b>, then {(biz.skuPrefix||'').toUpperCase()}02… Other companies are never affected.</small>}</label>
+      {canEditBusiness?<button className="settingsSave" type="submit" disabled={bizSaving||Object.keys(bizIssues).length>0}>{bizSaving?'Saving…':'Save business profile'}</button>:<div className="settingsNotice">Only a company administrator can change these details.</div>}
+    </form>}
+   </div>
+
    <div className="panel taxSettingsPanel">
     <span className="eyebrow">TAX & GST</span><h2>Invoice tax configuration</h2>
     <p className="settingsHelp">Set this once for the company. Cashiers do not need to enter GST on every bill. The same configuration is used for invoice calculations and PDFs.</p>
@@ -194,7 +272,7 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     {taxError&&<div className="settingsError">{taxError}</div>}
     {taxMessage&&<div className="settingsSuccess">{taxMessage}</div>}
     {companyId&&!taxLoading&&<div className="taxSettingsForm">
-      <label className="toggleField"><span><b>Enable tax on invoices</b><small>When disabled, invoices are calculated without GST/CGST/SGST.</small></span><input type="checkbox" checked={tax.enabled} onChange={e=>setTax({...tax,enabled:e.target.checked})}/></label>
+      <label className="toggleField"><span><b>Include GST in calculations</b><small>When on, GST lines are added automatically to live bill totals, payments, ledgers and printed invoices. When off, invoices are calculated without GST/CGST/SGST.</small></span><input type="checkbox" checked={tax.enabled} onChange={e=>setTax({...tax,enabled:e.target.checked})}/></label>
       <label><span>Tax mode</span><select value={tax.mode} disabled={!tax.enabled} onChange={e=>setTax({...tax,mode:e.target.value as TaxSettingsState['mode']})}><option value="GST">GST</option><option value="CGST_SGST">CGST + SGST</option></select></label>
       {tax.mode==='GST'?<label><span>GST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.rate} disabled={!tax.enabled} onChange={e=>setTax({...tax,rate:e.target.value})}/></label>:<div className="taxSplitGrid"><label><span>CGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.cgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,cgstRate:e.target.value})}/></label><label><span>SGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.sgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,sgstRate:e.target.value})}/></label></div>}
       <div className="taxPreview"><b>Invoice preview</b>{!tax.enabled?<span>No tax</span>:tax.mode==='GST'?<span>GST @ {Number(tax.rate||0).toFixed(2)}%</span>:<span>CGST @ {Number(tax.cgstRate||0).toFixed(2)}% + SGST @ {Number(tax.sgstRate||0).toFixed(2)}% = {(Number(tax.cgstRate||0)+Number(tax.sgstRate||0)).toFixed(2)}%</span>}</div>

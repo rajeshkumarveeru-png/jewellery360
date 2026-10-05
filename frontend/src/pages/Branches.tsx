@@ -50,7 +50,7 @@ export default function BranchesModule({user,companiesData,onNotice}:{user:User;
    </div>
    <div className="panel">
     <div className="panelHead"><div><span className="eyebrow">LIVE DATABASE</span><h2>{list.length} branches</h2></div><button className="ghost" onClick={load}>Refresh</button></div>
-    <Table><thead><tr><th>Branch</th><th>Company</th><th>GSTIN</th><th>Phone</th><th>Status</th><th>Action</th></tr></thead><tbody>{list.map((x:any)=><tr key={x.id}><td><b>{x.name}</b><small className="tableSub">{x.code}</small></td><td>{x.companyName}</td><td>{x.gstin||'—'}</td><td>{x.phone||'—'}</td><td><span className="pill success">{x.active?'ACTIVE':'INACTIVE'}</span></td><td>{canEdit?<button className="ghost" type="button" onClick={()=>edit(x)}>Edit</button>:<span>—</span>}</td></tr>)}</tbody></Table>{!list.length&&<Empty text="No branches yet."/>}
+    <Table cards><thead><tr><th>Branch</th><th>Company</th><th>GSTIN</th><th>Phone</th><th>Status</th><th>Action</th></tr></thead><tbody>{list.map((x:any)=><tr key={x.id}><td><b>{x.name}</b><small className="tableSub">{x.code}</small></td><td>{x.companyName}</td><td>{x.gstin||'—'}</td><td>{x.phone||'—'}</td><td><span className="pill success">{x.active?'ACTIVE':'INACTIVE'}</span></td><td>{canEdit?<button className="ghost" type="button" onClick={()=>edit(x)}>Edit</button>:<span>—</span>}</td></tr>)}</tbody></Table>{!list.length&&<Empty text="No branches yet."/>}
     <div className="adminOnlyNote"><b>Admin only.</b> Branch GSTIN, contact details and invoice/PDF text are stored per branch and are used by billing, invoices and other branch-facing documents.</div>
    </div>
  </div>;

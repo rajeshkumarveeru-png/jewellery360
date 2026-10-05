@@ -1,4 +1,4 @@
-import {FormEvent, useEffect, useState} from 'react';
+import {FormEvent, useEffect, useRef, useState} from 'react';
 import {
   users, createUser, updateUser, enableUser, branches
 } from '../api';
@@ -9,7 +9,8 @@ import './Users.css';
 const editableRoles: Role[] = ['MANAGER','CASHIER','SALESMAN','INVENTORY_MANAGER','ACCOUNTANT','VIEWER'];
 const emptyForm = {username:'', email:'', phone:'', password:'', role:'CASHIER' as Role, branchId:''};
 
-export default function UsersModule({user,onNotice}:{user:User;onNotice:(x:string)=>void}){
+export default function UsersModule({user,onNotice,focusCreate=0}:{user:User;onNotice:(x:string)=>void;focusCreate?:number}){
+ const usernameRef=useRef<HTMLInputElement>(null);
  const [list,setList]=useState<User[]>([]);
  const [branchList,setBranchList]=useState<Branch[]>([]);
  const [f,setF]=useState<any>({...emptyForm});
@@ -49,6 +50,8 @@ export default function UsersModule({user,onNotice}:{user:User;onNotice:(x:strin
    return()=>window.clearTimeout(t);
  },[search]);
  useEffect(()=>{void loadBranches();},[user.id,user.role,user.companyId]);
+ useEffect(()=>{ if(focusCreate>0){ reset(); window.setTimeout(()=>usernameRef.current?.focus(),120);} // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[focusCreate]);
 
  const reset=()=>{
    setEditing(null);
@@ -107,8 +110,8 @@ export default function UsersModule({user,onNotice}:{user:User;onNotice:(x:strin
        {editing&&<button type="button" className="ghost" onClick={reset}>Cancel edit</button>}
      </div>
      <p className="usersIntro">All active users are shown here. Search by username, email, phone, role, company or branch.</p>
-     {can&&<form className="formGrid" onSubmit={save}>
-       <input placeholder="Username" required value={f.username||''} onChange={e=>setF({...f,username:e.target.value})}/>
+     {can&&<form className="formGrid singleColumnForm" onSubmit={save} aria-label={editing?'Edit user':'Create user'}>
+       <input ref={usernameRef} placeholder="Username" aria-label="Username" required value={f.username||''} onChange={e=>setF({...f,username:e.target.value})}/>
        <input placeholder="Email" type="email" required value={f.email||''} onChange={e=>setF({...f,email:e.target.value})}/>
        <input placeholder="Phone" value={f.phone||''} onChange={e=>setF({...f,phone:e.target.value})}/>
        <input placeholder={editing?'New password (optional)':'Temporary password'} type="password" required={!editing} value={f.password||''} onChange={e=>setF({...f,password:e.target.value})}/>
@@ -128,7 +131,7 @@ export default function UsersModule({user,onNotice}:{user:User;onNotice:(x:strin
    <div className="panel">
      <div className="panelHead usersListHead"><div><span className="eyebrow">DIRECTORY</span><h2>All users</h2></div><span className="userCount">{list.length} user{list.length===1?'':'s'}</span></div>
      <div className="userSearch"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search username, email, phone, role, company or branch…" aria-label="Search users"/><button className="ghost" type="button" onClick={()=>setSearch('')} disabled={!search}>Clear</button></div>
-     {loading?<div className="empty"><div>◇</div><b>Loading users…</b></div>:<Table><thead><tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Company</th><th>Branch</th><th>Status</th><th>Action</th></tr></thead><tbody>{list.map(x=><tr key={x.id}>
+     {loading?<div className="empty"><div>◇</div><b>Loading users…</b></div>:<Table bare><thead><tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Company</th><th>Branch</th><th>Status</th><th>Action</th></tr></thead><tbody>{list.map(x=><tr key={x.id}>
        <td><b>{x.username}</b></td><td>{x.email||'—'}</td><td>{x.phone||'—'}</td><td>{x.role}</td><td>{x.companyName||'Platform'}</td><td>{x.branchName||'—'}</td>
        <td><span className={x.enabled?'pill success':'pill'}>{x.enabled?'ACTIVE':'PENDING'}</span></td>
        <td className="userActions">

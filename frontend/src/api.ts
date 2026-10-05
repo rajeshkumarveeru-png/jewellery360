@@ -169,7 +169,7 @@ export const phase3RepairUpdate=(id:number,x:any)=>api.patch(`/phase3/repairs/${
 export const phase3CustomOrderUpdate=(id:number,x:any)=>api.patch(`/phase3/custom-orders/${id}`,x);
 export const phase3Advance=(x:any)=>api.post('/phase3/advances',x);
 export const phase3Outstanding=(customerId:number)=>api.get(`/phase3/customers/${customerId}/outstanding`);
-export const phase3Report=(type:string)=>api.get(`/phase3/reports/${type}`);
+export const phase3Report=(type:string,from?:string,to?:string)=>api.get(`/phase3/reports/${type}`,{params:{from:from||undefined,to:to||undefined}});
 
 
 // Phase 4 normalized-domain helpers
@@ -187,3 +187,16 @@ export const getWhatsAppSettings=(companyId?:number|null)=>api.get('/properties/
 export const saveWhatsAppSettings=(x:any,companyId?:number|null)=>api.put('/properties/whatsapp',x,{params:companyId?{companyId}:undefined});
 export const getTaxSettings=(companyId?:number|null)=>api.get('/properties/tax',{params:companyId?{companyId}:undefined});
 export const saveTaxSettings=(x:any,companyId?:number|null)=>api.put('/properties/tax',x,{params:companyId?{companyId}:undefined});
+
+
+// Executive dashboard analytics: today's summary, From/To totals and the daily / weekly / monthly trend series.
+export type Granularity='DAY'|'WEEK'|'MONTH';
+export const salesAnalytics=(params:{from?:string;to?:string;granularity?:Granularity})=>api.get('/analytics/sales',{params});
+
+// Business profile (phone, corporate e-mail, GSTIN, print layout, SKU prefix) stored in the company property table.
+export const getBusinessSettings=(companyId?:number|null)=>api.get('/properties/business',{params:companyId?{companyId}:undefined});
+export const saveBusinessSettings=(x:{companyName?:string;phone:string;email:string;gstin:string;printFormat:string;skuPrefix:string},companyId?:number|null)=>api.put('/properties/business',x,{params:companyId?{companyId}:undefined});
+
+// Tenant-isolated SKU / tag number sequence (starts at 01, optional company prefix).
+export const nextSku=()=>api.get('/domain/jewellery/next-sku');
+export const nextTag=()=>api.get('/domain/jewellery/next-tag');

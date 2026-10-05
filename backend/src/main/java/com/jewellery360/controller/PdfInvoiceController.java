@@ -20,10 +20,11 @@ public class PdfInvoiceController {
     public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable Long id){
         BusinessRecord r=records.findById(id).orElseThrow();
         if(!"APP_ADMIN".equals(me.getRole())&&!Objects.equals(r.getCompany().getId(),me.getCompanyId())) throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN,"Invoice access denied");
-        permissions.requireModule(me,"BILLING");
+        // No separate BILLING-module gate: a signed-in user may open invoices of their own company (ownership check above).
         Map<String,Object> p;
         try{p=mapper.readValue(r.getPayload(),Map.class);}catch(Exception e){p=Map.of();}
-        String[] lines={"JEWELLERY360","Invoice: "+r.getTitle(),"Date: "+r.getRecordDate(),"Customer: "+p.getOrDefault("customer",""),"Tag: "+p.getOrDefault("tag",""),
+        String brand=r.getCompany().getName()==null?"":r.getCompany().getName().toUpperCase();
+        String[] lines={brand,"Invoice: "+r.getTitle(),"Date: "+r.getRecordDate(),"Customer: "+p.getOrDefault("customer",""),"Tag: "+p.getOrDefault("tag",""),
             "Design: "+p.getOrDefault("design",""),"Purity: "+p.getOrDefault("purity",""),"Gross Weight: "+p.getOrDefault("grossWeight",""),
             "Stone Weight: "+p.getOrDefault("stoneWeight",""),"Net Weight: "+p.getOrDefault("netWeight",""),"Gold Rate: "+p.getOrDefault("goldRate",""),
             "Gold Value: "+p.getOrDefault("goldValue",""),"Wastage: "+p.getOrDefault("wastageValue",""),"Making: "+p.getOrDefault("makingCharge",""),

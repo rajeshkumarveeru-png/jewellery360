@@ -1,0 +1,314 @@
+/* =====================================================================================================
+   JEWELLERY360 - PREMIUM ENTERPRISE LAYER ("Ultra-Pro")             imported LAST in main.tsx
+   1 glass surfaces   2 micro-interactions   3 single-pass glass sweep + flash-trace borders
+   4 domain colours   5 form fixes (single column, always-visible input text)   6 dropdown layering
+   7 dashboard widgets (today summary, calendar range picker, trend chart)   8 settings / reports extras
+   ===================================================================================================== */
+
+:root{
+  --pro-ease:cubic-bezier(.4,0,.2,1);
+  --pro-glass:rgba(255,255,255,.62);
+  --pro-glass-strong:rgba(255,255,255,.82);
+  --pro-hairline:rgba(120,130,145,.22);
+  --pro-input-bg:rgba(255,255,255,.94);
+  --pro-input-ink:#17202b;
+  --pro-placeholder:#7b8794;
+  --pro-lift:0 14px 34px rgba(24,35,47,.14);
+}
+.theme-premium_dark{
+  --pro-glass:rgba(255,255,255,.045);
+  --pro-glass-strong:rgba(255,255,255,.07);
+  --pro-hairline:rgba(255,255,255,.08);
+  --pro-input-bg:rgba(255,255,255,.07);
+  --pro-input-ink:#f4efe6;
+  --pro-placeholder:#93a0ae;
+  --pro-lift:0 16px 40px rgba(0,0,0,.45);
+}
+
+/* ---------------------------------------------------------------- 1. glass surfaces */
+.app aside{
+  background:linear-gradient(180deg,rgba(16,25,35,.92),rgba(10,17,25,.94))!important;
+  backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2);
+  border-right:1px solid rgba(255,255,255,.08)!important;
+}
+.workspace>header{
+  background:var(--pro-glass-strong)!important;
+  backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+  border:1px solid var(--pro-hairline);border-radius:18px;padding:14px 18px;
+  box-shadow:0 10px 32px rgba(24,35,47,.07);
+}
+.panel,.kpi,.heroPanel,.invoicePreview,.contextRequired,.barcodeScannerCard,.authCard,.todayWidget{
+  background:var(--pro-glass-strong)!important;
+  border:1px solid var(--pro-hairline)!important;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+}
+.theme-premium_dark .panel,.theme-premium_dark .kpi,.theme-premium_dark .authCard,.theme-premium_dark .todayWidget{
+  box-shadow:0 18px 50px rgba(0,0,0,.35)!important;
+}
+.itemPickerMenu,.customerPickerMenu,.drpPopover{
+  background:var(--pro-glass-strong)!important;backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+  border:1px solid var(--pro-hairline)!important;
+}
+.theme-premium_dark .itemPickerMenu,.theme-premium_dark .customerPickerMenu,.theme-premium_dark .drpPopover{background:rgba(22,31,42,.92)!important}
+
+/* ---------------------------------------------------------------- 2. micro-interactions (every interactive thing) */
+button,select,input,textarea,.nav button,.signout,.pill,.reportTabs button,.itemPickerOption,.customerPickerOption,
+.menuPreferenceRow,.setting,.roleRow,tbody tr,tbody td,.kpi,.panel,.drpDay,.drpPreset,.segmented button{
+  transition:all .3s var(--pro-ease);
+}
+button:not(:disabled):hover,.nav button:hover,.signout:hover,.reportTabs button:hover,.itemPickerOption:hover,.customerPickerOption:hover,
+.menuPreferenceRow:hover,.drpPreset:hover,.pill:hover{
+  transform:translateY(-2px);box-shadow:var(--pro-lift);
+}
+.nav button:hover{background:rgba(var(--j360-accent-rgb),.14)!important;border-color:rgba(var(--j360-accent-rgb),.28)!important}
+.itemPickerOption:hover,.customerPickerOption:hover{background:rgba(var(--j360-accent-rgb),.12)!important}
+button:not(:disabled):active{transform:translateY(0);box-shadow:none}
+button:disabled{opacity:.55;cursor:not-allowed}
+select:hover,input:hover,textarea:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(var(--j360-accent-rgb),.12)}
+select:focus,input:focus,textarea:focus{transform:none}
+tbody tr:hover td{background:rgba(var(--j360-accent-rgb),.07)}
+tbody td:hover{background:rgba(var(--j360-accent-rgb),.12)!important;box-shadow:inset 0 0 0 1px rgba(var(--j360-accent-rgb),.22)}
+.kpi:hover,.setting:hover,.roleRow:hover{transform:translateY(-2px);box-shadow:var(--pro-lift)}
+
+/* ---------------------------------------------------------------- 3. glass sweep (single pass) + flash-trace borders */
+.primary,.settingsSave,.createInvoiceButton,.todayActions .primary{
+  position:relative;overflow:hidden;isolation:isolate;
+}
+.primary::after,.settingsSave::after,.createInvoiceButton::after{
+  content:"";position:absolute;z-index:-1;top:-60%;left:-45%;width:28%;height:220%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.62),transparent);
+  transform:rotate(20deg) translateX(-300%);opacity:1;
+  animation:proSweepOnce 1.1s var(--pro-ease) .5s 1 both;
+}
+/* sweep again on hover and while an action is executing (button text changes to "Saving…" / is disabled) */
+.primary:hover::after,.settingsSave:hover::after,.createInvoiceButton:hover::after{animation:proSweepOnce .9s var(--pro-ease) 1 both}
+.primary:disabled::after,.settingsSave:disabled::after{animation:proSweepOnce 1.1s var(--pro-ease) infinite}
+@keyframes proSweepOnce{0%{transform:rotate(20deg) translateX(-300%)}100%{transform:rotate(20deg) translateX(620%)}}
+
+/* flash trace: a sharp accent line runs once around a field wrapper / card when it gains focus or is processing */
+.fieldWrap,.singleColumnForm label,.drpFields label,.todayWidget,.panel:has(.is-processing){position:relative}
+.fieldWrap::before,.singleColumnForm label::before,.drpFields label::before{
+  content:"";position:absolute;inset:0;border-radius:12px;padding:1.5px;pointer-events:none;opacity:0;
+  background:conic-gradient(from 0deg,transparent 0 62%,var(--j360-accent) 80%,var(--j360-accent-2) 90%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+}
+.fieldWrap:focus-within::before,.singleColumnForm label:focus-within::before,.drpFields label.active::before{
+  opacity:1;animation:proTrace .9s linear 1 both;
+}
+@keyframes proTrace{0%{transform:rotate(0)}100%{transform:rotate(360deg);opacity:.0}}
+.fieldWrap::before,.singleColumnForm label::before{overflow:visible}
+.is-processing{position:relative}
+
+/* ---------------------------------------------------------------- 4. domain colours (class lives on .workspace - fixed in Dashboard.tsx) */
+.workspace.module-overview{--j360-accent:#b8893e;--j360-accent-2:#e0bb72;--j360-accent-rgb:184,137,62}
+.workspace.module-billing,.workspace.module-payments{--j360-accent:#0f9d6e;--j360-accent-2:#5fd7a9;--j360-accent-rgb:15,157,110}        /* emerald  */
+.workspace.module-jewellery,.workspace.module-inventory{--j360-accent:#1f4fa8;--j360-accent-2:#6f9be0;--j360-accent-rgb:31,79,168}   /* deep sapphire */
+.workspace.module-purchases,.workspace.module-suppliers{--j360-accent:#7a4fc0;--j360-accent-2:#b595ec;--j360-accent-rgb:122,79,192}   /* amethyst (vendors) */
+.workspace.module-customers{--j360-accent:#b04a6a;--j360-accent-2:#e093aa;--j360-accent-rgb:176,74,106}                           /* rose */
+.workspace.module-services,.workspace.module-old-gold{--j360-accent:#a8741c;--j360-accent-2:#e6b960;--j360-accent-rgb:168,116,28}
+.workspace>header{border-top:3px solid var(--j360-accent)}
+.workspace .eyebrow{color:var(--j360-accent)}
+.sideLogo{background:linear-gradient(145deg,var(--j360-accent-2,#e0bb72),var(--j360-accent,#b8893e))}
+.sideLogo{font-size:13px;letter-spacing:.02em;text-transform:uppercase}
+
+/* ---------------------------------------------------------------- 5a. text typed into inputs must ALWAYS be visible */
+input,select,textarea,
+input:hover,input:focus,input:active,input:focus-visible,
+select:hover,select:focus,select:active,textarea:hover,textarea:focus,textarea:active,
+.formGrid input,.formGrid select,.formGrid textarea,.authCard input,.authCard select,.userSearch input,.headerTools select,
+.formGrid input:focus,.formGrid select:focus,.formGrid textarea:focus,.authCard input:focus,.userSearch input:focus{
+  color:var(--pro-input-ink)!important;
+  -webkit-text-fill-color:var(--pro-input-ink)!important;
+  caret-color:var(--j360-accent)!important;
+  background-color:var(--pro-input-bg)!important;
+  opacity:1!important;visibility:visible!important;text-indent:0;
+}
+input::placeholder,textarea::placeholder{color:var(--pro-placeholder)!important;-webkit-text-fill-color:var(--pro-placeholder)!important;opacity:1!important}
+input:disabled,select:disabled,textarea:disabled{opacity:.7!important}
+/* browser autofill paints its own background: keep our text colour readable */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,input:-webkit-autofill:active{
+  -webkit-text-fill-color:var(--pro-input-ink)!important;caret-color:var(--j360-accent)!important;
+  -webkit-box-shadow:0 0 0 1000px var(--pro-input-bg) inset!important;box-shadow:0 0 0 1000px var(--pro-input-bg) inset!important;
+  transition:background-color 99999s ease-in-out 0s;
+}
+select option{color:#17202b;background:#fff}
+/* the transition on colour is what made text appear to "vanish" until blur on some browsers */
+input,select,textarea{transition:border-color .3s var(--pro-ease),box-shadow .3s var(--pro-ease),background-color .3s var(--pro-ease),transform .3s var(--pro-ease)}
+
+/* ---------------------------------------------------------------- 5b. unified single-column forms (mobile, laptop and ultra-wide alike) */
+.formGrid:not(.billingForm),.singleColumnForm,.authCard.singleColumnForm{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  grid-template-columns:none!important;gap:14px!important;
+  width:100%;max-width:620px;
+}
+.formGrid:not(.billingForm)>*,.singleColumnForm>*{width:100%!important;max-width:100%!important;min-width:0;grid-column:auto!important}
+.formGrid:not(.billingForm) .userFormActions,.singleColumnForm .userFormActions{display:flex;flex-direction:row;gap:10px;justify-content:flex-end}
+.formGrid:not(.billingForm) .userFormActions>*{width:auto!important;flex:1}
+@media (min-width:1800px){.formGrid:not(.billingForm),.singleColumnForm{max-width:680px}}
+.authCard .fieldWrap{width:100%}
+.authCard.singleColumnForm{max-width:460px}
+.settingsForm label,.singleColumnForm label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:700;color:var(--j360-text-2)}
+.settingsForm label>span,.singleColumnForm label>span{letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;color:var(--j360-muted)}
+.settingsForm label small{font-weight:500;color:var(--j360-muted);line-height:1.45}
+.settingsForm label em{font-style:normal;font-weight:600;font-size:11.5px;color:var(--j360-danger)}
+.settingsForm label.hasIssue input{border-color:var(--j360-danger)!important;box-shadow:0 0 0 3px rgba(196,84,75,.12)!important}
+.settingsForm input,.settingsForm select{min-height:44px;padding:10px 13px;border:1px solid var(--j360-border-strong);border-radius:11px}
+.businessSettingsPanel .settingsSave{align-self:flex-start;margin-top:4px}
+.autoField{display:flex;gap:8px;align-items:stretch}
+.autoField input{flex:1;min-width:0}
+.autoButton{white-space:nowrap;border-radius:11px!important;border:1px solid rgba(var(--j360-accent-rgb),.35)!important;color:var(--j360-accent)!important;font-weight:700}
+
+/* ---------------------------------------------------------------- 6. dropdowns / calendar must paint above tables and cards */
+.panel:has(.itemPicker),.panel:has(.customerPicker),.billingMainPanel,.multiItemCard,.billingForm,.billingLayout>.panel{overflow:visible!important}
+.itemPickerField,.customerBillingField{z-index:40}
+.itemPickerField:focus-within,.customerBillingField:focus-within,.panel:focus-within{z-index:60}
+.itemPickerMenu,.customerPickerMenu{z-index:2000!important;max-height:min(360px,55vh)}
+.drpPopover{position:fixed;z-index:5000}
+
+/* ---------------------------------------------------------------- 7. dashboard widgets */
+.overviewPage{display:flex;flex-direction:column;gap:18px}
+.todayWidget{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) auto;gap:18px 28px;align-items:center;padding:24px 26px;border-radius:22px;
+  background:linear-gradient(135deg,rgba(var(--j360-accent-rgb),.16),var(--pro-glass-strong) 55%)!important;box-shadow:var(--j360-shadow)}
+.todayWidget::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(500px 220px at 100% 0,rgba(var(--j360-accent-rgb),.22),transparent 70%)}
+.todayWidget>*{position:relative}
+.todayTotal{display:block;font-size:clamp(34px,5vw,54px);line-height:1.05;font-weight:800;letter-spacing:-.03em;margin:6px 0 8px;font-variant-numeric:tabular-nums;color:var(--j360-accent)}
+.todayMeta{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.todayMeta small,.todayUpdated{color:var(--j360-muted)}
+.todayStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.todayStats div{padding:12px 14px;border-radius:14px;background:var(--pro-glass);border:1px solid var(--pro-hairline)}
+.todayStats span{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--j360-muted)}
+.todayStats b{display:block;margin-top:4px;font-size:17px;font-variant-numeric:tabular-nums}
+.todayActions{display:flex;flex-direction:column;gap:8px;min-width:150px}
+.todayUpdated{grid-column:1/-1;font-size:11.5px}
+.deltaChip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:11.5px;font-weight:800}
+.deltaChip.up{background:rgba(47,138,97,.14);color:#1f7a50}.deltaChip.down{background:rgba(196,84,75,.14);color:#b1443b}
+
+.trendPanel{overflow:visible!important}
+.trendHead{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-start}
+.trendControls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.rangeKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:6px 0 16px}
+.rangeKpis div{padding:12px 14px;border-radius:14px;background:var(--pro-glass);border:1px solid var(--pro-hairline)}
+.rangeKpis span{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--j360-muted)}
+.rangeKpis b{display:block;margin-top:3px;font-size:18px;font-variant-numeric:tabular-nums}
+
+.segmented{position:relative;display:inline-grid;grid-template-columns:repeat(var(--n,2),1fr);padding:3px;border-radius:12px;background:rgba(var(--j360-accent-rgb),.09);border:1px solid var(--pro-hairline);isolation:isolate}
+.segmentedThumb{position:absolute;z-index:-1;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/var(--n,2));border-radius:9px;background:var(--j360-accent);box-shadow:0 8px 18px rgba(var(--j360-accent-rgb),.35);transform:translateX(calc(var(--i,0)*100%));transition:transform .3s var(--pro-ease)}
+.segmented button{min-height:34px!important;padding:0 14px!important;border:0!important;background:transparent!important;box-shadow:none!important;color:var(--j360-text-2)!important;font-weight:700;border-radius:9px}
+.segmented button.on{color:#fff!important}.segmented button:hover{transform:none;box-shadow:none}
+
+.drp{position:relative}
+.drpButton{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:6px 14px 6px 10px!important;border-radius:12px!important;border:1px solid var(--pro-hairline)!important;background:var(--pro-glass-strong)!important;color:var(--j360-text)!important;text-align:left}
+.drpButton:hover,.drpButton.open{border-color:var(--j360-accent)!important}
+.drpIcon{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:9px;background:rgba(var(--j360-accent-rgb),.14);color:var(--j360-accent)}
+.drpText{display:flex;flex-direction:column;line-height:1.2}.drpText small{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--j360-muted)}.drpText b{font-size:13px;white-space:nowrap}.drpText i{font-style:normal;opacity:.55}
+.drpCaret{opacity:.6}
+.drpPopover{padding:14px;border-radius:18px;box-shadow:0 30px 80px rgba(15,22,32,.35);color:var(--j360-text)}
+.drpPresets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.drpPreset{min-height:32px!important;padding:0 11px!important;font-size:12px!important;border-radius:99px!important;border:1px solid var(--pro-hairline)!important;background:var(--pro-glass)!important;color:var(--j360-text-2)!important;font-weight:700}
+.drpPreset:hover{border-color:var(--j360-accent)!important;color:var(--j360-accent)!important}
+.drpFields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.drpFields label{display:flex;flex-direction:column;gap:4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--j360-muted)}
+.drpFields input{min-height:38px;padding:6px 9px;border-radius:10px;border:1px solid var(--pro-hairline)}
+.drpFields label.active input{border-color:var(--j360-accent)}
+.drpHead{display:flex;align-items:center;justify-content:space-between;margin:6px 0}
+.drpNav{width:34px;min-height:34px!important;padding:0!important;border-radius:10px!important;border:1px solid var(--pro-hairline)!important;background:var(--pro-glass)!important;color:var(--j360-text)!important;font-size:18px;line-height:1}
+.drpWeek,.drpGrid{display:grid;grid-template-columns:repeat(7,1fr)}
+.drpWeek span{text-align:center;font-size:10.5px;font-weight:800;color:var(--j360-muted);padding:4px 0}
+.drpGrid{gap:2px}
+.drpDay{min-height:36px!important;padding:0!important;border:0!important;border-radius:10px!important;background:transparent!important;color:var(--j360-text)!important;font-size:12.5px!important;font-weight:600}
+.drpDay.outside{opacity:.38}.drpDay.today{box-shadow:inset 0 0 0 1px var(--j360-accent)}
+.drpDay.in{background:rgba(var(--j360-accent-rgb),.16)!important;border-radius:0!important}
+.drpDay.start,.drpDay.end{background:var(--j360-accent)!important;color:#fff!important;box-shadow:0 8px 18px rgba(var(--j360-accent-rgb),.35)}
+.drpDay:disabled{opacity:.25}
+.drpDay:not(:disabled):hover{background:rgba(var(--j360-accent-rgb),.22)!important}
+.drpFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--pro-hairline);font-size:12px;color:var(--j360-muted)}
+.drpFoot>div{display:flex;gap:8px}
+
+.trendChart{position:relative;width:100%}
+.trendChart svg{width:100%;height:auto;display:block;overflow:visible}
+.trendGrid{stroke:var(--pro-hairline);stroke-width:1;stroke-dasharray:3 4}
+.trendAxis{fill:var(--j360-muted);font-size:11px;font-variant-numeric:tabular-nums}
+.trendLine{fill:none;stroke:var(--j360-accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:trendDraw 1.1s var(--pro-ease) forwards}
+@keyframes trendDraw{to{stroke-dashoffset:0}}
+.trendArea{opacity:0;animation:trendFade .9s var(--pro-ease) .5s forwards}@keyframes trendFade{to{opacity:1}}
+.trendDot{fill:var(--j360-surface-strong,#fff);stroke:var(--j360-accent);stroke-width:2}.trendDot.on{fill:var(--j360-accent)}
+.trendBar{fill:url(#trendBar);transform-origin:bottom;transform-box:fill-box;animation:trendRise .7s var(--pro-ease) both}
+@keyframes trendRise{from{transform:scaleY(.05)}to{transform:scaleY(1)}}
+.trendBar.on{filter:brightness(1.12)}
+.trendCursor{stroke:var(--j360-accent);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.trendTip{position:absolute;top:6px;transform:translateX(-50%);padding:8px 12px;border-radius:12px;background:rgba(18,26,36,.94);color:#fff;font-size:12px;pointer-events:none;white-space:nowrap;box-shadow:0 14px 34px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:2px}
+.trendTip small{opacity:.7}.trendTip b{font-size:15px;font-variant-numeric:tabular-nums}.trendTip span{opacity:.75;font-size:11px}
+.trendEmpty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:38px 10px;text-align:center;color:var(--j360-muted)}
+.trendEmpty span{font-size:28px;color:var(--j360-accent)}.trendEmpty b{color:var(--j360-text)}
+
+/* ---------------------------------------------------------------- 8. reports toolbar + responsive */
+.reportToolbar{display:flex;gap:12px;align-items:center;margin-bottom:12px;position:relative;z-index:30}
+@media (max-width:1100px){.todayWidget{grid-template-columns:1fr 1fr}.todayActions{flex-direction:row;flex-wrap:wrap;grid-column:1/-1}.rangeKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){
+  .todayWidget{grid-template-columns:1fr;padding:18px}.todayStats{grid-template-columns:1fr 1fr 1fr}.todayStats b{font-size:14px}
+  .trendControls{width:100%}.trendControls>*{flex:1 1 100%}.segmented{display:grid}
+  .drpFields{grid-template-columns:1fr}
+  .workspace>header{padding:12px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .trendLine{stroke-dashoffset:0}.trendArea{opacity:1}
+}
+
+/* ---------------------------------------------------------------- 9. widget buttons inside .panel must not inherit the global gold "primary" button skin
+   (styles.css paints every `.panel button:not(.ghost)` with the accent gradient; these are neutral controls) */
+.panel button.drpButton:not(.ghost),.panel .segmented button:not(.ghost),.panel button.autoButton:not(.ghost),.panel button.drpNav:not(.ghost){
+  background:var(--pro-glass-strong)!important;border:1px solid var(--pro-hairline)!important;box-shadow:none!important;color:var(--j360-text)!important;filter:none!important;
+}
+.panel .segmented button:not(.ghost){background:transparent!important;border:0!important;color:var(--j360-text-2)!important}
+.panel .segmented button.on:not(.ghost){color:#fff!important}
+.panel button.drpButton:not(.ghost):hover{border-color:var(--j360-accent)!important;box-shadow:var(--pro-lift)!important}
+.panel button.drpButton:not(.ghost)::after,.panel .segmented button::after,.panel button.autoButton::after,.panel button.drpNav::after{display:none!important}
+.panel button.autoButton:not(.ghost){color:var(--j360-accent)!important;border-color:rgba(var(--j360-accent-rgb),.35)!important}
+.drpPopover button.primary{background:linear-gradient(135deg,var(--j360-accent),color-mix(in srgb,var(--j360-accent) 72%,#111))!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important}
+.drpPopover button.ghost{background:transparent!important;color:var(--j360-text-2)!important;border:1px solid var(--pro-hairline)!important}
+.headerClock{min-width:max-content;padding-right:14px}
+.headerMarketGadget{max-width:100%}
+
+/* ---------------------------------------------------------------- 9. dark-theme legibility + outlined secondary buttons (found in browser testing) */
+.theme-premium_dark .panel h2,.theme-premium_dark .panelHead h2,.theme-premium_dark .panel h3,.theme-premium_dark .setting b,.theme-premium_dark .roleRow b{color:#f4efe6!important}
+.theme-premium_dark .panel td,.theme-premium_dark .panel td b,.theme-premium_dark .panel td small,.theme-premium_dark .panel th{color:#e6dfd2}
+.theme-premium_dark .panel p,.theme-premium_dark .panel small,.theme-premium_dark .settingsHelp{color:#aab4c0}
+.theme-premium_dark .panel table tr:hover td{background:rgba(255,255,255,.04)}
+.panel button.secondary:not(.ghost),.userFormActions button.secondary:not(.ghost){
+  background:var(--pro-glass-strong)!important;color:var(--j360-accent)!important;
+  border:1px solid rgba(var(--j360-accent-rgb),.42)!important;box-shadow:none!important
+}
+.panel button.secondary:not(.ghost):hover{background:rgba(var(--j360-accent-rgb),.14)!important;transform:translateY(-2px)!important;box-shadow:var(--pro-lift)!important}
+.panel button.secondary:not(.ghost)::after{display:none!important}
+.theme-premium_dark .panel button.secondary:not(.ghost){color:#f0d9a8!important}
+.sideBrand b{white-space:normal;line-height:1.2;overflow-wrap:anywhere}
+.theme-premium_dark .ghost,.theme-premium_dark .panel button.ghost{color:#cfd8e3!important}
+.theme-premium_dark .ghost:disabled{color:#7d8896!important}
+.rangeKpis>div,.todayStats>div{transition:transform .3s var(--pro-ease),box-shadow .3s var(--pro-ease),border-color .3s var(--pro-ease),background .3s var(--pro-ease)}
+.rangeKpis>div:hover,.todayStats>div:hover{transform:translateY(-2px);box-shadow:var(--pro-lift);border-color:rgba(var(--j360-accent-rgb),.35)}
+
+/* flash trace for bare inputs (forms whose fields are not wrapped in a <label>): a sharp accent ring flashes once on focus */
+.singleColumnForm>input:focus,.singleColumnForm>select:focus,.singleColumnForm>textarea:focus,.formGrid>input:focus,.formGrid>select:focus,.userSearch input:focus{
+  animation:proFlash .75s var(--pro-ease) 1;
+}
+@keyframes proFlash{
+  0%{box-shadow:0 0 0 0 rgba(var(--j360-accent-rgb),.95),0 0 0 0 rgba(var(--j360-accent-rgb),.35)}
+  45%{box-shadow:0 0 0 2px rgba(var(--j360-accent-rgb),.95),0 0 0 9px rgba(var(--j360-accent-rgb),.16)}
+  100%{box-shadow:0 0 0 4px rgba(var(--j360-accent-rgb),.11),0 8px 24px rgba(var(--j360-accent-rgb),.08)}
+}
+@media (prefers-reduced-motion:reduce){
+  .singleColumnForm>input:focus,.formGrid>input:focus,.fieldWrap:focus-within::before,.singleColumnForm label:focus-within::before{animation:none}
+  .primary::after,.panel button:not(.ghost)::after{animation:none!important}
+}
+
+/* ---------------------------------------------------------------- 10. every creation / registration form is ONE column on every screen size */
+.branchConfigForm,.singleColumnForm,.authCard form,form.formGrid:not(.billingForm){grid-template-columns:minmax(0,1fr)!important}
+.branchConfigForm .wide,.singleColumnForm .wide{grid-column:auto!important}
+.branchConfigForm,.singleColumnForm{max-width:680px}
+.branchConfigForm label::before{content:"";position:absolute;inset:0;border-radius:12px;padding:1.5px;pointer-events:none;opacity:0;
+  background:conic-gradient(from 0deg,transparent 0 62%,var(--j360-accent) 80%,var(--j360-accent-2) 90%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.branchConfigForm label{position:relative}
+.branchConfigForm label:focus-within::before{opacity:1;animation:proTrace .9s linear 1 both}

@@ -3,6 +3,7 @@ package com.jewellery360.controller;
 import com.jewellery360.domain.*;
 import com.jewellery360.repository.*;
 import com.jewellery360.security.AuthenticatedUser;
+import com.jewellery360.service.CompanyPropertyService;
 import com.jewellery360.service.MarketGoldRateService;
 import com.jewellery360.service.PermissionService;
 import lombok.RequiredArgsConstructor;
@@ -31,16 +32,28 @@ public class NormalizedInvoiceController {
     private final SaleItemRepository items;
     private final PermissionService permissions;
     private final MarketGoldRateService marketGoldRates;
+    private final CompanyPropertyService companyProperties;
 
+    /**
+     * Invoice PDF. Any signed-in user may open invoices of their OWN company (and branch, for branch-bound users);
+     * no separate BILLING-module permission is required, so Reports/Payments users can print what they can already see.
+     * The company/branch ownership check in {@link #check} is kept on purpose: it is the tenant-isolation boundary.
+     */
     @GetMapping("/sales/{id}/pdf")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<byte[]> salePdf(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id) {
-        permissions.requireModule(me, "BILLING");
         Sale s = sales.findById(id).orElseThrow(() -> notFound("Sale not found"));
         check(me, s.getCompany().getId(), s.getBranch().getId());
 
         List<SaleItem> saleItems = items.findBySaleId(id);
-        Map<String, Object> market = marketGoldRates.current();
-        byte[] pdf = InvoicePdf.render(s, saleItems, market, ZonedDateTime.now(INDIA));
+        CompanyPropertyService.BusinessProfile profile = companyProperties.getBusinessProfile(s.getCompany());
+        byte[] pdf;
+        if ("50MM".equals(profile.printFormat()) || "80MM".equals(profile.printFormat())) {
+            pdf = ThermalReceipt.render(s, saleItems, profile, ZonedDateTime.now(INDIA), "80MM".equals(profile.printFormat()));
+        } else {
+            Map<String, Object> market = marketGoldRates.current();
+            pdf = InvoicePdf.render(s, saleItems, market, ZonedDateTime.now(INDIA), profile);
+        }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
@@ -50,11 +63,10 @@ public class NormalizedInvoiceController {
 
     @GetMapping("/returns/{id}/pdf")
     public ResponseEntity<byte[]> returnPdf(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id) {
-        permissions.requireModule(me, "BILLING");
         SaleReturn r = returns.findById(id).orElseThrow(() -> notFound("Return not found"));
         check(me, r.getCompany().getId(), r.getBranch().getId());
         List<String> lines = List.of(
-                "JEWELLERY360", "SALES RETURN", "Return No: " + r.getReturnNo(),
+                companyProperties.getBusinessProfile(r.getCompany()).companyName().toUpperCase(Locale.ROOT), "SALES RETURN", "Return No: " + r.getReturnNo(),
                 "Date: " + r.getReturnDate(), "Original Invoice: " + r.getSale().getInvoiceNo(),
                 "Customer: " + r.getSale().getCustomer().getName(), "Amount: Rs. " + money(r.getAmount()),
                 "Reason: " + Objects.toString(r.getReason(), "")
@@ -79,30 +91,30 @@ public class NormalizedInvoiceController {
         private static final float W = 595f, H = 842f, M = 36f;
         private static final int ROWS_PER_PAGE = 6;
 
-        static byte[] render(Sale sale, List<SaleItem> rows, Map<String, Object> market, ZonedDateTime generatedAt) {
+        static byte[] render(Sale sale, List<SaleItem> rows, Map<String, Object> market, ZonedDateTime generatedAt, CompanyPropertyService.BusinessProfile profile) {
             List<Page> pages = new ArrayList<>();
             int pageCount = Math.max(1, (int) Math.ceil(rows.size() / (double) ROWS_PER_PAGE));
             for (int pageNo = 0; pageNo < pageCount; pageNo++) {
                 int from = pageNo * ROWS_PER_PAGE;
                 int to = Math.min(rows.size(), from + ROWS_PER_PAGE);
-                pages.add(page(sale, rows.subList(from, to), market, generatedAt, pageNo + 1, pageCount, pageNo == pageCount - 1));
+                pages.add(page(sale, rows.subList(from, to), market, generatedAt, pageNo + 1, pageCount, pageNo == pageCount - 1, profile));
             }
             return PdfWriter.write(pages);
         }
 
         private static Page page(Sale s, List<SaleItem> rows, Map<String, Object> market, ZonedDateTime generatedAt,
-                                 int pageNo, int pageCount, boolean last) {
+                                 int pageNo, int pageCount, boolean last, CompanyPropertyService.BusinessProfile profile) {
             Page p = new Page();
             float y = H - M;
             Branch branch = s.getBranch();
             Company company = s.getCompany();
             String branchName = branch == null ? "Main Branch" : nullToDash(branch.getName());
             String branchGstin = branch != null && branch.getGstin() != null && !branch.getGstin().isBlank()
-                    ? branch.getGstin() : (company == null ? "" : company.getGstin());
+                    ? branch.getGstin() : firstNonBlank(profile.gstin(), company == null ? "" : company.getGstin());
             String branchPhone = branch != null && branch.getPhone() != null && !branch.getPhone().isBlank()
-                    ? branch.getPhone() : (company == null ? "" : company.getPhone());
+                    ? branch.getPhone() : firstNonBlank(profile.phone(), company == null ? "" : company.getPhone());
             String branchEmail = branch != null && branch.getEmail() != null && !branch.getEmail().isBlank()
-                    ? branch.getEmail() : (company == null ? "" : company.getEmail());
+                    ? branch.getEmail() : firstNonBlank(profile.email(), company == null ? "" : company.getEmail());
             String branchWebsite = branch == null ? "" : nullToEmpty(branch.getWebsite());
             String branchAddress = branch == null ? "" : nullToEmpty(branch.getAddress());
             String invoiceTitle = branch != null && branch.getInvoiceTitle() != null && !branch.getInvoiceTitle().isBlank()
@@ -112,7 +124,8 @@ public class NormalizedInvoiceController {
 
             // Light, neutral jewellery-invoice header. Avoid a black background while keeping strong visual hierarchy.
             p.roundRect(M, y - 104, W - 2 * M, 104, 0.985f, 0.965f, 0.915f, 0.78f, 0.62f, 0.28f);
-            p.text(M + 16, y - 25, 21, true, "JEWELLERY360", 0.55f, 0.35f, 0.10f);
+            String brand = firstNonBlank(profile.companyName(), company == null ? "" : company.getName());
+            p.text(M + 16, y - 25, brand.length() > 22 ? 15 : 21, true, cut(brand.toUpperCase(Locale.ROOT), 30), 0.55f, 0.35f, 0.10f);
             p.text(M + 16, y - 42, 8.5f, true, cut(branchName, 34), 0.22f, 0.19f, 0.15f);
             p.text(M + 16, y - 56, 7.5f, false, cut(branchAddress, 58), 0.42f, 0.38f, 0.31f);
             p.text(M + 16, y - 70, 7.5f, false, "GSTIN: " + nullToDash(branchGstin) + "   |   Phone: " + nullToDash(branchPhone), 0.42f, 0.38f, 0.31f);
@@ -236,7 +249,7 @@ public class NormalizedInvoiceController {
                 p.text(355, y - 47, 7, false, "Authorised signatory", 0.48f, 0.44f, 0.38f);
                 String terms = branch != null ? branch.getInvoiceTerms() : null;
                 String footer = branch != null ? branch.getInvoiceFooter() : null;
-                String footerText = footer != null && !footer.isBlank() ? footer : "Thank you for choosing Jewellery360. Please retain this invoice for future exchange, service and warranty reference.";
+                String footerText = footer != null && !footer.isBlank() ? footer : "Thank you for choosing " + brand + ". Please retain this invoice for future exchange, service and warranty reference.";
                 if (terms != null && !terms.isBlank()) footerText = footerText + " | Terms: " + terms;
                 p.text(M, 26, 7, false, cut(footerText, 118), 0.46f, 0.42f, 0.36f);
             }
@@ -272,6 +285,144 @@ public class NormalizedInvoiceController {
         private static String cut(String s,int n){if(s==null)return "";return s.length()<=n?s:s.substring(0,Math.max(0,n-1))+"…";}
         private static String nullToDash(String s){return s==null||s.isBlank()?"—":s;}
         private static String nullToEmpty(String s){return s==null?"":s;}
+    }
+
+
+    private static String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : (second == null ? "" : second);
+    }
+
+    /**
+     * 50 mm / 80 mm thermal receipt. Plain monospaced layout so columns line up on any thermal printer; the page height
+     * grows with the number of lines. Uses the same sale snapshot (subtotal, tax mode and rates, discount, total) as the A4 invoice,
+     * so the GST / CGST / SGST lines always match the company's "Include GST" setting at the time of billing.
+     */
+    static final class ThermalReceipt {
+        private static final float MM = 72f / 25.4f;
+
+        static byte[] render(Sale s, List<SaleItem> rows, CompanyPropertyService.BusinessProfile profile, ZonedDateTime generatedAt, boolean wide) {
+            final int cols = wide ? 42 : 28;
+            final float font = wide ? 7.2f : 6.6f;
+            final float width = (wide ? 80 : 50) * MM;
+            final float margin = wide ? 8f : 6f;
+            final float leading = font + 3.2f;
+
+            List<String[]> lines = new ArrayList<>();   // {text, "B" if bold}
+            Branch branch = s.getBranch();
+            Company company = s.getCompany();
+            String brand = firstNonBlank(profile.companyName(), company == null ? "" : company.getName());
+            String phone = firstNonBlank(branch != null ? branch.getPhone() : "", profile.phone());
+            String gstin = firstNonBlank(branch != null ? branch.getGstin() : "", profile.gstin());
+            String email = firstNonBlank(branch != null ? branch.getEmail() : "", profile.email());
+
+            for (String part : wrap(brand.toUpperCase(Locale.ROOT), cols)) lines.add(new String[]{center(part, cols), "B"});
+            if (branch != null && branch.getName() != null) lines.add(new String[]{center(cut(branch.getName(), cols), cols), ""});
+            if (branch != null && branch.getAddress() != null && !branch.getAddress().isBlank()) {
+                for (String part : wrap(branch.getAddress(), cols)) lines.add(new String[]{center(part, cols), ""});
+            }
+            if (!phone.isBlank()) lines.add(new String[]{center("Ph: " + phone, cols), ""});
+            if (!email.isBlank()) lines.add(new String[]{center(cut(email, cols), cols), ""});
+            if (!gstin.isBlank()) lines.add(new String[]{center("GSTIN: " + gstin, cols), ""});
+            lines.add(new String[]{rule(cols), ""});
+            String title = branch != null && branch.getInvoiceTitle() != null && !branch.getInvoiceTitle().isBlank() ? branch.getInvoiceTitle() : "TAX INVOICE";
+            lines.add(new String[]{center(cut(title, cols), cols), "B"});
+            lines.add(new String[]{"Inv : " + cut(s.getInvoiceNo(), cols - 6), ""});
+            lines.add(new String[]{"Date: " + (s.getSaleDate() == null ? "-" : s.getSaleDate().format(DATE)), ""});
+            lines.add(new String[]{"Time: " + generatedAt.format(DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)), ""});
+            if (s.getCustomer() != null) {
+                lines.add(new String[]{"Cust: " + cut(nullToDash(s.getCustomer().getName()), cols - 6), ""});
+                if (s.getCustomer().getPhone() != null && !s.getCustomer().getPhone().isBlank()) lines.add(new String[]{"Ph  : " + s.getCustomer().getPhone(), ""});
+            }
+            lines.add(new String[]{"Gold rate: Rs." + money(s.getGoldRate()) + "/g", ""});
+            lines.add(new String[]{rule(cols), ""});
+
+            for (SaleItem si : rows) {
+                String name = si.getJewelleryItem() != null && si.getJewelleryItem().getProduct() != null ? si.getJewelleryItem().getProduct().getName() : "Jewellery";
+                lines.add(new String[]{cut(name, cols), "B"});
+                lines.add(new String[]{cut("Tag " + nullToEmpty(si.getTagNo()) + " " + nullToEmpty(si.getPurity()), cols), ""});
+                lines.add(new String[]{cut("N.Wt " + weightText(si.getNetWeight()) + "g x " + money(si.getGoldRate()), cols), ""});
+                lines.add(new String[]{pair("Making+Other", money(nzv(si.getMakingCharge()).add(nzv(si.getOtherCharge())).add(nzv(si.getStoneCharge()))), cols), ""});
+                lines.add(new String[]{pair("Item total", money(si.getTotal()), cols), "B"});
+            }
+            if (rows.isEmpty()) lines.add(new String[]{"No sale items found.", ""});
+            lines.add(new String[]{rule(cols), ""});
+
+            lines.add(new String[]{pair("Subtotal", money(s.getSubtotal()), cols), ""});
+            BigDecimal gst = nzv(s.getGst());
+            if ("CGST_SGST".equalsIgnoreCase(s.getTaxMode())) {
+                BigDecimal split = nzv(s.getCgstRate()).add(nzv(s.getSgstRate()));
+                BigDecimal half = split.signum() == 0 ? BigDecimal.ZERO : gst.multiply(nzv(s.getCgstRate())).divide(split, 2, java.math.RoundingMode.HALF_UP);
+                lines.add(new String[]{pair("CGST " + money(s.getCgstRate()) + "%", money(half), cols), ""});
+                lines.add(new String[]{pair("SGST " + money(s.getSgstRate()) + "%", money(gst.subtract(half)), cols), ""});
+            } else if (!"NONE".equalsIgnoreCase(s.getTaxMode()) && gst.signum() > 0) {
+                lines.add(new String[]{pair("GST " + money(s.getTaxRate()) + "%", money(gst), cols), ""});
+            }
+            if (nzv(s.getDiscount()).signum() > 0) lines.add(new String[]{pair("Discount", "-" + money(s.getDiscount()), cols), ""});
+            lines.add(new String[]{rule(cols), ""});
+            lines.add(new String[]{pair("TOTAL Rs.", money(s.getTotal()), cols), "B"});
+            lines.add(new String[]{"Payment: " + nullToDash(s.getPaymentStatus()), ""});
+            lines.add(new String[]{rule(cols), ""});
+            String footer = branch != null && branch.getInvoiceFooter() != null && !branch.getInvoiceFooter().isBlank() ? branch.getInvoiceFooter() : "Thank you for choosing " + brand + "!";
+            for (String part : wrap(footer, cols)) lines.add(new String[]{center(part, cols), ""});
+
+            float height = margin * 2 + lines.size() * leading;
+            StringBuilder content = new StringBuilder();
+            float y = height - margin - font;
+            for (String[] line : lines) {
+                content.append(String.format(Locale.US, "BT /F%d %.1f Tf 1 0 0 1 %.1f %.1f Tm (%s) Tj ET\n", "B".equals(line[1]) ? 2 : 1, font, margin, y, escape(line[0])));
+                y -= leading;
+            }
+            return build(width, height, content.toString());
+        }
+
+        private static byte[] build(float width, float height, String content) {
+            List<String> objs = new ArrayList<>();
+            objs.add("<< /Type /Catalog /Pages 2 0 R >>");
+            objs.add("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+            objs.add(String.format(Locale.US, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>", width, height));
+            objs.add("<< /Length " + content.getBytes(StandardCharsets.ISO_8859_1).length + " >>\nstream\n" + content + "endstream");
+            objs.add("<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>");
+            objs.add("<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>");
+            StringBuilder pdf = new StringBuilder("%PDF-1.4\n");
+            List<Integer> offsets = new ArrayList<>();
+            for (int i = 0; i < objs.size(); i++) {
+                offsets.add(pdf.toString().getBytes(StandardCharsets.ISO_8859_1).length);
+                pdf.append(i + 1).append(" 0 obj\n").append(objs.get(i)).append("\nendobj\n");
+            }
+            int xref = pdf.toString().getBytes(StandardCharsets.ISO_8859_1).length;
+            pdf.append("xref\n0 ").append(objs.size() + 1).append("\n0000000000 65535 f \n");
+            for (int off : offsets) pdf.append(String.format(Locale.US, "%010d 00000 n \n", off));
+            pdf.append("trailer\n<< /Size ").append(objs.size() + 1).append(" /Root 1 0 R >>\nstartxref\n").append(xref).append("\n%%EOF");
+            return pdf.toString().getBytes(StandardCharsets.ISO_8859_1);
+        }
+
+        private static String escape(String s) {
+            String latin = new String(String.valueOf(s).replace("\u20b9", "Rs.").getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1);
+            return latin.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)").replace("\r", " ").replace("\n", " ");
+        }
+        private static BigDecimal nzv(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }
+        private static String nullToDash(String s) { return s == null || s.isBlank() ? "-" : s; }
+        private static String nullToEmpty(String s) { return s == null ? "" : s; }
+        private static String weightText(BigDecimal x) { return nzv(x).setScale(3, java.math.RoundingMode.HALF_UP).toPlainString(); }
+        private static String cut(String s, int n) { if (s == null) return ""; return s.length() <= n ? s : s.substring(0, Math.max(0, n - 1)) + "."; }
+        private static String rule(int cols) { return "-".repeat(cols); }
+        private static String center(String s, int cols) { int pad = Math.max(0, (cols - s.length()) / 2); return " ".repeat(pad) + s; }
+        private static String pair(String left, String right, int cols) {
+            int space = Math.max(1, cols - left.length() - right.length());
+            return cut(left, cols - right.length() - 1) + " ".repeat(space) + right;
+        }
+        private static List<String> wrap(String text, int cols) {
+            List<String> out = new ArrayList<>();
+            StringBuilder cur = new StringBuilder();
+            for (String word : String.valueOf(text).trim().split("\\s+")) {
+                if (cur.length() > 0 && cur.length() + 1 + word.length() > cols) { out.add(cur.toString()); cur.setLength(0); }
+                if (cur.length() > 0) cur.append(' ');
+                cur.append(word.length() > cols ? word.substring(0, cols) : word);
+            }
+            if (cur.length() > 0) out.add(cur.toString());
+            return out;
+        }
+        private static String money(BigDecimal n) { return NumberFormat.getNumberInstance(new Locale("en", "IN")).format(n == null ? BigDecimal.ZERO : n.setScale(2, java.math.RoundingMode.HALF_UP)); }
     }
 
     static final class Page {

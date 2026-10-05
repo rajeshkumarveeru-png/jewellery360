@@ -6,6 +6,7 @@ import com.jewellery360.domain.*;
 import com.jewellery360.repository.*;
 import com.jewellery360.security.AuthenticatedUser;
 import com.jewellery360.service.PermissionService;
+import com.jewellery360.service.SkuService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,7 @@ public class DomainCrudController {
     private final WhatsappLogRepository whatsappLogs;
     private final NotificationLogRepository notificationLogs;
     private final HttpServletRequest request;
+    private final SkuService skuService;
 
     @GetMapping("/customers")
     public List<Map<String, Object>> customers(
@@ -130,6 +132,22 @@ public class DomainCrudController {
         return designs.save(x);
     }
 
+    /** Next free SKU for the caller's company (sequence is isolated per company; optional company-defined prefix). */
+    @GetMapping("/jewellery/next-sku")
+    @Transactional
+    public Map<String, String> nextSku(@AuthenticationPrincipal AuthenticatedUser me) {
+        permissions.requireModule(me, "JEWELLERY");
+        return Map.of("sku", skuService.nextProductSku(contextCompany(me)));
+    }
+
+    /** Next free tag number for the caller's company. */
+    @GetMapping("/jewellery/next-tag")
+    @Transactional
+    public Map<String, String> nextTag(@AuthenticationPrincipal AuthenticatedUser me) {
+        permissions.requireModule(me, "JEWELLERY");
+        return Map.of("tagNo", skuService.nextTagNo(contextCompany(me)));
+    }
+
     @GetMapping("/jewellery/products")
     public List<JewelleryProduct> products(@AuthenticationPrincipal AuthenticatedUser me) {
         return list(products, me, "JEWELLERY");
@@ -142,6 +160,7 @@ public class DomainCrudController {
         JewelleryProduct x = convert(n, JewelleryProduct.class);
         bindContext(me, x);
         scopeCreate(me, x.getCompany(), null);
+        if (x.getSku() == null || x.getSku().isBlank()) x.setSku(skuService.nextProductSku(x.getCompany()));
         if (products.existsByCompanyIdAndSkuIgnoreCase(x.getCompany().getId(), x.getSku()))
             throw conflict("Product SKU already exists for this company: " + x.getSku());
         x.setCategory(categories.findById(requiredId(n, "categoryId")).orElseThrow(() -> bad("Category not found")));
@@ -162,6 +181,8 @@ public class DomainCrudController {
         JewelleryTag x = convert(n, JewelleryTag.class);
         bindContext(me, x);
         scopeCreate(me, x.getCompany(), x.getBranch());
+        if (x.getTagNo() == null || x.getTagNo().isBlank()) x.setTagNo(skuService.nextTagNo(x.getCompany()));
+        if (x.getBarcode() == null || x.getBarcode().isBlank()) x.setBarcode(x.getTagNo());
         if (tags.existsByCompanyIdAndTagNoIgnoreCase(x.getCompany().getId(), x.getTagNo()))
             throw conflict("Tag number already exists for this company: " + x.getTagNo());
         if (tags.existsByCompanyIdAndBarcode(x.getCompany().getId(), x.getBarcode()))
@@ -862,6 +883,16 @@ public class DomainCrudController {
 
     private void requireDelete(AuthenticatedUser me, String module) {
         permissions.requireAction(me, module, "DELETE");
+    }
+
+    private Company contextCompany(AuthenticatedUser me) {
+        if ("APP_ADMIN".equals(me.getRole())) {
+            String cs = request.getHeader("X-Company-Id");
+            if (cs == null) throw bad("APP_ADMIN requires X-Company-Id context");
+            return companies.findById(Long.parseLong(cs)).orElseThrow(() -> bad("Company context not found"));
+        }
+        if (me.getCompanyId() == null) throw bad("Company scope is required");
+        return companies.findById(me.getCompanyId()).orElseThrow(() -> bad("Company not found"));
     }
 
     private void bindContext(AuthenticatedUser me, Object entity) {

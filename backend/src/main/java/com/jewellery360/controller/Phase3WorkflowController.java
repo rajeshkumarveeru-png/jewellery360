@@ -25,5 +25,5 @@ public class Phase3WorkflowController {
     @PatchMapping("/custom-orders/{id}") public Map<String,Object> customOrder(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable Long id,@RequestBody JsonNode n){return service.updateCustomOrder(me,id,n);}
     @PostMapping("/advances") public Map<String,Object> advance(@AuthenticationPrincipal AuthenticatedUser me,@RequestBody JsonNode n){return service.createAdvance(me,n);}
     @GetMapping("/customers/{id}/outstanding") public Map<String,Object> outstanding(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable Long id){return service.customerOutstanding(me,id);}
-    @GetMapping("/reports/{type}") public Map<String,Object> report(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable String type){return service.normalizedReport(me,type);}
+    @GetMapping("/reports/{type}") public Map<String,Object> report(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable String type,@RequestParam(required=false) java.time.LocalDate from,@RequestParam(required=false) java.time.LocalDate to){return service.normalizedReport(me,type,from,to);}
 }
