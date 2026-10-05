@@ -6,6 +6,7 @@ import {
   headerGoldRates,
 } from '../api';
 import { Empty, Table } from '../shared/ui';
+import FormDrawer from '../shared/FormDrawer';
 import './GoldRates.css';
 import PurityMaster from './PurityMaster';
 
@@ -610,13 +611,13 @@ export default function GoldRatesModule({
               TOP GRID
           ===================================================== */}
 
-            <div className="goldRateTopGrid">
+            <div className="goldRateTopGrid hasDrawer">
 
           {/* ===================================================
             SAVE GOLD RATES
         =================================================== */}
 
-          <div className="panel goldRateFormPanel">
+          <FormDrawer label="Save gold rates" title="Save gold rates" hint="Rates are saved per purity and used on every new bill."><div className="panel goldRateFormPanel">
 
             <div className="panelHead">
 
@@ -732,6 +733,7 @@ export default function GoldRatesModule({
 
             </form>
           </div>
+</FormDrawer>
 
           {/* ===================================================
             MARKET RATE

@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getBusinessSettings, saveBusinessSettings, getFriendlyApiError} from '../api';
+import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getBusinessSettings, saveBusinessSettings, invoicePreview, getFriendlyApiError} from '../api';
 import {rememberBrandName} from '../shared/brand';
 import {Role,User,ThemeKey} from '../shared/types';
 import {roleMenus,defaultPreferredMenu} from '../shared/config';
@@ -26,8 +26,21 @@ type TaxSettingsState = {
   sgstRate:string;
 };
 
-type BusinessState={companyName:string;phone:string;email:string;gstin:string;printFormat:'A4'|'80MM'|'50MM';skuPrefix:string};
-const emptyBusiness:BusinessState={companyName:'',phone:'',email:'',gstin:'',printFormat:'A4',skuPrefix:''};
+type BusinessState={companyName:string;phone:string;email:string;gstin:string;printFormat:'A4'|'80MM'|'50MM';skuPrefix:string;invoiceTemplate:string};
+const emptyBusiness:BusinessState={companyName:'',phone:'',email:'',gstin:'',printFormat:'A4',skuPrefix:'',invoiceTemplate:'CLASSIC'};
+const STYLE_PACKS:{key:ThemeKey;label:string;style:string;note:string;thumb:string}[]=[
+  {key:'LUXURY_GOLD',label:'Luxury Gold',style:'Glass',note:'Gold pill sidebar, glass cards, gradient buttons.',thumb:'pk-luxury'},
+  {key:'CLASSIC_IVORY',label:'Classic Ivory',style:'Ledger',note:'Top menu bar, serif type, ruled tables, engraved buttons, underline fields.',thumb:'pk-classic'},
+  {key:'PREMIUM_DARK',label:'Premium Dark',style:'Console',note:'Icon rail, neon outlines, grid tables, mono type, glow buttons.',thumb:'pk-dark'},
+  {key:'MODERN_LIGHT',label:'Modern Light',style:'Studio',note:'Floating menu, huge radii, floating table rows, pill buttons.',thumb:'pk-modern'}
+];
+const INVOICE_DESIGNS:{key:string;label:string;note:string;best:string}[]=[
+  {key:'CLASSIC',label:'Classic Gold',note:'Cream and gold boxes, rate board in the header.',best:'Everyday showroom bills'},
+  {key:'MODERN',label:'Modern Minimal',note:'Clean white page, thin lines, teal accent, amount in words.',best:'Premium boutiques'},
+  {key:'ROYAL',label:'Royal Border',note:'Double maroon-and-gold frame with serif lettering.',best:'Weddings and high-value sales'},
+  {key:'COMPACT',label:'Compact Table',note:'Dense navy grid, 17 items per page, wastage column.',best:'Long bills with many items'},
+  {key:'FORMAL',label:'GST Formal',note:'Black-and-white tax invoice with HSN, tax summary and declaration.',best:'B2B and audit copies'}
+];
 const GSTIN_RE=/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PRINT_OPTIONS:{value:BusinessState['printFormat'];label:string;hint:string}[]=[
@@ -175,12 +188,25 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  })();
  const canEditBusiness=user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN';
 
+
+ const [previewBusy,setPreviewBusy]=useState('');
+ const openPreview=async(key:string)=>{
+   const popup=window.open('about:blank','_blank');
+   setPreviewBusy(key);
+   try{
+     const r=await invoicePreview(key);
+     const url=URL.createObjectURL(new Blob([r.data],{type:'application/pdf'}));
+     if(popup){popup.location.href=url;popup.focus();}else{window.open(url,'_blank');}
+     window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+   }catch(e){popup?.close();setBizError(getFriendlyApiError(e,'Unable to open the design preview.'));}
+   finally{setPreviewBusy('');}
+ };
  const saveBiz=async()=>{
    if(!companyId||Object.keys(bizIssues).length) return;
    setBizSaving(true); setBizMessage(''); setBizError('');
    try{
-     const r=await saveBusinessSettings({companyName:biz.companyName.trim(),phone:biz.phone.trim(),email:biz.email.trim(),gstin:biz.gstin.trim().toUpperCase(),printFormat:biz.printFormat,skuPrefix:biz.skuPrefix.trim().toUpperCase()},companyId);
-     setBiz({companyName:String(r.data?.companyName||biz.companyName),phone:String(r.data?.phone||''),email:String(r.data?.email||''),gstin:String(r.data?.gstin||''),printFormat:(r.data?.printFormat||biz.printFormat) as BusinessState['printFormat'],skuPrefix:String(r.data?.skuPrefix||'')});
+     const r=await saveBusinessSettings({companyName:biz.companyName.trim(),phone:biz.phone.trim(),email:biz.email.trim(),gstin:biz.gstin.trim().toUpperCase(),printFormat:biz.printFormat,skuPrefix:biz.skuPrefix.trim().toUpperCase(),invoiceTemplate:biz.invoiceTemplate},companyId);
+     setBiz({companyName:String(r.data?.companyName||biz.companyName),phone:String(r.data?.phone||''),email:String(r.data?.email||''),gstin:String(r.data?.gstin||''),printFormat:(r.data?.printFormat||biz.printFormat) as BusinessState['printFormat'],skuPrefix:String(r.data?.skuPrefix||''),invoiceTemplate:String(r.data?.invoiceTemplate||biz.invoiceTemplate)});
      rememberBrandName(String(r.data?.companyName||biz.companyName));
      window.dispatchEvent(new Event('j360-brand-changed'));
      setBizMessage('Business settings saved. The company name, GSTIN, contact details and print layout now apply to new invoices and receipts.');
@@ -238,7 +264,7 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  return <div className="moduleGrid settingsGrid">
    <div className="panel">
     <span className="eyebrow">WORKSPACE</span><h2>Settings</h2>
-    <div className="setting"><div><b>Theme</b><small>Stored as a UI preference in this browser.</small></div><select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold</option><option value="CLASSIC_IVORY">Classic Ivory</option><option value="PREMIUM_DARK">Premium Dark</option><option value="MODERN_LIGHT">Modern Light</option></select></div>
+    <div className="setting"><div><b>Theme</b><small>Stored as a UI preference in this browser.</small></div><select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold · Glass</option><option value="CLASSIC_IVORY">Classic Ivory · Ledger</option><option value="PREMIUM_DARK">Premium Dark · Console</option><option value="MODERN_LIGHT">Modern Light · Studio</option></select></div>
     <div className="setting"><div><b>Business identity</b><small>{user.companyName||'Platform'} · {user.branchName||'No branch selected'}</small></div></div>
     <div className="setting"><div><b>Company property storage</b><small>WhatsApp configuration is stored per company in the <code>property</code> table. APP_ADMIN must select a company context before editing it.</small></div></div>
    </div>
@@ -264,6 +290,38 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     </form>}
    </div>
 
+
+
+   <div className="panel interfaceStylePanel">
+    <span className="eyebrow">INTERFACE STYLE</span><h2>Pick the look of the whole app</h2>
+    <p className="settingsHelp">Each style changes the menu, buttons, inputs, tables and cards - not just the colours. It is saved in this browser.</p>
+    <div className="styleGrid" role="radiogroup" aria-label="Interface style">
+      {STYLE_PACKS.map(k=><div key={k.key} className={`styleCard${theme===k.key?' on':''}`}>
+        <button type="button" role="radio" aria-checked={theme===k.key} className="stylePick" onClick={()=>setTheme(k.key)}>
+          <span className={`packThumb ${k.thumb}`} aria-hidden="true"><i/><i/><i/><i/></span>
+          <b>{k.label} · {k.style}</b><small>{k.note}</small>
+          {theme===k.key&&<span className="designTick">In use</span>}
+        </button>
+      </div>)}
+    </div>
+   </div>
+   <div className="panel invoiceDesignPanel">
+    <span className="eyebrow">INVOICE & RECEIPT DESIGN</span><h2>Choose how your invoices look</h2>
+    <p className="settingsHelp">Pick the A4 invoice design. Open a sample to see it with your company name. Thermal receipts (50 / 80 mm) keep their compact layout; change the paper size in the business profile. A cashier can still print another design for one bill from the invoice-created card.</p>
+    {!companyId&&<div className="settingsNotice">Select a company context to choose an invoice design.</div>}
+    {companyId&&<div className="designGrid" role="radiogroup" aria-label="Invoice design">
+      {INVOICE_DESIGNS.map(d=><div key={d.key} className={`designCard${biz.invoiceTemplate===d.key?' on':''}`}>
+        <button type="button" role="radio" aria-checked={biz.invoiceTemplate===d.key} className="designPick" disabled={!canEditBusiness} onClick={()=>setBiz({...biz,invoiceTemplate:d.key})}>
+          <span className={`invThumb t-${d.key.toLowerCase()}`} aria-hidden="true"><i/><i/><i/><i/><i/></span>
+          <b>{d.label}</b><small>{d.note}</small><em>Best for: {d.best}</em>
+          {biz.invoiceTemplate===d.key&&<span className="designTick">Selected</span>}
+        </button>
+        <button type="button" className="designPreview" disabled={previewBusy===d.key} onClick={()=>void openPreview(d.key)}>{previewBusy===d.key?'Opening…':'Preview PDF'}</button>
+      </div>)}
+    </div>}
+    {companyId&&canEditBusiness&&<button className="settingsSave" type="button" disabled={bizSaving} onClick={()=>void saveBiz()}>{bizSaving?'Saving…':'Save invoice design'}</button>}
+    {bizMessage&&<div className="settingsSuccess" role="status">{bizMessage}</div>}
+   </div>
    <div className="panel taxSettingsPanel">
     <span className="eyebrow">TAX & GST</span><h2>Invoice tax configuration</h2>
     <p className="settingsHelp">Set this once for the company. Cashiers do not need to enter GST on every bill. The same configuration is used for invoice calculations and PDFs.</p>

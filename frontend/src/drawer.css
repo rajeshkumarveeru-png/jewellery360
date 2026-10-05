@@ -1,0 +1,145 @@
+/* =====================================================================================================
+   JEWELLERY360 v6 - COLLAPSIBLE MENU (toggle icon in the header) + SLIDE-OVER "ADD" DRAWERS + LAPTOP-SIZE FIT
+   Imported last. Same idea as BIZ360: the list owns the page, the add form slides in from the right.
+   ===================================================================================================== */
+
+/* ------------------------------------------------------------------------------ header toggle */
+.menuToggle{flex:0 0 auto;display:inline-grid;place-items:center;width:40px;height:40px;min-height:0!important;padding:0!important;margin-right:12px;border-radius:12px!important;cursor:pointer;
+  background:rgba(var(--j360-accent-rgb),.12)!important;color:var(--jw-text-accent,var(--j360-accent))!important;border:1px solid rgba(var(--j360-accent-rgb),.45)!important;box-shadow:none!important;transition:transform .2s,background .2s,border-color .2s!important}
+.menuToggle::after{display:none!important}
+.menuToggle:hover{transform:translateY(-2px)!important;background:rgba(var(--j360-accent-rgb),.22)!important}
+.workspace>header>.headTitle{flex:1 1 auto;min-width:0;margin-right:auto}
+.theme-classic_ivory .menuToggle{border-radius:0!important;border:1px solid #7a1f2b!important;color:#7a1f2b!important;background:#fffdf6!important}
+.theme-premium_dark .menuToggle{border-radius:4px!important;color:#6fe0ff!important;border-color:rgba(111,224,255,.55)!important;background:rgba(111,224,255,.08)!important}
+.theme-modern_light .menuToggle{border-radius:99px!important}
+@media (max-width:900px){.menuToggle{display:none}}
+
+/* ------------------------------------------------------------------------------ collapsed menu (>= 901px) */
+@media (min-width:901px){
+  .navText{display:inline}
+  /* Glass + Studio: side menu shrinks to an icon rail */
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside{width:88px!important;flex:0 0 88px!important;padding:14px 10px!important;overflow-x:hidden}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .sideBrand{justify-content:center;gap:0;padding:6px 0 18px!important}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .sideBrand>div:last-child{display:none}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .nav button{justify-content:center!important;padding:6px!important;gap:0!important}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .nav button .navText{display:none}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .nav button::after{display:none!important}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .nav button:hover{transform:none!important}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .signout{justify-content:center!important;padding:0!important}
+  .app.nav-collapsed:not(.theme-classic_ivory):not(.theme-premium_dark) aside .signout .navText{display:none}
+  /* Ledger: the top menu keeps one row of icons (labels return as tooltips) */
+  .app.theme-classic_ivory.nav-collapsed aside .nav button .navText,.app.theme-classic_ivory.nav-collapsed aside .signout .navText{display:none}
+  .app.theme-classic_ivory.nav-collapsed aside .sideBrand>div:last-child{display:none}
+  .app.theme-classic_ivory.nav-collapsed aside .nav button{padding-left:16px!important;padding-right:16px!important;gap:0!important}
+  .app.theme-classic_ivory aside .nav{min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .app.theme-classic_ivory aside .nav::-webkit-scrollbar{display:none}
+  .app.theme-classic_ivory aside .nav button{flex:0 0 auto}
+  /* Console: the labelled rail narrows to bare icons */
+  .app.theme-premium_dark.nav-collapsed aside{width:58px!important;flex:0 0 58px!important;padding:10px 4px!important}
+  .app.theme-premium_dark.nav-collapsed aside .sideBrand>div:last-child,.app.theme-premium_dark.nav-collapsed aside .nav button .navText,.app.theme-premium_dark.nav-collapsed aside .signout .navText{display:none}
+  .app.theme-premium_dark.nav-collapsed aside .nav button{width:44px!important;min-height:38px!important;padding:4px!important;justify-content:center}
+  .app aside{transition:width .25s ease,flex-basis .25s ease,padding .25s ease,opacity .2s}
+}
+
+/* ------------------------------------------------------------------------------ add drawer */
+.hasDrawer{grid-template-columns:minmax(0,1fr)!important}
+.entryTrigger{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.entryTrigger p{margin:0;font-size:13px;color:var(--j360-muted,#667281)}
+.entryNew{margin-left:auto;display:inline-flex;align-items:center;gap:8px;min-height:40px!important;padding:8px 18px!important;border-radius:99px!important;font-weight:800;font-size:13.5px!important;cursor:pointer;white-space:nowrap;color:#fff!important;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--j360-accent) 78%,#000),color-mix(in srgb,var(--j360-accent) 52%,#000))!important;border:1px solid rgba(255,255,255,.35)!important;box-shadow:0 12px 26px -14px rgba(var(--j360-accent-rgb),.9)!important;transition:transform .2s,box-shadow .2s!important}
+.entryNew::after{display:none!important}
+.entryNew:hover{transform:translateY(-2px)!important;box-shadow:0 18px 32px -14px rgba(var(--j360-accent-rgb),.95)!important}
+.entryNew span{font-size:16px;line-height:1}
+.theme-classic_ivory .entryNew{border-radius:0!important;color:#fffdf6!important;background:#7a1f2b!important;border:1px solid #4d1219!important;box-shadow:3px 3px 0 #b9a77f!important;letter-spacing:.06em;text-transform:uppercase;font-size:12px!important}
+.theme-premium_dark .entryNew{border-radius:4px!important;color:#6fe0ff!important;background:rgba(111,224,255,.08)!important;border:1px solid #6fe0ff!important;box-shadow:0 0 18px -4px rgba(111,224,255,.7)!important;text-transform:uppercase;letter-spacing:.08em;font-size:12px!important}
+.theme-modern_light .entryNew{color:#fff!important;background:linear-gradient(135deg,#6366f1,#4338ca)!important;border:0!important;box-shadow:0 14px 28px -14px rgba(67,56,202,.8)!important}
+
+.entryBackdrop{position:fixed;inset:0;z-index:7000;background:rgba(6,10,16,.55);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:opacity .25s,visibility 0s .25s}
+.entryBackdrop.open{opacity:1;visibility:visible;transition:opacity .25s}
+.formDrawer{position:fixed;top:0;right:0;bottom:0;z-index:7001;width:min(480px,100vw);display:flex;flex-direction:column;color:var(--j360-text,#17202b);
+  background:#fbf7ee;border-left:3px solid var(--j360-accent);box-shadow:-30px 0 70px -30px rgba(0,0,0,.6);
+  transform:translateX(104%);visibility:hidden;transition:transform .3s cubic-bezier(.22,1,.36,1),visibility 0s .3s}
+.formDrawer.open{transform:none;visibility:visible;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.formDrawerHead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid rgba(120,110,90,.25);background:linear-gradient(135deg,rgba(var(--j360-accent-rgb),.22),rgba(var(--j360-accent-rgb),.05))}
+.formDrawerHead small{font-size:10px;font-weight:850;letter-spacing:.18em;color:var(--jw-text-accent,var(--j360-accent))}
+.formDrawerHead h2{margin:2px 0 0;font-size:20px}
+.formDrawerClose{width:36px;height:36px;min-height:0!important;padding:0!important;border-radius:50%!important;display:grid;place-items:center;cursor:pointer;color:inherit!important;background:rgba(0,0,0,.06)!important;border:1px solid rgba(120,110,90,.3)!important;box-shadow:none!important}
+.formDrawerClose::after{display:none!important}.formDrawerClose:hover{background:rgba(190,60,60,.15)!important;transform:rotate(90deg)!important}
+.formDrawerBody{flex:1 1 auto;min-height:0;overflow-y:auto;padding:18px 20px 24px}
+.formDrawerBody .panel{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;backdrop-filter:none!important;border-radius:0!important;margin:0!important}
+.formDrawerBody .panel::before,.formDrawerBody .panel::after{display:none!important}
+.formDrawerBody form,.formDrawerBody .formGrid,.formDrawerBody .branchConfigForm,.formDrawerBody .singleColumnForm{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+.formDrawerBody input,.formDrawerBody select,.formDrawerBody textarea{width:100%}
+.formDrawerHint{flex:0 0 auto;padding:8px 20px;font-size:11px;color:var(--j360-muted,#667281);border-top:1px solid rgba(120,110,90,.2)}
+.formDrawerHint kbd{font:700 10px Inter,sans-serif;padding:2px 6px;border-radius:5px;border:1px solid rgba(120,110,90,.4);background:rgba(0,0,0,.05)}
+.theme-classic_ivory .formDrawer{background:#fffdf6;border-left:4px double #7a1f2b;box-shadow:-8px 0 0 -2px #d9cba6,-30px 0 60px -30px rgba(0,0,0,.5)}
+.theme-classic_ivory .formDrawerHead{background:#f4ecd8;border-bottom:2px solid #7a1f2b}.theme-classic_ivory .formDrawerHead h2{font-family:Georgia,serif;color:#3b2a14}.theme-classic_ivory .formDrawerClose{border-radius:0!important}
+.theme-premium_dark .formDrawer{background:#0b1118;color:#e6edf5;border-left:1px solid #6fe0ff;box-shadow:-20px 0 60px -20px rgba(111,224,255,.35)}
+.theme-premium_dark .formDrawerHead{background:rgba(111,224,255,.07);border-bottom:1px solid rgba(111,224,255,.35)}.theme-premium_dark .formDrawerHead small{color:#6fe0ff}.theme-premium_dark .formDrawerClose{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.2)!important}
+.theme-premium_dark .formDrawerHint{color:#8795a5;border-color:rgba(255,255,255,.1)}.theme-premium_dark .formDrawerHint kbd{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.08)}
+.theme-modern_light .formDrawer{background:#fff;border-left:0;border-radius:28px 0 0 28px;box-shadow:-30px 0 80px -30px rgba(40,50,120,.5)}
+.theme-modern_light .formDrawerHead{background:linear-gradient(135deg,#eef0ff,#fff);border-radius:28px 0 0 0}.theme-modern_light .formDrawerHead small{color:#4338ca}
+@media (max-width:600px){.formDrawer{width:100vw;border-radius:0!important}}
+@media (prefers-reduced-motion:reduce){.formDrawer,.entryBackdrop,.app aside{transition:none!important}}
+
+/* ------------------------------------------------------------------------------ LAPTOP FIT: short screens (e.g. 1534x702 css px at 125% scaling) */
+@media (min-width:901px) and (max-height:780px){
+  .workspace>header{margin:8px 14px 0!important;padding:5px 12px!important}
+  .workspace>header h1{font-size:19px}
+  .workspace>header .eyebrow{display:none!important}
+  .workspace>header .jClock,.workspace>header .jDate,.workspace>header .jOrnament,.workspace>header .jGreet,.workspace>header .jRatesHead small{display:none!important}
+  .workspace>header .jGadget{min-height:0}.workspace>header .jTime{padding:4px 12px}.workspace>header .jRates{padding:4px 12px;gap:2px}
+  .menuToggle{width:36px;height:36px}
+  .workspaceBody{padding:10px 14px 10px}
+  .appFooter{margin:0 14px 6px!important;padding:4px 12px}
+  .footBrand span,.footStatus .footPill:nth-child(3){display:none}
+  .pageHero{margin-bottom:10px;padding:7px 12px}.pageHero .heroText small,.pageHero .heroActions{display:none}.heroMedal{width:34px;height:34px;border-radius:11px}
+  .workspace.module-billing .workspaceBody{padding:8px 14px}
+  .pos{gap:10px}.posMain{padding:10px;gap:7px}.posBar{gap:8px}.posTitle b{font-size:17px}
+  .pos .pf input,.pos .pf select{min-height:34px!important;height:34px}.pos .customerAddButton{min-height:34px!important}
+  .pos .bsum{padding:10px 12px 10px;gap:6px}
+  .pos .bsumModes,.pos .bsumBar,.pos .bsumSteps,.pos .bsumMeta{display:none!important}
+  .pos .bsumTotal{padding:7px 12px}.pos .bsumTotal strong{font-size:22px}.pos .bsumTotal small{display:none}
+  .pos .bsumPay{padding:7px 9px;gap:5px}.pos .bsumBtn{min-height:36px!important}
+  .pos .bsumRows>div{padding:2px 6px!important}
+  .ovTop{grid-template-columns:1.2fr 1fr .9fr}.ovBig{font-size:32px}.ovTile{padding:12px 14px}
+}
+
+/* ------------------------------------------------------------------------------ menu that always fits the screen height */
+@media (min-width:901px){
+  .app aside .nav{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(var(--j360-accent-rgb),.5) transparent}
+}
+@media (min-width:901px) and (max-height:820px){
+  .app:not(.theme-classic_ivory) aside{padding-top:8px!important;padding-bottom:8px!important}
+  .app:not(.theme-classic_ivory) aside .sideBrand{padding:2px 6px 8px!important}
+  .app:not(.theme-classic_ivory) aside .sideLogo{width:38px;height:38px;border-radius:12px}
+  .app:not(.theme-classic_ivory) aside .nav{padding:4px 0!important;gap:2px!important}
+  .app:not(.theme-classic_ivory) aside .nav button{min-height:34px!important;padding-top:2px!important;padding-bottom:2px!important}
+  .app:not(.theme-classic_ivory) aside .nav button .navIcon{width:26px;height:26px}
+  .app:not(.theme-classic_ivory) aside .nav button .navIcon svg{width:15px;height:15px}
+  .app:not(.theme-classic_ivory) aside .signout{min-height:36px!important;margin-top:4px}
+  .app.theme-premium_dark:not(.nav-collapsed) aside .nav button{min-height:44px!important}
+}
+/* Console rail: the 16 icons must fit short screens too */
+@media (min-width:901px) and (max-height:820px){
+  .app.theme-premium_dark aside .nav{gap:1px!important}
+  .app.theme-premium_dark aside .nav button{min-height:34px!important;padding:1px 2px!important;font-size:9px!important}
+  .app.theme-premium_dark:not(.nav-collapsed) aside .nav button{min-height:40px!important}
+  .app.theme-premium_dark aside .nav button .navIcon{width:22px;height:22px}
+  .app.theme-premium_dark aside .sideBrand{padding:0 0 6px!important}.app.theme-premium_dark aside .sideLogo{width:34px;height:34px}
+}
+
+/* ---- final specificity pass: the compact menu must beat the per-style rules (all 16 items visible at 702px tall) */
+@media (min-width:901px) and (max-height:820px){
+  .app.app.app:not(.theme-classic_ivory) aside{padding-top:8px!important;padding-bottom:8px!important}
+  .app.app.app:not(.theme-classic_ivory) aside .sideBrand{padding:0 6px 6px!important}
+  .app.app.app:not(.theme-classic_ivory) aside .sideLogo{width:36px;height:36px;border-radius:11px}
+  .app.app.app:not(.theme-classic_ivory) aside .nav{padding:2px 0!important;gap:2px!important}
+  .app.app.app:not(.theme-classic_ivory) aside .nav button{min-height:32px!important;height:auto;padding-top:1px!important;padding-bottom:1px!important}
+  .app.app.app:not(.theme-classic_ivory) aside .nav button .navIcon{width:24px;height:24px}
+  .app.app.app:not(.theme-classic_ivory) aside .signout{min-height:32px!important;height:32px;margin-top:2px!important;padding-top:0!important;padding-bottom:0!important}
+  .app.app.app.theme-premium_dark:not(.nav-collapsed) aside .nav button{min-height:40px!important}
+  .app.app.app.theme-premium_dark:not(.nav-collapsed) aside .nav{overflow-y:auto}
+}
+/* the drawer title already says what the form is: hide the page-style heading repeated inside it */
+.formDrawerBody .panel>.eyebrow:first-child,.formDrawerBody .panel>.eyebrow:first-child+h2{display:none}

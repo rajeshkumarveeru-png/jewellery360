@@ -21,6 +21,7 @@ import {
 } from '../api';
 
 import { Table, Empty } from '../shared/ui';
+import FormDrawer from '../shared/FormDrawer';
 import BulkProductImport from './BulkProductImport';
 import './Jewellery.css';
 
@@ -414,12 +415,12 @@ export default function JewelleryModule({
         {/* =====================================================
             MAIN CONTENT
         ====================================================== */}
-        <div className="moduleGrid">
+        <div className="moduleGrid hasDrawer">
 
           {/* ===================================================
               CREATE / QUICK ADD PANEL
           ==================================================== */}
-          <div className="panel jewelleryCreatePanel ultraGlassGrid">
+          <FormDrawer label="Add jewellery" title="Add jewellery" hint="Add products, tags and items here; they appear in the list below."><div className="panel jewelleryCreatePanel ultraGlassGrid">
 
             <span className="eyebrow">
               JEWELLERY
@@ -999,6 +1000,7 @@ export default function JewelleryModule({
             />
 
           </div>
+</FormDrawer>
 
           {/* ===================================================
               LIST PANEL

@@ -4,6 +4,7 @@ import {
 } from '../api';
 import {Role,User,Branch} from '../shared/types';
 import {Table,Empty} from '../shared/ui';
+import FormDrawer from '../shared/FormDrawer';
 import './Users.css';
 
 const editableRoles: Role[] = ['MANAGER','CASHIER','SALESMAN','INVENTORY_MANAGER','ACCOUNTANT','VIEWER'];
@@ -103,8 +104,8 @@ export default function UsersModule({user,onNotice,focusCreate=0}:{user:User;onN
    }finally{setSaving(false);}
  };
 
- return <div className="page-users moduleGrid">
-   <div className="panel userFormPanel">
+ return <div className="page-users moduleGrid hasDrawer">
+   <FormDrawer label="New user" title="Create user" editTitle="Edit user" editing={editing!==null} onCancel={reset}><div className="panel userFormPanel">
      <div className="panelHead">
        <div><span className="eyebrow">IDENTITY</span><h2>{editing?'Edit user':'Users'}</h2></div>
        {editing&&<button type="button" className="ghost" onClick={reset}>Cancel edit</button>}
@@ -127,8 +128,7 @@ export default function UsersModule({user,onNotice,focusCreate=0}:{user:User;onN
          <button className="primary" disabled={saving}>{saving?(editing?'Updating…':'Creating…'):(editing?'Update user':'Create user')}</button>
        </div>
      </form>}
-   </div>
-   <div className="panel">
+   </div></FormDrawer><div className="panel">
      <div className="panelHead usersListHead"><div><span className="eyebrow">DIRECTORY</span><h2>All users</h2></div><span className="userCount">{list.length} user{list.length===1?'':'s'}</span></div>
      <div className="userSearch"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search username, email, phone, role, company or branch…" aria-label="Search users"/><button className="ghost" type="button" onClick={()=>setSearch('')} disabled={!search}>Clear</button></div>
      {loading?<div className="empty"><div>◇</div><b>Loading users…</b></div>:<Table bare><thead><tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Company</th><th>Branch</th><th>Status</th><th>Action</th></tr></thead><tbody>{list.map(x=><tr key={x.id}>

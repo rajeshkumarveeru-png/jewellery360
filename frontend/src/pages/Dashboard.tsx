@@ -86,10 +86,12 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
  const selectCompany=(id:number|null)=>{setContextCompany(id);setContextBranch(null);if(id)localStorage.setItem('j360_context_company',String(id));else localStorage.removeItem('j360_context_company');localStorage.removeItem('j360_context_branch');};
  const selectBranch=(id:number|null)=>{setContextBranch(id);if(id)localStorage.setItem('j360_context_branch',String(id));else localStorage.removeItem('j360_context_branch');};
  const readyContext=user.role!=='APP_ADMIN'||!!contextCompany&&!!contextBranch;
- const refreshNotice=(s:string)=>{setNotice(s);window.setTimeout(()=>setNotice(''),3500);};
+ const refreshNotice=(s:string)=>{setNotice(s);window.dispatchEvent(new CustomEvent('j360-notice',{detail:s}));window.setTimeout(()=>setNotice(''),3500);};
 
  const moduleClass=`module-${tab.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}`;
  const [paletteOpen,setPaletteOpen]=useState(false);
+ const [navCollapsed,setNavCollapsed]=useState<boolean>(()=>{try{const v=localStorage.getItem('j360_nav_collapsed');if(v==='1'||v==='0')return v==='1';}catch{/* storage unavailable */}return typeof window!=='undefined'&&window.innerWidth<1600;});
+ const toggleNav=()=>setNavCollapsed(c=>{const n=!c;try{localStorage.setItem('j360_nav_collapsed',n?'1':'0');}catch{/* ignore */}return n;});
  const go=(t:string)=>{if(menu.includes(t)){setTab(t);}else{refreshNotice(`${t} is not available for your role.`);}};
  useEffect(()=>{
    const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setPaletteOpen(o=>!o);}};
@@ -105,17 +107,17 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
    ...(menu.includes('Users')&&(user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN')?[{id:'a-user',label:'Create a user',hint:'Users',group:'Action',run:()=>{setTab('Users');setUsersFocus(n=>n+1);}}]:[]),
    {id:'a-theme',label:'Switch theme',hint:`Now: ${theme.replace('_',' ').toLowerCase()}`,group:'Action',run:()=>setTheme(themeOrder[(themeOrder.indexOf(theme)+1)%themeOrder.length])}
  ];
- return <div className={`app theme-${theme.toLowerCase()} ${moduleClass}`} style={{background:c.bg,color:c.ink}}>
+ return <div className={`app theme-${theme.toLowerCase()} ${moduleClass}${navCollapsed?' nav-collapsed':''}`} style={{background:c.bg,color:c.ink}}>
   <aside><div className="sideBrand"><div className="sideLogo" aria-hidden="true">{brandInitials(brand)}</div><div><b title={brand}>{brand}</b><small>{user.role.replaceAll('_',' ')}</small></div></div>
-   <div className="nav">{menu.map((x:string)=><button key={x} className={tab===x?'active':''} onClick={()=>setTab(x)}><NavIcon name={x}/>{x}</button>)}</div>
-   <button className="signout" onClick={logout}>↪ Sign out</button>
+   <div className="nav">{menu.map((x:string)=><button key={x} className={tab===x?'active':''} onClick={()=>setTab(x)} title={x} aria-label={x} aria-current={tab===x?'page':undefined}><NavIcon name={x}/><span className="navText">{x}</span></button>)}</div>
+   <button className="signout" onClick={logout} title="Sign out" aria-label="Sign out"><span aria-hidden="true">↪</span><span className="navText">Sign out</span></button>
   </aside>
   <section className={`workspace ${moduleClass}`}>
-   <header><div><span className="eyebrow">{brand.toUpperCase()} / {user.role}</span><h1>{tab}</h1></div>
+   <header><button type="button" className="menuToggle" onClick={toggleNav} aria-pressed={navCollapsed} aria-label={navCollapsed?'Expand menu':'Collapse menu'} title={navCollapsed?'Expand menu':'Collapse menu'}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button><div className="headTitle"><span className="eyebrow">{brand.toUpperCase()} / {user.role}</span><h1>{tab}</h1></div>
     <div className="headerTools"><HeaderGadget ready={readyContext}/>
       {user.role==='APP_ADMIN'&&<><select value={contextCompany??''} onChange={e=>selectCompany(Number(e.target.value)||null)}><option value="">Company context</option>{companiesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select value={contextBranch??''} disabled={!contextCompany} onChange={e=>selectBranch(Number(e.target.value)||null)}><option value="">Branch context</option>{branchesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></>}
       {user.role!=='APP_ADMIN'&&<span className="contextBadge">{user.companyName||'Platform'} · {user.branchName||'All branches'}</span>}
-      <select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold</option><option value="CLASSIC_IVORY">Classic Ivory</option><option value="PREMIUM_DARK">Premium Dark</option><option value="MODERN_LIGHT">Modern Light</option></select>
+      <select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold · Glass</option><option value="CLASSIC_IVORY">Classic Ivory · Ledger</option><option value="PREMIUM_DARK">Premium Dark · Console</option><option value="MODERN_LIGHT">Modern Light · Studio</option></select>
     </div>
    </header>
    <main className="workspaceBody" id="main">

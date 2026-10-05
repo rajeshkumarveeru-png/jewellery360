@@ -128,6 +128,11 @@ public class PropertyController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SKU prefix may contain letters, digits and hyphen (max 12 characters)");
         }
 
+        String template = defaultIfBlank(body.invoiceTemplate(), "CLASSIC").toUpperCase();
+        if (!java.util.Arrays.asList(InvoiceTemplates.KEYS).contains(template)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invoice design must be one of " + String.join(", ", InvoiceTemplates.KEYS));
+        }
+        companyProperties.setBusinessProperty(company, CompanyPropertyService.INVOICE_TEMPLATE, template);
         companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_PHONE, phone);
         companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_EMAIL, email);
         companyProperties.setBusinessProperty(company, CompanyPropertyService.BUSINESS_GSTIN, gstin);
@@ -214,6 +219,7 @@ public class PropertyController {
         result.put("gstin", profile.gstin());
         result.put("printFormat", profile.printFormat());
         result.put("skuPrefix", profile.skuPrefix());
+        result.put("invoiceTemplate", profile.invoiceTemplate());
         return result;
     }
 
@@ -225,7 +231,7 @@ public class PropertyController {
         return n.setScale(3, java.math.RoundingMode.HALF_UP);
     }
 
-    public record BusinessRequest(String companyName, String phone, String email, String gstin, String printFormat, String skuPrefix) {}
+    public record BusinessRequest(String companyName, String phone, String email, String gstin, String printFormat, String skuPrefix, String invoiceTemplate) {}
 
     public record TaxRequest(boolean enabled, String mode, java.math.BigDecimal rate, java.math.BigDecimal cgstRate, java.math.BigDecimal sgstRate) {}
 

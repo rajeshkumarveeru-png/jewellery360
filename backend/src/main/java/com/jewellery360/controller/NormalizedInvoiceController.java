@@ -33,6 +33,7 @@ public class NormalizedInvoiceController {
     private final PermissionService permissions;
     private final MarketGoldRateService marketGoldRates;
     private final CompanyPropertyService companyProperties;
+    private final CompanyRepository companies;
 
     /**
      * Invoice PDF. Any signed-in user may open invoices of their OWN company (and branch, for branch-bound users);
@@ -41,18 +42,21 @@ public class NormalizedInvoiceController {
      */
     @GetMapping("/sales/{id}/pdf")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ResponseEntity<byte[]> salePdf(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id) {
+    public ResponseEntity<byte[]> salePdf(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id,
+                                          @RequestParam(required = false) String template, @RequestParam(required = false) String format) {
         Sale s = sales.findById(id).orElseThrow(() -> notFound("Sale not found"));
         check(me, s.getCompany().getId(), s.getBranch().getId());
 
         List<SaleItem> saleItems = items.findBySaleId(id);
         CompanyPropertyService.BusinessProfile profile = companyProperties.getBusinessProfile(s.getCompany());
+        // the company's saved choices are the default; ?template= and ?format= let a cashier print another design or paper size
+        String paper = format == null || format.isBlank() ? profile.printFormat() : format.trim().toUpperCase(Locale.ROOT);
+        String design = InvoiceTemplates.normalize(template == null || template.isBlank() ? profile.invoiceTemplate() : template);
         byte[] pdf;
-        if ("50MM".equals(profile.printFormat()) || "80MM".equals(profile.printFormat())) {
-            pdf = ThermalReceipt.render(s, saleItems, profile, ZonedDateTime.now(INDIA), "80MM".equals(profile.printFormat()));
+        if ("50MM".equals(paper) || "80MM".equals(paper)) {
+            pdf = ThermalReceipt.render(s, saleItems, profile, ZonedDateTime.now(INDIA), "80MM".equals(paper));
         } else {
-            Map<String, Object> market = marketGoldRates.current();
-            pdf = InvoicePdf.render(s, saleItems, market, ZonedDateTime.now(INDIA), profile);
+            pdf = InvoiceTemplates.render(design, toTemplateData(s, saleItems, marketGoldRates.current(), ZonedDateTime.now(INDIA), profile));
         }
 
         return ResponseEntity.ok()
@@ -60,6 +64,80 @@ public class NormalizedInvoiceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + safeFileName(s.getInvoiceNo()) + ".pdf")
                 .body(pdf);
     }
+
+    /** Sample invoice in any design, for the picker in Settings. Needs no sale; uses the signed-in company's name and contact details. */
+    @GetMapping("/preview")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> preview(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(defaultValue = "CLASSIC") String template,
+                                          @RequestHeader(value = "X-Company-Id", required = false) Long companyId) {
+        Long cid = "APP_ADMIN".equals(me.getRole()) ? companyId : me.getCompanyId();
+        CompanyPropertyService.BusinessProfile profile = cid == null ? null
+                : companies.findById(cid).map(companyProperties::getBusinessProfile).orElse(null);
+        InvoiceTemplates.Data data = profile == null
+                ? InvoiceTemplates.sample("", "", "", "")
+                : InvoiceTemplates.sample(profile.companyName(), profile.phone(), profile.email(), profile.gstin());
+        byte[] pdf = InvoiceTemplates.render(InvoiceTemplates.normalize(template), data);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=invoice-design-preview.pdf").body(pdf);
+    }
+
+    /** Entities -> plain data for the A4 designs (all designs share this one mapping, so they always show the same figures). */
+    private static InvoiceTemplates.Data toTemplateData(Sale s, List<SaleItem> rows, Map<String, Object> market, ZonedDateTime at,
+                                                        CompanyPropertyService.BusinessProfile profile) {
+        Branch branch = s.getBranch();
+        Company company = s.getCompany();
+        String brand = !profile.companyName().isBlank() ? profile.companyName() : (company == null ? "" : nullToEmpty(company.getName()));
+        String gstin = firstNonBlank(branch == null ? "" : branch.getGstin(), firstNonBlank(profile.gstin(), company == null ? "" : company.getGstin()));
+        String phone = firstNonBlank(branch == null ? "" : branch.getPhone(), firstNonBlank(profile.phone(), company == null ? "" : company.getPhone()));
+        String email = firstNonBlank(branch == null ? "" : branch.getEmail(), firstNonBlank(profile.email(), company == null ? "" : company.getEmail()));
+        List<InvoiceTemplates.Line> lines = new ArrayList<>();
+        BigDecimal gold = BigDecimal.ZERO, wastage = BigDecimal.ZERO, making = BigDecimal.ZERO, stone = BigDecimal.ZERO, other = BigDecimal.ZERO;
+        for (SaleItem si : rows) {
+            JewelleryItem ji = si.getJewelleryItem();
+            String name = ji != null && ji.getProduct() != null ? nullToEmpty(ji.getProduct().getName()) : "Jewellery";
+            String design = ji != null && ji.getProduct() != null && ji.getProduct().getDesign() != null ? nullToEmpty(ji.getProduct().getDesign().getName()) : "";
+            String barcode = ji != null && ji.getTag() != null ? nullToEmpty(ji.getTag().getBarcode()) : "";
+            BigDecimal net = si.getNetWeight() == null ? BigDecimal.ZERO : si.getNetWeight();
+            BigDecimal rate = si.getGoldRate() == null ? BigDecimal.ZERO : si.getGoldRate();
+            gold = gold.add(net.multiply(rate));
+            wastage = wastage.add(nzBig(si.getWastageValue()));
+            making = making.add(nzBig(si.getMakingCharge()));
+            stone = stone.add(nzBig(si.getStoneCharge()));
+            other = other.add(nzBig(si.getOtherCharge()));
+            lines.add(new InvoiceTemplates.Line(name, design, nullToEmpty(si.getTagNo()), barcode, nullToEmpty(si.getPurity()), nzBig(si.getGrossWeight()),
+                    nzBig(si.getStoneWeight()), net, rate, nzBig(si.getWastageValue()), nzBig(si.getMakingCharge()), nzBig(si.getStoneCharge()),
+                    nzBig(si.getOtherCharge()), nzBig(si.getTotal())));
+        }
+        List<InvoiceTemplates.Rate> rates = new ArrayList<>();
+        Object raw = market == null ? null : market.get("marketRates");
+        if (!(raw instanceof List<?>)) raw = market == null ? null : market.get("rates");
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> m) {
+                    Object karat = m.get("karat") != null ? m.get("karat") : m.get("purity");
+                    try { rates.add(new InvoiceTemplates.Rate(String.valueOf(karat), new BigDecimal(String.valueOf(m.get("ratePerGram"))))); } catch (Exception ignored) { /* skip a rate without a number */ }
+                }
+            }
+            rates.sort(java.util.Comparator.comparingInt(r -> -digits(r.karat())));
+        }
+        String mode = s.getTaxMode() == null ? "GST" : s.getTaxMode();
+        String dateOnly = s.getSaleDate() == null ? "-" : s.getSaleDate().format(DATE);
+        return new InvoiceTemplates.Data(brand, branch == null ? "Main Branch" : nullToEmpty(branch.getName()), branch == null ? "" : nullToEmpty(branch.getAddress()),
+                gstin, phone, email, branch == null ? "" : nullToEmpty(branch.getWebsite()),
+                branch != null && branch.getInvoiceTitle() != null && !branch.getInvoiceTitle().isBlank() ? branch.getInvoiceTitle() : "Tax Invoice",
+                branch != null && branch.getInvoiceSubtitle() != null && !branch.getInvoiceSubtitle().isBlank() ? branch.getInvoiceSubtitle() : "Transparent jewellery price breakup",
+                nullToEmpty(s.getInvoiceNo()), dateOnly, at.format(TIME),
+                s.getCustomer() == null ? "" : nullToEmpty(s.getCustomer().getName()), s.getCustomer() == null ? "" : nullToEmpty(s.getCustomer().getPhone()),
+                s.getCustomer() == null ? "" : nullToEmpty(s.getCustomer().getGstin()), s.getCustomer() == null ? "" : nullToEmpty(s.getCustomer().getAddress()),
+                lines, gold, wastage, making, stone, other, nzBig(s.getSubtotal()), mode, nzBig(s.getTaxRate()), nzBig(s.getCgstRate()), nzBig(s.getSgstRate()),
+                nzBig(s.getGst()), nzBig(s.getDiscount()), nzBig(s.getTotal()), nullToEmpty(s.getPaymentStatus()), nzBig(s.getGoldRate()), rates,
+                branch == null ? "" : nullToEmpty(branch.getInvoiceFooter()), branch == null ? "" : nullToEmpty(branch.getInvoiceTerms()),
+                dateOnly, at.format(DateTimeFormatter.ofPattern("hh:mm:ss a", Locale.ENGLISH)));
+    }
+
+    private static String nullToEmpty(String s) { return s == null ? "" : s; }
+    private static BigDecimal nzBig(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }
+    private static int digits(String s) { try { return Integer.parseInt(s.replaceAll("[^0-9]", "")); } catch (Exception e) { return 0; } }
 
     @GetMapping("/returns/{id}/pdf")
     public ResponseEntity<byte[]> returnPdf(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id) {

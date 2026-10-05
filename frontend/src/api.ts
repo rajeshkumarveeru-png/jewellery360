@@ -104,7 +104,9 @@ export const createBilling=(x:any)=>api.post('/billing',x);
 export const createDomainBilling=(x:any)=>api.post('/billing/domain',x);
 export const cancelDomainBilling=(id:number)=>api.post(`/billing/domain/${id}/cancel`);
 export const invoicePdf=(id:number)=>api.get(`/invoices/${id}/pdf`,{responseType:'blob'});
-export const salePdf=(id:number)=>api.get(`/invoices/sales/${id}/pdf`,{responseType:'blob'});
+export const salePdf=(id:number,template?:string,format?:string)=>api.get(`/invoices/sales/${id}/pdf`,{responseType:'blob',params:{template:template||undefined,format:format||undefined}});
+// sample invoice in a given design (A4), used by the design picker in Settings
+export const invoicePreview=(template:string)=>api.get('/invoices/preview',{responseType:'blob',params:{template}});
 export const sendInvoiceWhatsApp=(saleId:number)=>api.post(`/whatsapp/sales/${saleId}`);
 
 // Normalized jewellery-domain APIs. These are the target APIs for the module UI migration;
@@ -195,7 +197,7 @@ export const salesAnalytics=(params:{from?:string;to?:string;granularity?:Granul
 
 // Business profile (phone, corporate e-mail, GSTIN, print layout, SKU prefix) stored in the company property table.
 export const getBusinessSettings=(companyId?:number|null)=>api.get('/properties/business',{params:companyId?{companyId}:undefined});
-export const saveBusinessSettings=(x:{companyName?:string;phone:string;email:string;gstin:string;printFormat:string;skuPrefix:string},companyId?:number|null)=>api.put('/properties/business',x,{params:companyId?{companyId}:undefined});
+export const saveBusinessSettings=(x:{companyName?:string;phone:string;email:string;gstin:string;printFormat:string;skuPrefix:string;invoiceTemplate?:string},companyId?:number|null)=>api.put('/properties/business',x,{params:companyId?{companyId}:undefined});
 
 // Tenant-isolated SKU / tag number sequence (starts at 01, optional company prefix).
 export const nextSku=()=>api.get('/domain/jewellery/next-sku');

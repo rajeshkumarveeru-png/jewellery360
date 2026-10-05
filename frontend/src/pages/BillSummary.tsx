@@ -95,7 +95,7 @@ type Props = {
   onRemove: (id: string) => void;
   formId: string;
   lastCreated: any | null;
-  onPrint: () => void;
+  onPrint: (template?: string) => void;
   onWhatsApp: () => void;
   onNewBill: () => void;
 };
@@ -104,6 +104,7 @@ const MODES = ['CASH', 'UPI', 'CARD', 'CREDIT'];
 const PRINT_LABEL: Record<string, string> = {A4: 'A4 invoice', '80MM': '80 mm receipt', '50MM': '50 mm receipt'};
 
 export default function BillSummary(p: Props) {
+  const [design, setDesign] = useState('');
   const est = useMemo(() => estimateBill(p.lines, p.goldRate, p.tax, p.discount), [p.lines, p.goldRate, p.tax, p.discount]);
   const verified = !!p.calc && Math.abs(Number(p.calc.total || 0) - est.total) < 0.01;
   const shownTotal = verified ? Number(p.calc.total) : est.total;
@@ -150,7 +151,10 @@ export default function BillSummary(p: Props) {
         <div className="bsumDoneTotal"><span>Amount billed</span><strong>{inr(p.lastCreated.total ?? shownTotal)}</strong></div>
         <div className="bsumChips"><span>Prints as {PRINT_LABEL[p.printFormat] || 'A4 invoice'}</span>{p.lastCreated.paymentStatus && <span>{String(p.lastCreated.paymentStatus).replace('_', ' ')}</span>}</div>
         <div className="bsumActions col">
-          <button type="button" className="bsumBtn gold" onClick={p.onPrint}>🖨 Print invoice</button>
+          <label className="bsumDesign"><span>Invoice design</span><select value={design} onChange={e => setDesign(e.target.value)} aria-label="Invoice design for this print">
+            <option value="">Company default</option><option value="CLASSIC">Classic Gold</option><option value="MODERN">Modern Minimal</option><option value="ROYAL">Royal Border</option><option value="COMPACT">Compact Table</option><option value="FORMAL">GST Formal</option>
+          </select></label>
+          <button type="button" className="bsumBtn gold" onClick={() => p.onPrint(design || undefined)}>🖨 Print invoice</button>
           <button type="button" className="bsumBtn outline" onClick={p.onWhatsApp}>◌ Send on WhatsApp</button>
           <button type="button" className="bsumBtn ghost" onClick={p.onNewBill}>＋ Start a new bill</button>
         </div>

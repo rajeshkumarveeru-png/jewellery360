@@ -32,6 +32,7 @@ public class CompanyPropertyService {
     public static final String BUSINESS_GSTIN = "BUSINESS_GSTIN";
     public static final String PRINT_FORMAT = "PRINT_FORMAT";
     public static final String SKU_PREFIX = "SKU_PREFIX";
+    public static final String INVOICE_TEMPLATE = "INVOICE_TEMPLATE";
 
     public static final String TAX_ENABLED = "TAX_ENABLED";
     public static final String TAX_MODE = "TAX_MODE";
@@ -98,6 +99,7 @@ public class CompanyPropertyService {
         values.put(BUSINESS_GSTIN, "");
         values.put(PRINT_FORMAT, "A4");
         values.put(SKU_PREFIX, "");
+        values.put(INVOICE_TEMPLATE, "CLASSIC");
         return values;
     }
 
@@ -122,7 +124,7 @@ public class CompanyPropertyService {
     @Transactional
     public BusinessProfile getBusinessProfile(Company company) {
         if (company == null || company.getId() == null) {
-            return new BusinessProfile("", "", "", "", "A4", "");
+            return new BusinessProfile("", "", "", "", "A4", "", "CLASSIC");
         }
         initializeBusinessDefaults(company);
         Long id = company.getId();
@@ -134,8 +136,10 @@ public class CompanyPropertyService {
         if (gstin.isBlank() && company.getGstin() != null) gstin = company.getGstin();
         String format = value(id, PRINT_FORMAT, "A4").toUpperCase();
         if (!"A4".equals(format) && !"50MM".equals(format) && !"80MM".equals(format)) format = "A4";
+        String template = value(id, INVOICE_TEMPLATE, "CLASSIC").toUpperCase();
+        if (!java.util.List.of("CLASSIC", "MODERN", "ROYAL", "COMPACT", "FORMAL").contains(template)) template = "CLASSIC";
         return new BusinessProfile(company.getName() == null ? "" : company.getName(), phone, email, gstin, format,
-                value(id, SKU_PREFIX, "").toUpperCase());
+                value(id, SKU_PREFIX, "").toUpperCase(), template);
     }
 
     @Transactional
@@ -185,7 +189,7 @@ public class CompanyPropertyService {
     }
 
     /** Company identity + document settings. printFormat is one of A4, 50MM (thermal) or 80MM (thermal). */
-    public record BusinessProfile(String companyName, String phone, String email, String gstin, String printFormat, String skuPrefix) {}
+    public record BusinessProfile(String companyName, String phone, String email, String gstin, String printFormat, String skuPrefix, String invoiceTemplate) {}
 
     public record TaxSettings(
             boolean enabled,
