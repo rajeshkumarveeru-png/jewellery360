@@ -43,7 +43,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
-                        .anyRequest().authenticated()
+                        // every REST endpoint lives under /api and needs a signed-in user
+                        .requestMatchers("/api/**").authenticated()
+                        // everything else is the web app itself (index.html, /assets/**, screens like /sales):
+                        // public files; the screens call /api with the login token
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwt, UsernamePasswordAuthenticationFilter.class);
 

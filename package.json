@@ -1,0 +1,46 @@
+{
+  "name": "jewell360",
+  "version": "1.0.0",
+  "description": "Jewellery 360 desktop application",
+  "private": true,
+  "type": "module",
+  "author": {
+    "name": "R2Tech Solutions",
+    "email": "rtwotechsolutions@gmail.com"
+  },
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "electron": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.r2tech.jewell360",
+    "productName": "Jewellery 360",
+    "asar": true,
+    "compression": "maximum",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "Jewell360-${version}-Portable.exe"
+    }
+  }
+}
