@@ -143,3 +143,8 @@
 }
 /* the drawer title already says what the form is: hide the page-style heading repeated inside it */
 .formDrawerBody .panel>.eyebrow:first-child,.formDrawerBody .panel>.eyebrow:first-child+h2{display:none}
+
+/* Sign out showed TWO arrow icons: the "↪" glyph in the markup AND the round "↪" badge drawn by ::before.
+   Every theme except Classic Ivory (which hides the badge) keeps only the badge. */
+html body .app:not(.theme-classic_ivory) aside .signout>span[aria-hidden="true"]{display:none!important}
+html body .app:not(.theme-classic_ivory) aside .signout::before{display:grid!important}
