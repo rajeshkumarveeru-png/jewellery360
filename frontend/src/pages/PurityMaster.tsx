@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
+import {usePermissions} from '../shared/permissions';
+import {confirmDialog} from '../shared/Notify';
 import {
   domainPurities,
   createDomainPurity,
@@ -50,6 +52,7 @@ export default function PurityMaster({
   ready: boolean;
   onNotice: (message: string) => void;
 }) {
+  const perms=usePermissions();
   const [rows, setRows] = useState<PurityRow[]>([]);
   const [form, setForm] = useState<PurityForm>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -145,7 +148,7 @@ export default function PurityMaster({
   };
 
   const deactivate = async (row: PurityRow): Promise<void> => {
-    if (!window.confirm(`Deactivate purity ${row.name}? Existing jewellery records will remain linked to it.`)) {
+    if (!(await confirmDialog({title: 'Deactivate this purity?', message: `${row.name} will be switched off. Existing jewellery records stay linked to it.`, confirmLabel: 'Deactivate', tone: 'danger'}))) {
       return;
     }
 
@@ -284,7 +287,7 @@ export default function PurityMaster({
                     </span>
                   </td>
                   <td>
-                    <div className="purityActions">
+                    {perms.canManage&&<div className="purityActions">
                       <button type="button" className="ghost small" onClick={() => edit(row)}>
                         Edit
                       </button>
@@ -293,7 +296,7 @@ export default function PurityMaster({
                           Deactivate
                         </button>
                       )}
-                    </div>
+                    </div>}
                   </td>
                 </tr>
               ))}

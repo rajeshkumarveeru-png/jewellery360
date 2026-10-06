@@ -98,7 +98,8 @@ export default function BillingModule({ready,onNotice}:{ready:boolean;onNotice:(
  const sendCreatedWhatsApp=async()=>{if(!lastCreated?.id)return;try{const response=await sendInvoiceWhatsApp(Number(lastCreated.id));onNotice(response?.data?.status==='SENT'?'Invoice sent on WhatsApp.':(response?.data?.message||'WhatsApp message submitted.'));}catch(err:any){onNotice(err?.response?.data?.message||'Unable to send invoice on WhatsApp');}};
  const money=(v:any)=>`₹${Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
  const lineAmount=(x:Line)=>{const rate=Number(f.goldRate||0)>0?Number(f.goldRate):Number(x.goldRate||0);const g=Number(x.netWeight||0)*rate;return g+g*Number(x.wastagePercent||0)/100+Number(x.makingCharge||0)+Number(x.stoneCharge||0)+Number(x.otherCharge||0);};
- const num=(x:Line,k:keyof Line,label:string,step='0.001')=><input type="number" step={step} aria-label={`${label} for ${x.name}`} value={x[k] as number} onChange={e=>updateLine(x.id,k,Number(e.target.value))}/>;
+ const SHORT:Record<string,string>={'Gross weight':'Gross g','Net weight':'Net g','Wastage percent':'Wastage %','Making charge':'Making ₹','Stone charge':'Stone ₹','Other charge':'Other ₹'};
+ const num=(x:Line,k:keyof Line,label:string,step='0.001')=><label className="pc" data-l={SHORT[label]||label}><input type="number" step={step} aria-label={`${label} for ${x.name}`} value={x[k] as number} onChange={e=>updateLine(x.id,k,Number(e.target.value))}/></label>;
  return <div className="pos">
   {ready&&<form id="billing-form" className="posMain" onSubmit={save}>
    <div className="posBar">
@@ -123,7 +124,7 @@ export default function BillingModule({ready,onNotice}:{ready:boolean;onNotice:(
       <span className="n">{i+1}</span>
       <div className="it"><b title={x.name}>{x.name}</b><small>{x.purity}{x.tag?` · Tag ${x.tag}`:''}</small></div>
       {num(x,'grossWeight','Gross weight')}
-      <input type="number" step="0.001" aria-label={`Stone weight for ${x.name}`} value={x.stoneWeight} onChange={e=>{const stone=Number(e.target.value);updateLine(x.id,'stoneWeight',stone);updateLine(x.id,'netWeight',Math.max(x.grossWeight-stone,0));}}/>
+      <label className="pc" data-l="Stone g"><input type="number" step="0.001" aria-label={`Stone weight for ${x.name}`} value={x.stoneWeight} onChange={e=>{const stone=Number(e.target.value);updateLine(x.id,'stoneWeight',stone);updateLine(x.id,'netWeight',Math.max(x.grossWeight-stone,0));}}/></label>
       {num(x,'netWeight','Net weight')}
       {num(x,'wastagePercent','Wastage percent')}
       {num(x,'makingCharge','Making charge')}

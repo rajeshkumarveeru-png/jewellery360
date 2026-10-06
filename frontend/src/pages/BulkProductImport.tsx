@@ -1,4 +1,5 @@
 import {useMemo, useState} from 'react';
+import {confirmDialog} from '../shared/Notify';
 import * as XLSX from 'xlsx';
 import {bulkJewelleryImportCommit, bulkJewelleryImportPreview} from '../api';
 import './BulkProductImport.css';
@@ -80,7 +81,7 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
 
   const commit = async() => {
     if(!canCommit) return;
-    if(!window.confirm(`Import ${rows.length} jewellery items into the selected branch?`)) return;
+    if(!(await confirmDialog({title:'Import these items?',message:`${rows.length} jewellery items will be added to the selected branch.`,confirmLabel:'Import'})))return;
     setBusy(true);
     try {
       const response = await bulkJewelleryImportCommit(rows);

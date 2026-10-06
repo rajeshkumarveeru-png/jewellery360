@@ -105,6 +105,8 @@ const PRINT_LABEL: Record<string, string> = {A4: 'A4 invoice', '80MM': '80 mm re
 
 export default function BillSummary(p: Props) {
   const [design, setDesign] = useState('');
+  // phones: the summary is a bottom sheet opened from a floating total bar (desktop ignores these)
+  const [sheet, setSheet] = useState(false);
   const est = useMemo(() => estimateBill(p.lines, p.goldRate, p.tax, p.discount), [p.lines, p.goldRate, p.tax, p.discount]);
   const verified = !!p.calc && Math.abs(Number(p.calc.total || 0) - est.total) < 0.01;
   const shownTotal = verified ? Number(p.calc.total) : est.total;
@@ -163,7 +165,14 @@ export default function BillSummary(p: Props) {
   }
 
   return (
-    <section className={`bsum${hasItems ? '' : ' empty'}`} aria-label="Bill summary">
+    <>
+    <button type="button" className="bsumFloat" onClick={() => setSheet(true)} aria-label="View bill">
+      <span className="bsumFloatInfo"><small>{p.lines.length} item{p.lines.length === 1 ? '' : 's'} · {status}</small><b>{inr(shownTotal)}</b></span>
+      <span className="bsumFloatBtn">View bill ▴</span>
+    </button>
+    {sheet && <div className="bsumBackdrop" onClick={() => setSheet(false)} aria-hidden="true" />}
+    <section className={`bsum${hasItems ? '' : ' empty'}${sheet ? ' sheetOpen' : ''}`} aria-label="Bill summary">
+      <button type="button" className="bsumClose" onClick={() => setSheet(false)} aria-label="Close bill">✕ Close</button>
       <div className="bsumGlow" aria-hidden="true" />
 
       <header className="bsumHead">
@@ -238,5 +247,6 @@ export default function BillSummary(p: Props) {
       <p className="bsumFoot">Tax follows Settings · Gold rate is the live market rate · Payment is capped at the bill total.</p>
       </div>
     </section>
+    </>
   );
 }

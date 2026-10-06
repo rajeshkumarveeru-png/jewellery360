@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {usePermissions} from './permissions';
 import type {ReactNode} from 'react';
 
 /* Slide-over entry form (same idea as BIZ360's EntryDrawer). The page keeps ALL of its form state and handlers;
@@ -7,9 +8,10 @@ import type {ReactNode} from 'react';
    like an error, arriving after the form was submitted, closes the drawer. On an error the drawer stays open with the typed values. */
 const ERROR_WORDS = /unable|fail|error|invalid|required|select company|not available|already exists|cannot|denied|forbidden|not found|too long|must /i;
 
-export default function FormDrawer({label, title, editTitle, hint, editing = false, onCancel, children}: {
-  label: string; title: string; editTitle?: string; hint?: string; editing?: boolean; onCancel?: () => void; children: ReactNode;
+export default function FormDrawer({label, title, editTitle, hint, editing = false, onCancel, needsManage = false, children}: {
+  label: string; title: string; editTitle?: string; hint?: string; editing?: boolean; onCancel?: () => void; needsManage?: boolean; children: ReactNode;
 }) {
+  const perms = usePermissions();
   const [manual, setManual] = useState(false);
   const submitted = useRef(false);
   const body = useRef<HTMLDivElement>(null);
@@ -43,6 +45,8 @@ export default function FormDrawer({label, title, editTitle, hint, editing = fal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // a user without the "add / edit / delete records" power never sees the create form of these pages
+  if (needsManage && !perms.canManage) return null;
   return (
     <>
       <div className="entryTrigger">

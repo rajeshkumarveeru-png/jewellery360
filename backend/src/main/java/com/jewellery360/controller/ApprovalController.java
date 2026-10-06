@@ -52,15 +52,27 @@ public class ApprovalController {
                         "PENDING"
                 )
                 .stream()
+                .filter(x -> !"USER_SLOT".equals(x.getRequestType()))
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /** App admin: every request for a new user (waiting and decided) for the history list. */
+    @GetMapping("/user-requests")
+    @Transactional(readOnly = true)
+    public List<ApprovalResponse> userRequests(@AuthenticationPrincipal AuthenticatedUser me) {
+        if (!"APP_ADMIN".equals(me.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only APP_ADMIN can see all user requests");
+        }
+        return requests.findByRequestTypeOrderByIdDesc("USER_SLOT").stream().limit(100).map(this::toResponse).toList();
     }
 
     @PostMapping("/{id}/approve")
     @Transactional
     public Map<String, Object> approve(
             @AuthenticationPrincipal AuthenticatedUser me,
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body
     ) {
         UserRequest r = requests.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -95,6 +107,31 @@ public class ApprovalController {
             }
         }
 
+                if ("USER_SLOT".equals(r.getRequestType())) {
+            // A request for one more user: approval only unlocks the "create user" step for the company admin (one approval = one user).
+            if (!appAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only APP_ADMIN can approve requests for new users");
+            }
+            String note = body == null ? null : body.get("note");
+            r.setStatus("APPROVED");
+            r.setProcessedAt(Instant.now());
+            r.setDecisionNote(note == null || note.isBlank() ? null : note.trim());
+            requests.save(r);
+            audit.log(me, "APPROVE", "USER_REQUEST", r.getId(), null, Map.of("type", "USER_SLOT", "status", "APPROVED"));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("message", "Request approved. The company admin can now create the user.");
+            out.put("requestId", r.getId());
+            out.put("requestType", r.getRequestType());
+            AppUser requester = r.getRequestedBy();
+            if (requester != null && requester.getPhone() != null && !requester.getPhone().isBlank()) {
+                String text = "Hello " + requester.getUsername() + "! Your request to add a new user (" + r.getRequestedName()
+                        + ") on Jewellery360 has been approved. You can create the user now from the Users page.";
+                String digits = requester.getPhone().replaceAll("[^0-9]", "");
+                if (digits.length() == 10) digits = "91" + digits;
+                out.put("notificationUrl", "https://wa.me/" + digits + "?text=" + java.net.URLEncoder.encode(text, java.nio.charset.StandardCharsets.UTF_8));
+            }
+            return out;
+        }
         if ("PASSWORD_RESET".equals(r.getRequestType())) {
             if (r.getTargetUser() == null) {
                 throw new ResponseStatusException(
@@ -249,7 +286,8 @@ public class ApprovalController {
     @Transactional
     public Map<String, Object> reject(
             @AuthenticationPrincipal AuthenticatedUser me,
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body
     ) {
         UserRequest r = requests.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -266,10 +304,10 @@ public class ApprovalController {
 
         boolean appAdmin = "APP_ADMIN".equals(me.getRole());
 
-        if ("NEW_ACCOUNT".equals(r.getRequestType()) && !appAdmin) {
+        if (("NEW_ACCOUNT".equals(r.getRequestType()) || "USER_SLOT".equals(r.getRequestType())) && !appAdmin) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Only APP_ADMIN can reject company registrations"
+                    "Only APP_ADMIN can reject this request"
             );
         }
 
@@ -283,6 +321,8 @@ public class ApprovalController {
 
         r.setStatus("REJECTED");
         r.setProcessedAt(Instant.now());
+        String rejectNote = body == null ? null : body.get("note");
+        r.setDecisionNote(rejectNote == null || rejectNote.isBlank() ? null : rejectNote.trim());
         requests.save(r);
 
         audit.log(
@@ -325,7 +365,12 @@ public class ApprovalController {
                 company == null ? null : company.getId(),
                 company == null ? null : company.getName(),
                 branch == null ? null : branch.getId(),
-                branch == null ? null : branch.getName()
+                branch == null ? null : branch.getName(),
+                r.getRequestedName(),
+                r.getDecisionNote(),
+                r.getRequestedBy() == null ? null : r.getRequestedBy().getUsername(),
+                r.getRequestedBy() == null ? null : r.getRequestedBy().getPhone(),
+                company == null ? null : users.countByCompanyIdAndRoleNotAndDeletedFalse(company.getId(), AppRole.COMPANY_ADMIN)
         );
     }
 
@@ -344,6 +389,11 @@ public class ApprovalController {
             Long companyId,
             String companyName,
             Long branchId,
-            String branchName
+            String branchName,
+            String requestedName,
+            String decisionNote,
+            String requestedByName,
+            String requestedByPhone,
+            Long currentUsers
     ) {}
 }

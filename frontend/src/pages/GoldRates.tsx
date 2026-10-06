@@ -617,7 +617,7 @@ export default function GoldRatesModule({
             SAVE GOLD RATES
         =================================================== */}
 
-          <FormDrawer label="Save gold rates" title="Save gold rates" hint="Rates are saved per purity and used on every new bill."><div className="panel goldRateFormPanel">
+          <FormDrawer needsManage label="Save gold rates" title="Save gold rates" hint="Rates are saved per purity and used on every new bill."><div className="panel goldRateFormPanel">
 
             <div className="panelHead">
 

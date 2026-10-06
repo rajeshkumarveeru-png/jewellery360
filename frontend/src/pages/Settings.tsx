@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {usePermissions} from '../shared/permissions';
 import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getBusinessSettings, saveBusinessSettings, invoicePreview, getFriendlyApiError} from '../api';
 import {rememberBrandName} from '../shared/brand';
 import {Role,User,ThemeKey} from '../shared/types';
@@ -187,7 +188,8 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
    if(biz.skuPrefix.trim()&&!/^[A-Za-z0-9][A-Za-z0-9-]{0,11}$/.test(biz.skuPrefix.trim())) out.skuPrefix='Use letters, digits or hyphen (max 12).';
    return out;
  })();
- const canEditBusiness=user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN';
+ const perms=usePermissions();
+ const canEditBusiness=user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN'||perms.canEditSettings;
 
 
  const [previewBusy,setPreviewBusy]=useState('');
@@ -335,7 +337,7 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
       <label><span>Tax mode</span><select value={tax.mode} disabled={!tax.enabled} onChange={e=>setTax({...tax,mode:e.target.value as TaxSettingsState['mode']})}><option value="GST">GST</option><option value="CGST_SGST">CGST + SGST</option></select></label>
       {tax.mode==='GST'?<label><span>GST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.rate} disabled={!tax.enabled} onChange={e=>setTax({...tax,rate:e.target.value})}/></label>:<div className="taxSplitGrid"><label><span>CGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.cgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,cgstRate:e.target.value})}/></label><label><span>SGST rate (%)</span><input type="number" min="0" max="100" step="0.01" value={tax.sgstRate} disabled={!tax.enabled} onChange={e=>setTax({...tax,sgstRate:e.target.value})}/></label></div>}
       <div className="taxPreview"><b>Invoice preview</b>{!tax.enabled?<span>No tax</span>:tax.mode==='GST'?<span>GST @ {Number(tax.rate||0).toFixed(2)}%</span>:<span>CGST @ {Number(tax.cgstRate||0).toFixed(2)}% + SGST @ {Number(tax.sgstRate||0).toFixed(2)}% = {(Number(tax.cgstRate||0)+Number(tax.sgstRate||0)).toFixed(2)}%</span>}</div>
-      <button className="settingsSave" type="button" disabled={taxSaving} onClick={saveTax}>{taxSaving?'Saving…':'Save tax settings'}</button>
+      {canEditBusiness&&<button className="settingsSave" type="button" disabled={taxSaving} onClick={saveTax}>{taxSaving?'Saving…':'Save tax settings'}</button>}
     </div>}
    </div>
 
@@ -373,7 +375,7 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
        <label><span>Template Language</span><input value={wa.templateLanguage} onChange={e=>setWa({...wa,templateLanguage:e.target.value})}/></label>
       </div>
       <div className="settingsDefaults"><b>Default properties created at company approval</b><span>Enabled: false</span><span>Graph API: v23.0</span><span>Invoice template: smartbill_invoice</span><span>Language: en_US</span><span>Access token / Phone Number ID / Webhook token: blank until configured</span></div>
-      <button className="settingsSave" disabled={saving} onClick={save}>{saving?'Saving…':'Save WhatsApp company settings'}</button>
+      {canEditBusiness&&<button className="settingsSave" disabled={saving} onClick={save}>{saving?'Saving…':'Save WhatsApp company settings'}</button>}
     </>}
    </div>
 

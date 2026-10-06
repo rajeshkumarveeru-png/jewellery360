@@ -26,4 +26,6 @@ public class AppUser {
     @Column(nullable=false) private boolean enabled = false;
     @Column(nullable=false) private boolean deleted = false;
     @Column(nullable=false) private Instant createdAt = Instant.now();
+    /** Pages and powers the company admin granted (comma separated keys). Empty means "the defaults of the role". */
+    @Column(length=800) private String permissions;
 }

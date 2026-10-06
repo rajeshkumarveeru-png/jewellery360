@@ -19,4 +19,8 @@ public class UserRequest {
     @Column(length=255) private String pendingPasswordHash;
     @Column(nullable=false) private Instant createdAt = Instant.now();
     private Instant processedAt;
+    /** USER_SLOT requests: who the new user is for, the administrator's note, and the user that was created from it. */
+    @Column(length=80) private String requestedName;
+    @Column(length=300) private String decisionNote;
+    private Long createdUserId;
 }

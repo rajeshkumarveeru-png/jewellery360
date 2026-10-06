@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {companies,branches,getUserMenuPreferences} from '../api';
 import HeaderGadget from '../shared/HeaderGadget';
 import AppFooter from '../shared/AppFooter';
@@ -6,7 +6,8 @@ import PageHero from '../shared/PageHero';
 import CommandPalette from '../shared/CommandPalette';
 import type {PaletteItem} from '../shared/CommandPalette';
 import {User,ThemeKey,Company,Branch} from '../shared/types';
-import {defaultPreferredMenu,themeMap} from '../shared/config';
+import {allowedMenu,themeMap} from '../shared/config';
+import {PermissionsContext,permissionsFor} from '../shared/permissions';
 import {NavIcon} from '../shared/ui';
 import {brandInitials,getBrandName,rememberBrandName} from '../shared/brand';
 import './Dashboard.css';
@@ -30,17 +31,18 @@ import PaymentsModule from './Payments';
 import WhatsAppModule from './WhatsApp';
 import SettingsModule from './Settings';
 export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:ThemeKey;setTheme:(t:ThemeKey)=>void;logout:()=>void}){
+ const perms=useMemo(()=>permissionsFor(user),[user.role,JSON.stringify(user.permissions??null)]);
  const [contextCompany,setContextCompany]=useState<number|null>(Number(localStorage.getItem('j360_context_company'))||null);
- const [menu,setMenu]=useState<string[]>(()=>defaultPreferredMenu(user.role)); const [tab,setTab]=useState(menu[0]);
+ const [menu,setMenu]=useState<string[]>(()=>allowedMenu(user)); const [tab,setTab]=useState(menu[0]);
  const loadUserMenu=()=>{
    const companyId=user.role==='APP_ADMIN'?contextCompany:(user.companyId??null);
-   if(!companyId){setMenu(defaultPreferredMenu(user.role));return;}
+   if(!companyId){setMenu(allowedMenu(user));return;}
    getUserMenuPreferences(companyId).then(r=>{
      const saved=Array.isArray(r.data?.menu)?r.data.menu:[];
-     const allowed=defaultPreferredMenu(user.role);
+     const allowed=allowedMenu(user);
      const ordered=saved.filter((x:string)=>allowed.includes(x));
      setMenu(ordered.length?ordered:allowed);
-   }).catch(()=>setMenu(defaultPreferredMenu(user.role)));
+   }).catch(()=>setMenu(allowedMenu(user)));
  };
  const [contextBranch,setContextBranch]=useState<number|null>(Number(localStorage.getItem('j360_context_branch'))||null);
  const [companiesData,setCompaniesData]=useState<Company[]>([]);const [branchesData,setBranchesData]=useState<Branch[]>([]);
@@ -68,7 +70,7 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
 
  useEffect(()=>{if(user.role==='APP_ADMIN'){companies().then(r=>setCompaniesData(r.data)).catch(()=>{});}else{branches().then(r=>setBranchesData(r.data)).catch(()=>{});}},[user.role]);
  useEffect(()=>{if(user.role==='APP_ADMIN'&&contextCompany)branches().then(r=>setBranchesData(r.data.filter((b:Branch)=>b.companyId===contextCompany))).catch(()=>{});},[user.role,contextCompany]);
- useEffect(()=>{ loadUserMenu(); },[user.id,user.role,contextCompany]);
+ useEffect(()=>{ loadUserMenu(); },[user.id,user.role,contextCompany,JSON.stringify(user.permissions??null)]);
  useEffect(()=>{
    const refreshMenu=()=>loadUserMenu();
    window.addEventListener('j360-menu-preferences-changed',refreshMenu);
@@ -102,28 +104,29 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
  const paletteItems:PaletteItem[]=[
    ...menu.map((m:string)=>({id:`go-${m}`,label:m,hint:'Open page',group:'Go to',run:()=>setTab(m)})),
    ...(menu.includes('Billing')?[{id:'a-bill',label:'Start a new bill',hint:'Billing counter',group:'Action',run:()=>setTab('Billing')}]:[]),
-   ...(menu.includes('Jewellery')?[{id:'a-prod',label:'Add a product or tag',hint:'Jewellery',group:'Action',run:()=>setTab('Jewellery')}]:[]),
+   ...(menu.includes('Jewellery')&&perms.canManage?[{id:'a-prod',label:'Add a product or tag',hint:'Jewellery',group:'Action',run:()=>setTab('Jewellery')}]:[]),
    ...(menu.includes('Customers')?[{id:'a-cust',label:'Add a customer',hint:'Customers',group:'Action',run:()=>setTab('Customers')}]:[]),
    ...(menu.includes('Users')&&(user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN')?[{id:'a-user',label:'Create a user',hint:'Users',group:'Action',run:()=>{setTab('Users');setUsersFocus(n=>n+1);}}]:[]),
    {id:'a-theme',label:'Switch theme',hint:`Now: ${theme.replace('_',' ').toLowerCase()}`,group:'Action',run:()=>setTheme(themeOrder[(themeOrder.indexOf(theme)+1)%themeOrder.length])}
  ];
- return <div className={`app theme-${theme.toLowerCase()} ${moduleClass}${navCollapsed?' nav-collapsed':''}`} style={{background:c.bg,color:c.ink}}>
+ return <PermissionsContext.Provider value={perms}><div className={`app theme-${theme.toLowerCase()} ${moduleClass}${navCollapsed?' nav-collapsed':''}`} style={{background:c.bg,color:c.ink}}>
   <aside><div className="sideBrand"><div className="sideLogo" aria-hidden="true">{brandInitials(brand)}</div><div><b title={brand}>{brand}</b><small>{user.role.replaceAll('_',' ')}</small></div></div>
    <div className="nav">{menu.map((x:string)=><button key={x} className={tab===x?'active':''} onClick={()=>setTab(x)} title={x} aria-label={x} aria-current={tab===x?'page':undefined}><NavIcon name={x}/><span className="navText">{x}</span></button>)}</div>
    <button className="signout" onClick={logout} title="Sign out" aria-label="Sign out"><span aria-hidden="true">↪</span><span className="navText">Sign out</span></button>
   </aside>
   <section className={`workspace ${moduleClass}`}>
    <header><button type="button" className="menuToggle" onClick={toggleNav} aria-pressed={navCollapsed} aria-label={navCollapsed?'Expand menu':'Collapse menu'} title={navCollapsed?'Expand menu':'Collapse menu'}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button><div className="headTitle"><span className="eyebrow">{brand.toUpperCase()} / {user.role}</span><h1>{tab}</h1></div>
+    <button type="button" className="headSearch" onClick={()=>setPaletteOpen(true)} aria-label="Quick jump" title="Quick jump"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
     <div className="headerTools"><HeaderGadget ready={readyContext}/>
-      {user.role==='APP_ADMIN'&&<><select value={contextCompany??''} onChange={e=>selectCompany(Number(e.target.value)||null)}><option value="">Company context</option>{companiesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select value={contextBranch??''} disabled={!contextCompany} onChange={e=>selectBranch(Number(e.target.value)||null)}><option value="">Branch context</option>{branchesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></>}
+      {user.role==='APP_ADMIN'&&<><select className="ctxSelect" value={contextCompany??''} onChange={e=>selectCompany(Number(e.target.value)||null)}><option value="">Company context</option>{companiesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><select className="ctxSelect" value={contextBranch??''} disabled={!contextCompany} onChange={e=>selectBranch(Number(e.target.value)||null)}><option value="">Branch context</option>{branchesData.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></>}
       {user.role!=='APP_ADMIN'&&<span className="contextBadge">{user.companyName||'Platform'} · {user.branchName||'All branches'}</span>}
-      <select value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold · Glass</option><option value="CLASSIC_IVORY">Classic Ivory · Ledger</option><option value="PREMIUM_DARK">Premium Dark · Console</option><option value="MODERN_LIGHT">Modern Light · Studio</option></select>
+      <select className="themeSelect" value={theme} onChange={e=>setTheme(e.target.value as ThemeKey)}><option value="LUXURY_GOLD">Luxury Gold · Glass</option><option value="CLASSIC_IVORY">Classic Ivory · Ledger</option><option value="PREMIUM_DARK">Premium Dark · Console</option><option value="MODERN_LIGHT">Modern Light · Studio</option></select>
     </div>
    </header>
    <main className="workspaceBody" id="main">
    {notice&&<div className="toast">{notice}</div>}
    {!readyContext&&user.role==='APP_ADMIN'&&tab!=='Companies'&&tab!=='Branches'&&tab!=='Users'&&tab!=='Approvals'&&<div className="contextRequired"><b>Select Company + Branch context</b><span>APP_ADMIN must choose an operating company and branch before opening company-scoped workflows.</span></div>}
-   {tab!=='Overview'&&tab!=='Billing'&&<PageHero tab={tab} ready={readyContext} user={user} onGo={go}/>}
+   {tab!=='Overview'&&tab!=='Billing'&&tab!=='Users'&&<PageHero tab={tab} ready={readyContext} user={user} onGo={go}/>}
    {tab==='Overview'&&<Overview user={user} ready={readyContext}/>}
    {tab==='Companies'&&<CompaniesModule user={user} onNotice={refreshNotice}/>}
    {tab==='Branches'&&<BranchesModule user={user} companiesData={companiesData} onNotice={refreshNotice}/>}
@@ -146,5 +149,5 @@ export default function Dashboard({user,theme,setTheme,logout}:{user:User;theme:
    <AppFooter brand={brand} user={user} onPalette={()=>setPaletteOpen(true)}/>
   </section>
   <CommandPalette open={paletteOpen} items={paletteItems} onClose={()=>setPaletteOpen(false)}/>
- </div>
+ </div></PermissionsContext.Provider>
 }

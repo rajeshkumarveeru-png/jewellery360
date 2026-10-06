@@ -50,3 +50,7 @@ databaseChangeLog:
   - include:
       file: db/changelog/014-seed-default-purities.yml
       relativeToChangelogFile: false
+
+  - include:
+      file: db/changelog/015-user-access-and-slot-requests.yml
+      relativeToChangelogFile: false

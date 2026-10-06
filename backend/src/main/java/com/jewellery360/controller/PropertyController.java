@@ -21,6 +21,7 @@ import java.util.Map;
 @RequestMapping("/api/properties")
 @RequiredArgsConstructor
 public class PropertyController {
+    private final com.jewellery360.service.PermissionService permissions;
     private final PropertyRepository properties;
     private final CompanyRepository companies;
     private final CompanyPropertyService companyProperties;
@@ -88,7 +89,7 @@ public class PropertyController {
             @AuthenticationPrincipal AuthenticatedUser me,
             @RequestParam(required = false) Long companyId,
             @RequestBody BusinessRequest body) {
-        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole())) {
+        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()) && !permissions.canEditSettings(me)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a company administrator can change business settings");
         }
         Company company = resolveCompany(me, companyId);

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import {usePermissions} from '../shared/permissions';
 import BarcodeCameraScanner from './BarcodeCameraScanner';
 
 import {
@@ -32,6 +33,7 @@ export default function JewelleryModule({
   ready: boolean;
   onNotice: (x: string) => void;
 }) {
+  const perms=usePermissions();
   const [tab, setTab] = useState<
     'CATEGORIES' | 'DESIGNS' | 'PRODUCTS' | 'TAGS' | 'ITEMS'
   >('ITEMS');
@@ -341,13 +343,13 @@ export default function JewelleryModule({
           <div className="jewelleryTopActions">
 
             {/* BULK IMPORT */}
-            <button
+            {perms.canManage&&(<button
               type="button"
               className="secondary"
               onClick={() => setBulkImportOpen(true)}
             >
               ⇧ Bulk import
-            </button>
+            </button>)}
 
             {masterMode && (
               <button
@@ -420,7 +422,7 @@ export default function JewelleryModule({
           {/* ===================================================
               CREATE / QUICK ADD PANEL
           ==================================================== */}
-          <FormDrawer label="Add jewellery" title="Add jewellery" hint="Add products, tags and items here; they appear in the list below."><div className="panel jewelleryCreatePanel ultraGlassGrid">
+          <FormDrawer needsManage label="Add jewellery" title="Add jewellery" hint="Add products, tags and items here; they appear in the list below."><div className="panel jewelleryCreatePanel ultraGlassGrid">
 
             <span className="eyebrow">
               JEWELLERY
@@ -1160,13 +1162,13 @@ export default function JewelleryModule({
 
                         <td>
                           {String(x.status || '').toUpperCase() === 'IN_STOCK' && (
-                            <button
+                            perms.canManage && (<button
                               type="button"
                               className="tableEditButton"
                               onClick={() => openItemEdit(x)}
                             >
                               ✎ Edit
-                            </button>
+                            </button>)
                           )}
                         </td>
                       </>
@@ -1390,13 +1392,13 @@ export default function JewelleryModule({
           BULK PRODUCT IMPORT MODAL
       ======================================================== */}
       {bulkImportOpen && (
-        <BulkProductImport
+        perms.canManage&&(<BulkProductImport
           onClose={() => {
             setBulkImportOpen(false);
             void load();
           }}
           onNotice={onNotice}
-        />
+        />)
       )}
 
     </>

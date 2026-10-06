@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.*;
 
 @RestController
@@ -61,8 +62,21 @@ public class UserController {
         Long cid = resolveCompany(me, contextCompany);
         Long bid = contextBranch != null ? contextBranch : me.getBranchId();
         if (bid == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch context is required");
-        long count = users.countByCompanyIdAndRoleNotAndDeletedFalse(cid, AppRole.COMPANY_ADMIN);
-        if (count >= 10) throw new ResponseStatusException(HttpStatus.CONFLICT, "Maximum 10 company users allowed");
+        // Every new user of a company needs an approved request from the app administrator (no fixed number of users any more).
+        boolean appAdmin = "APP_ADMIN".equals(me.getRole());
+        UserRequest approval = null;
+        if (!appAdmin) {
+            approval = r.requestId() != null
+                    ? requests.findById(r.requestId())
+                            .filter(x -> x.getCompany() != null && Objects.equals(cid, x.getCompany().getId())
+                                    && "USER_SLOT".equals(x.getRequestType()) && "APPROVED".equals(x.getStatus()))
+                            .orElse(null)
+                    : requests.findFirstByCompanyIdAndRequestTypeAndStatusOrderByIdAsc(cid, "USER_SLOT", "APPROVED").orElse(null);
+            if (approval == null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Ask the app administrator to approve a new user first (Users page - Request a new user).");
+            }
+        }
         Company c = companies.findById(cid).orElseThrow();
         Branch b = branches.findById(bid).orElseThrow();
         if (!Objects.equals(b.getCompany().getId(), cid))
@@ -70,6 +84,14 @@ public class UserController {
         String username = r.username() == null ? "" : r.username().trim();
         String email = r.email() == null ? "" : r.email().trim().toLowerCase(Locale.ROOT);
         String phone = r.phone() == null ? "" : r.phone().replaceAll("[^0-9]", "");
+        if (!username.matches("[A-Za-z0-9._-]{3,80}") || !username.matches(".*[A-Za-z].*"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username must be 3-80 characters, contain a letter, and use only letters, numbers, dot, underscore or hyphen.");
+        if (!email.matches("^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid email address.");
+        if (!phone.isBlank() && !phone.matches("[0-9]{10,15}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid phone number with 10-15 digits.");
+        if (r.password() == null || r.password().length() < 8)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must contain at least 8 characters.");
         if (users.existsByUsernameIgnoreCaseAndDeletedFalse(username))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already in use across Jewellery360");
         if (users.existsByEmailIgnoreCase(email))
@@ -87,16 +109,14 @@ public class UserController {
         u.setRole(role);
         u.setCompany(c);
         u.setBranch(b);
-        u.setEnabled(false);
+        u.setEnabled(true); // the approval already happened (the app administrator approved the request)
+        if (r.permissions() != null) u.setPermissions(PermissionService.serialize(r.permissions()));
         users.save(u);
-        UserRequest req = new UserRequest();
-        req.setRequestType("NEW_USER");
-        req.setStatus("PENDING");
-        req.setTargetUser(u);
-        req.setRequestedBy(users.findById(me.getUserId()).orElse(null));
-        req.setCompany(c);
-        req.setMessage("New company user awaiting approval.");
-        requests.save(req);
+        if (approval != null) {
+            approval.setStatus("USED");
+            approval.setCreatedUserId(u.getId());
+            requests.save(approval);
+        }
         audit.log(me, "CREATE", "USER", u.getId(), null, auth.userResponse(u));
         return auth.userResponse(u);
     }
@@ -307,6 +327,118 @@ public class UserController {
         return auth.userResponse(u);
     }
 
+    /* ---------------- requests for new users (company admin -> app admin) ---------------- */
+
+    private static final int MAX_PENDING_SLOT_REQUESTS = 5;
+
+    private Map<String, Object> slotResponse(UserRequest r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", r.getId());
+        m.put("requestedName", r.getRequestedName());
+        m.put("note", r.getMessage());
+        m.put("status", r.getStatus());
+        m.put("createdAt", r.getCreatedAt() == null ? null : r.getCreatedAt().toString());
+        m.put("decidedAt", r.getProcessedAt() == null ? null : r.getProcessedAt().toString());
+        m.put("decisionNote", r.getDecisionNote());
+        m.put("createdUserId", r.getCreatedUserId());
+        return m;
+    }
+
+    private void requireAdmin(AuthenticatedUser me) {
+        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only an administrator can manage users");
+    }
+
+    @GetMapping("/slot-requests")
+    public List<Map<String, Object>> slotRequests(@AuthenticationPrincipal AuthenticatedUser me,
+                                                  @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
+        requireAdmin(me);
+        Long cid = resolveCompany(me, contextCompany);
+        return requests.findByCompanyIdAndRequestTypeOrderByIdDesc(cid, "USER_SLOT").stream().limit(50).map(this::slotResponse).toList();
+    }
+
+    @PostMapping("/slot-requests")
+    @Transactional
+    public Map<String, Object> requestSlot(@AuthenticationPrincipal AuthenticatedUser me, @RequestBody SlotRequestBody body,
+                                           @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
+        if (!"COMPANY_ADMIN".equals(me.getRole()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the company administrator requests new users (the app administrator creates users directly).");
+        Long cid = resolveCompany(me, contextCompany);
+        String name = body.requestedName() == null ? "" : body.requestedName().trim();
+        String note = body.note() == null ? "" : body.note().trim();
+        if (name.length() < 2)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tell the administrator who the new user is for (at least 2 characters).");
+        if (name.length() > 80) name = name.substring(0, 80);
+        if (note.length() > 300) note = note.substring(0, 300);
+        if (requests.countByCompanyIdAndRequestTypeAndStatus(cid, "USER_SLOT", "PENDING") >= MAX_PENDING_SLOT_REQUESTS)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have " + MAX_PENDING_SLOT_REQUESTS + " requests waiting for the administrator.");
+        UserRequest req = new UserRequest();
+        req.setRequestType("USER_SLOT");
+        req.setStatus("PENDING");
+        req.setCompany(companies.findById(cid).orElseThrow());
+        req.setRequestedBy(users.findById(me.getUserId()).orElse(null));
+        req.setRequestedName(name);
+        req.setMessage(note.isBlank() ? null : note);
+        requests.save(req);
+        audit.log(me, "CREATE", "USER_REQUEST", req.getId(), null, slotResponse(req));
+        return slotResponse(req);
+    }
+
+    @DeleteMapping("/slot-requests/{requestId}")
+    @Transactional
+    public Map<String, Object> cancelSlot(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long requestId,
+                                          @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
+        requireAdmin(me);
+        Long cid = resolveCompany(me, contextCompany);
+        UserRequest req = requests.findById(requestId)
+                .filter(x -> "USER_SLOT".equals(x.getRequestType()) && x.getCompany() != null && Objects.equals(cid, x.getCompany().getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found."));
+        if (!"PENDING".equals(req.getStatus()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only a request that is still waiting can be cancelled.");
+        req.setStatus("CANCELLED");
+        req.setProcessedAt(Instant.now());
+        requests.save(req);
+        return slotResponse(req);
+    }
+
+    /* ---------------- access + activation ---------------- */
+
+    private AppUser managedUser(AuthenticatedUser me, Long id, Long contextCompany) {
+        requireAdmin(me);
+        AppUser u = users.findById(id).filter(x -> !x.isDeleted()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (!"APP_ADMIN".equals(me.getRole())
+                && !Objects.equals(resolveCompany(me, contextCompany), u.getCompany() == null ? null : u.getCompany().getId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User access denied");
+        return u;
+    }
+
+    /** The company admin chooses which pages and powers a user has. Applies immediately; send a shorter list to take access away. */
+    @PutMapping("/{id}/permissions")
+    @Transactional
+    public Map<String, Object> setPermissions(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id, @RequestBody PermissionsBody body,
+                                              @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
+        AppUser u = managedUser(me, id, contextCompany);
+        if (u.getRole() == AppRole.APP_ADMIN || u.getRole() == AppRole.COMPANY_ADMIN)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Administrators always have full access.");
+        u.setPermissions(PermissionService.serialize(body.permissions()));
+        users.save(u);
+        audit.log(me, "UPDATE", "USER_ACCESS", id, null, auth.userResponse(u));
+        return auth.userResponse(u);
+    }
+
+    @PostMapping("/{id}/disable")
+    @Transactional
+    public Map<String, Object> disable(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id,
+                                       @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
+        AppUser u = managedUser(me, id, contextCompany);
+        if (u.getRole() == AppRole.APP_ADMIN || u.getRole() == AppRole.COMPANY_ADMIN)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An administrator account cannot be deactivated here.");
+        u.setEnabled(false);
+        users.save(u);
+        audit.log(me, "DISABLE", "USER", id, null, auth.userResponse(u));
+        return auth.userResponse(u);
+    }
+
     private Long resolveCompany(AuthenticatedUser me, Long ctx) {
         if ("APP_ADMIN".equals(me.getRole())) {
             if (ctx == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company context is required");
@@ -316,7 +448,13 @@ public class UserController {
     }
 
     public record CreateUserRequest(String username, String email, String phone, String password, String role,
-                                    Long branchId) {
+                                    Long branchId, java.util.List<String> permissions, Long requestId) {
+    }
+
+    public record SlotRequestBody(String requestedName, String note) {
+    }
+
+    public record PermissionsBody(java.util.List<String> permissions) {
     }
 
     public record UpdateUserRequest(

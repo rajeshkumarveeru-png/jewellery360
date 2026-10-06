@@ -1,0 +1,171 @@
+/* ============================================================================================
+   MOBILE DESIGN (phones and small tablets, up to 900 px) - loaded last so it wins.
+   A slim 56 px icon rail on the left, a compact header with the clock and gold rates, every table shown as cards,
+   "New ..." forms as a round + button with a full-screen sheet, the bill summary as a bottom sheet with a floating total bar.
+   Desktop keeps its layout: the pieces below that only exist for phones are hidden here.
+   ============================================================================================ */
+.bsumFloat,.bsumBackdrop,.bsumClose,.headSearch{display:none}
+.posLine .pc{display:contents}.posLine .pc::before{display:none}
+
+@media (max-width:900px){
+  html,body{max-width:100%;overflow-x:hidden}
+  html body .app{display:block!important;min-height:100dvh;padding:0!important}
+
+  /* ---------- the rail ---------- */
+  html body .app > aside{position:fixed!important;left:0;top:0;bottom:0;width:56px!important;min-width:0!important;height:100dvh!important;display:flex!important;flex-direction:column!important;align-items:center;
+    gap:6px!important;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px))!important;margin:0!important;border-radius:0!important;overflow-y:auto;overflow-x:hidden;z-index:70;scrollbar-width:none}
+  html body .app > aside::-webkit-scrollbar{display:none}
+  html body .app > aside .sideBrand{padding:0!important;margin:0!important;justify-content:center;width:100%;border:0!important;background:transparent!important}
+  html body .app > aside .sideBrand > div:last-child{display:none!important}
+  html body .app > aside .sideLogo{width:38px!important;height:38px!important;font-size:12px!important;border-radius:12px!important}
+  html body .app > aside .nav{display:flex!important;flex-direction:column!important;width:100%!important;height:auto!important;flex:1 1 auto;gap:5px!important;padding:0 6px!important;overflow:visible!important;margin:0!important}
+  html body .app > aside .nav button,html body .app > aside .signout{width:44px!important;min-width:0!important;height:44px!important;padding:0!important;margin:0 auto!important;justify-content:center!important;border-radius:14px!important;flex:0 0 auto}
+  html body .app > aside .navText{display:none!important}
+  html body .app > aside .signout{margin-top:auto!important}
+
+  /* ---------- the workspace + a compact two-row header ---------- */
+  html body .app > .workspace{margin-left:56px!important;width:calc(100% - 56px)!important;min-width:0!important;padding:0!important}
+  html body .app > .workspace > header{position:sticky!important;top:0;z-index:60;display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center;gap:6px 8px!important;
+    min-height:54px;height:auto!important;padding:7px 10px!important;margin:0!important;border-radius:0 0 18px 18px!important}
+  html body .app > .workspace > header .menuToggle{display:none!important}
+  html body .app > .workspace > header .headTitle{flex:1 1 0;min-width:0}
+  html body .app > .workspace > header .headTitle .eyebrow{display:block;font-size:8.5px!important;letter-spacing:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body .app > .workspace > header .headTitle h1{margin:0!important;font-size:18px!important;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body .app > .workspace > header .headSearch{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;padding:0!important;border-radius:13px!important;color:inherit!important;background:rgba(201,154,69,.18)!important;border:1px solid rgba(201,154,69,.5)!important;box-shadow:none!important;order:2}
+  html body .app > .workspace > header .headerTools,html body .app > .workspace > header .jGadget{display:contents!important}
+  /* clock: one digital line; gold rates: a chip strip on the second row */
+  html body .app > .workspace > header .jTime{order:3;display:flex!important;align-items:center;gap:6px!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;flex:0 0 auto}
+  html body .app > .workspace > header .jClock,html body .app > .workspace > header .jOrnament,html body .app > .workspace > header .jGreet,html body .app > .workspace > header .jDate,html body .app > .workspace > header .jRatesHead,html body .app > .workspace > header .jSource,html body .app > .workspace > header .jSec{display:none!important}
+  html body .app > .workspace > header .jDigital{display:flex;flex-direction:column;line-height:1}
+  html body .app > .workspace > header .jDigital time{font-size:15px!important}
+  html body .app > .workspace > header .jRates{order:5;flex:1 1 100%;min-width:0;padding:0!important;margin:0!important;background:transparent!important;border:0!important}
+  html body .app > .workspace > header .jRateRow{display:flex!important;flex-wrap:nowrap;gap:6px!important;overflow-x:auto;scrollbar-width:none}
+  html body .app > .workspace > header .jRateRow::-webkit-scrollbar{display:none}
+  html body .app > .workspace > header .jRate{flex:0 0 auto;font-size:12px!important}
+  html body .app > .workspace > header .contextBadge{order:6;flex:1 1 100%;font-size:11px!important;padding:3px 10px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html body .app > .workspace > header .themeSelect{display:none!important}
+  html body .app > .workspace > header .ctxSelect{order:6;flex:1 1 calc(50% - 4px);min-width:0;height:38px;font-size:13px!important}
+
+  html body .app > .workspace > .workspaceBody{padding:10px 10px calc(92px + env(safe-area-inset-bottom,0px))!important;overflow-x:hidden}
+  html body .app .appFooter{display:none!important}
+  html body .app .toast{left:64px!important;right:8px!important;top:8px!important;width:auto!important}
+
+  /* ---------- page banner: slim ---------- */
+  html body .app .pageHero{padding:10px 12px!important;gap:8px 10px!important;border-radius:18px!important;margin-bottom:10px!important}
+  html body .app .pageHero .heroMedal{width:36px!important;height:36px!important;flex:0 0 36px}
+  html body .app .pageHero .heroText b{font-size:16px!important}
+  html body .app .pageHero .heroText small,html body .app .pageHero .heroActions{display:none!important}
+  html body .app .pageHero .heroStats{display:flex!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;flex:1 1 100%;order:5}
+  html body .app .pageHero .heroStats::-webkit-scrollbar{display:none}
+  html body .app .pageHero .heroStats>span{flex:0 0 auto}
+
+  /* ---------- generic layout: one column, roomy touch targets, no iOS zoom ---------- */
+  html body .app :is(.moduleGrid,.billingLayout,.formGrid,.twoCol,.threeCol,.settingsGrid,.ovGrid){grid-template-columns:minmax(0,1fr)!important}
+  html body .app .panel{padding:12px!important;border-radius:18px!important}
+  html body .app .panelHead{flex-direction:column!important;align-items:flex-start!important;gap:8px!important}
+  html body .app :is(input,select,textarea){font-size:16px!important;min-height:44px}
+  html body .app :is(button.primary,button.secondary,button.ghost){min-height:44px}
+  html body .app .reportTabs,html body .app .segmented,html body .app .settingsTabs,html body .app .tabs{display:flex!important;overflow-x:auto;scrollbar-width:none;gap:6px}
+  html body .app .reportTabs button,html body .app .settingsTabs button{flex:0 0 auto}
+
+  /* ---------- tables become cards (cells are labelled by the shared Table component) ---------- */
+  html body .app .tableBox .tableTools{flex-wrap:wrap;gap:8px}
+  html body .app .tableBox .tableTools .tableBtns,html body .app .tableBox .tableTools .tableCount{display:none!important}
+  html body .app .tableBox .tableSearch{flex:1 1 100%}
+  html body .app .tableBox .tableWrap,html body .app .tmTableWrap{overflow:visible!important;border:0!important;background:transparent!important;box-shadow:none!important}
+  html body .app :is(.tableBox .tableWrap table,.tmTable){display:block!important;width:100%!important;min-width:0!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) thead{display:none!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) tbody{display:flex!important;flex-direction:column;gap:10px}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) tr{display:block!important;padding:10px 12px!important;border-radius:16px!important;border:1px solid rgba(154,111,44,.3)!important;background:#fffdf8!important;color:#211c18;box-shadow:0 14px 24px -22px rgba(33,28,24,.6)}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td{display:flex!important;align-items:center;justify-content:space-between;gap:12px;width:auto!important;padding:6px 0!important;border:0!important;border-bottom:1px dashed #eadfc6!important;text-align:right!important;font-size:13px!important;overflow-wrap:anywhere}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:last-child{border-bottom:0!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td::before{content:attr(data-label);flex:0 0 38%;max-width:44%;text-align:left;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8d6a2e}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td[data-label=""]::before,html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:not([data-label])::before{display:none}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:last-child:has(button,a){justify-content:flex-end;flex-wrap:wrap}
+
+  /* neutralise the desktop "card view" rules of the shared table so phones always get the same card */
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) tr::before,html body .app :is(.tableBox .tableWrap,.tmTableWrap) tr::after{display:none!important;content:none!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td{grid-column:auto!important;grid-row:auto!important;order:0!important;flex:none!important;max-width:none!important;min-width:0!important;min-height:0!important;position:static!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td::before{writing-mode:horizontal-tb!important;white-space:normal;position:static!important;transform:none!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:not(:empty)::after{display:none!important;content:none!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:empty::after{content:"—";color:#a89a82}
+  /* cells holding more than one element (title + note, name + badge) stack their label above the content */
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:has(> :nth-child(2)){display:block!important;text-align:left!important}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td:has(> :nth-child(2))::before{display:block!important;max-width:none!important;margin-bottom:3px}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td>*{min-width:0}
+  html body .app :is(.tableBox .tableWrap,.tmTableWrap) td{word-break:normal}
+
+  /* settings rows: label above the control */
+  html body .app .setting{flex-direction:column!important;align-items:stretch!important;gap:6px!important}
+  html body .app .setting select,html body .app .setting input{width:100%!important;min-width:0!important}
+
+  /* ---------- "New ..." forms: round + button, full-screen sheet ---------- */
+  html body .app .entryTrigger{position:fixed!important;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:55;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;width:auto!important}
+  html body .app .entryTrigger p{display:none!important}
+  html body .app .entryNew{width:56px;height:56px;min-height:0!important;padding:0!important;border-radius:50%!important;font-size:0!important;display:grid!important;place-items:center;box-shadow:0 18px 30px -10px rgba(122,90,34,.8)!important}
+  html body .app .entryNew span{font-size:28px!important;line-height:1}
+  html body .app .formDrawer{width:100%!important;max-width:none!important;left:0!important;right:0!important;border-radius:0!important}
+  html body .app .formDrawerHint{display:none!important}
+  html body .app .formDrawerBody{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))!important}
+
+  /* ---------- billing: the summary is a bottom sheet opened from a floating total bar ---------- */
+  html body .app .bsumFloat{display:flex!important;align-items:center;justify-content:space-between;gap:10px;position:fixed;left:64px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:58;min-height:56px;padding:8px 10px 8px 16px!important;border-radius:18px!important;color:#fff!important;
+    background:linear-gradient(135deg,#241c12,#4d3a1c)!important;border:1px solid rgba(240,205,136,.5)!important;box-shadow:0 22px 38px -18px rgba(0,0,0,.8)!important;text-align:left;cursor:pointer}
+  html body .app .bsumFloatInfo{display:flex;flex-direction:column;line-height:1.15}.bsumFloatInfo small{font-size:10.5px;color:#f0cd88;letter-spacing:.04em}.bsumFloatInfo b{font-size:20px}
+  html body .app .bsumFloatBtn{padding:9px 14px;border-radius:13px;font-size:13px;font-weight:800;color:#3a2c15;background:linear-gradient(135deg,#f7dc9b,#e2b45a)}
+  html body .app .bsumBackdrop{display:block!important;position:fixed;inset:0;z-index:65;background:rgba(20,15,8,.55);backdrop-filter:blur(4px)}
+  html body .app .bsum:not(.bsumDone){position:fixed!important;left:56px!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;max-height:90dvh;overflow-y:auto;margin:0!important;z-index:68;
+    border-radius:24px 24px 0 0!important;transform:translateY(105%);transition:transform .38s cubic-bezier(.22,1,.36,1);padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))!important}
+  html body .app .bsum.sheetOpen:not(.bsumDone){transform:none}
+  html body .app .bsum:not(.bsumDone) .bsumClose{display:block!important;position:sticky;top:0;z-index:3;margin:0 0 6px auto;padding:7px 14px!important;min-height:0!important;border-radius:99px!important;font-size:12px!important;font-weight:800;color:#3a2c15!important;background:rgba(240,205,136,.9)!important;border:0!important}
+  html body .app .bsum.bsumDone{position:static!important}
+
+  /* clock + rates take the colour of the header (light or dark theme) */
+  html body .app > .workspace > header :is(.jDigital time,.jDigital time b,.jDigital time em,.jRate,.jRate>span,.jRate small){color:inherit!important;opacity:1!important}
+  html body .app > .workspace > header .jRate{background:rgba(201,154,69,.16)!important;border-radius:99px!important;padding:3px 10px 3px 4px!important;border:1px solid rgba(201,154,69,.4)!important}
+  html body .app > .workspace > header .jDigital time i{display:inline!important;font-size:10px!important}
+  html body .app > .workspace > header .headerTools .jGadget .jTime .jDigital time b{color:#2a2218!important}
+  html body.theme-premium_dark .app > .workspace > header .headerTools .jGadget .jTime .jDigital time b,html body .app.theme-premium_dark > .workspace > header .headerTools .jGadget .jTime .jDigital time b{color:#f4ede0!important}
+  html body .app > .workspace > header .headerTools .jGadget .jRates .jRate,html body .app > .workspace > header .headerTools .jGadget .jRates .jRate>span{color:#2a2218!important}
+  html body .app.theme-premium_dark > .workspace > header .headerTools .jGadget .jRates .jRate,html body .app.theme-premium_dark > .workspace > header .headerTools .jGadget .jRates .jRate>span{color:#f4ede0!important}
+  html body .app > .workspace > header .jDigital time b,html body .app > .workspace > header .jDigital time span{-webkit-text-fill-color:currentColor!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;text-shadow:none!important}
+
+  /* bill lines: one card per item, the number fields in a labelled 3-column grid */
+  html body .app .posLines{overflow:visible!important}
+  html body .app .posLine.head{display:none!important}
+  html body .app .posLine:not(.head){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;align-items:end;padding:10px!important;margin-bottom:8px;border-radius:14px!important;border:1px solid rgba(154,111,44,.3)!important;background:rgba(255,253,248,.7);position:relative;min-width:0!important}
+  html body .app .posLine .n{display:none}
+  html body .app .posLine .it{grid-column:1/-1;padding-right:34px}
+  html body .app .posLine .pc{display:flex!important;flex-direction:column;gap:3px;min-width:0}
+  html body .app .posLine .pc::before{display:block;content:attr(data-l);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8d6a2e}
+  html body .app .posLine .pc input{width:100%!important;min-width:0}
+  html body .app .posLine .amt{grid-column:1/-1;text-align:right;font-size:16px}
+  html body .app .posLine .posX{position:absolute;top:8px;right:8px;width:30px;height:30px;min-height:0!important}
+
+  /* ---------- Users + Approvals ---------- */
+  html body .app .tmHero{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px!important;padding:14px!important;border-radius:20px!important}.tmHero h2{font-size:18px!important}.tmHero p,.tmHeroIcon{display:none!important}
+  html body .app .tmHero>div:nth-child(2){grid-column:1}
+  html body .app .tmRing{width:56px;height:56px;flex:0 0 56px;margin-left:0;grid-column:2;grid-row:1}.tmRing::before{inset:5px}.tmRing small{display:none}
+  html body .app .tmHeroActions{grid-column:1/-1;width:100%}html body .app .tmHeroActions .tmHeroBtn{flex:1 1 auto;justify-content:center}
+  html body .app .tmStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html body .app .tmGrid{grid-template-columns:minmax(0,1fr)!important}
+  html body .app .tmDrawer{width:100%!important}html body .app .tmRow2,html body .app .ac-grid{grid-template-columns:minmax(0,1fr)!important}
+  html body .app .tmViews{display:none}
+  html body .app .apCard{flex-direction:column;align-items:stretch}html body .app .apActions{width:100%}html body .app .apActions button{flex:1}
+  html body .app .apHistRows>div{grid-template-columns:1fr auto}html body .app .apHistRows span{grid-column:1/-1}
+
+  /* ---------- quick jump ---------- */
+  html body .cmdPanel,html body .paletteBox{width:calc(100vw - 16px)!important;max-width:none!important}
+
+  /* ---------- sign-in ---------- */
+  html body .auth{display:flex!important;flex-direction:column!important;height:auto!important;min-height:100dvh;overflow:visible!important;padding:18px 14px calc(24px + env(safe-area-inset-bottom,0px))!important;gap:14px!important}
+  html body .auth .brand{padding:0!important;text-align:left}html body .auth .brand h1{font-size:34px!important}html body .auth .brand p,html body .auth .brandPills{display:none!important}
+  html body .auth .logo{width:50px!important;height:50px!important}
+  html body .auth .authCard{width:100%!important;max-width:none!important;border-radius:22px!important}
+}
+@media (max-width:420px){
+  html body .app > .workspace > header .headTitle h1{font-size:16px!important}
+  html body .app .tmStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+/* the sign-in card scrolls on short desktop windows */
+@media (min-width:901px){html body .auth{max-height:100vh;overflow-y:auto}.authCard.af{margin-block:auto}}

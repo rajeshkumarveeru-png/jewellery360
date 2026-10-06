@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-user-access-and-slot-requests
+      author: jewellery360
+      changes:
+        - addColumn:
+            tableName: app_user
+            columns:
+              - column:
+                  name: permissions
+                  type: VARCHAR(800)
+        - addColumn:
+            tableName: user_request
+            columns:
+              - column:
+                  name: requested_name
+                  type: VARCHAR(80)
+              - column:
+                  name: decision_note
+                  type: VARCHAR(300)
+              - column:
+                  name: created_user_id
+                  type: BIGINT

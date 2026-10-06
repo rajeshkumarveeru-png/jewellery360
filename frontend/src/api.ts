@@ -81,8 +81,8 @@ export const updateUser=(id:number,x:any)=>api.put(`/users/${id}`,x);
 export const enableUser=(id:number)=>api.post(`/users/${id}/enable`);
 
 export const approvals=()=>api.get('/approvals/pending');
-export const approve=(id:number)=>api.post(`/approvals/${id}/approve`);
-export const reject=(id:number)=>api.post(`/approvals/${id}/reject`);
+export const approve=(id:number,note?:string)=>api.post(`/approvals/${id}/approve`,note?{note}:undefined);
+export const reject=(id:number,note?:string)=>api.post(`/approvals/${id}/reject`,note?{note}:undefined);
 
 export const companies=()=>api.get('/companies');
 export const createCompany=(x:any)=>api.post('/companies',x);
@@ -202,3 +202,15 @@ export const saveBusinessSettings=(x:{companyName?:string;phone:string;email:str
 // Tenant-isolated SKU / tag number sequence (starts at 01, optional company prefix).
 export const nextSku=()=>api.get('/domain/jewellery/next-sku');
 export const nextTag=()=>api.get('/domain/jewellery/next-tag');
+
+/* ============================================================
+   Sign-in helpers, staff access and requests for new users
+   ============================================================ */
+export const availability=(params:{username?:string;email?:string;phone?:string;company?:string})=>api.get('/auth/availability',{params});
+export const validateReset=(identifier:string)=>api.post('/auth/password-reset/validate',{identifier});
+export const setUserPermissions=(id:number,permissions:string[])=>api.put(`/users/${id}/permissions`,{permissions});
+export const disableUser=(id:number)=>api.post(`/users/${id}/disable`);
+export const userSlotRequests=()=>api.get('/users/slot-requests');
+export const createSlotRequest=(x:{requestedName:string;note?:string})=>api.post('/users/slot-requests',x);
+export const cancelSlotRequest=(id:number)=>api.delete(`/users/slot-requests/${id}`);
+export const userRequestHistory=()=>api.get('/approvals/user-requests');

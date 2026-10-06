@@ -28,6 +28,7 @@ public class AuthService {
     private final PropertyRepository properties;
     private final OtpChallengeRepository otps;
     private final WhatsAppService whatsapp;
+    private final PermissionService permissionService;
 
     @Transactional
     public Map<String, Object> login(String identifier, String password) {
@@ -102,6 +103,9 @@ public class AuthService {
 
         if (cleanCompany.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company name is required.");
         if (cleanUsername.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username is required.");
+        if (!cleanUsername.matches(".*[A-Za-z].*")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username must contain at least one letter (a number-only username could be mistaken for a mobile number).");
+        }
         if (!cleanUsername.matches("[A-Za-z0-9._-]{3,80}")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username must be 3-80 characters and may contain letters, numbers, dot, underscore, or hyphen.");
         }
@@ -244,6 +248,34 @@ public class AuthService {
         return Map.of("message", "Password reset successfully.");
     }
 
+    /** Live "is it already taken?" answers for the create-company and create-user forms (public, no personal data is returned). */
+    @Transactional(readOnly = true)
+    public Map<String, Object> availability(String username, String email, String phone, String company) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        String u = clean(username);
+        if (!u.isBlank()) m.put("usernameTaken", users.existsByUsernameIgnoreCaseAndDeletedFalse(u));
+        String e = clean(email).toLowerCase(Locale.ROOT);
+        if (!e.isBlank()) m.put("emailTaken", users.existsByEmailIgnoreCase(e));
+        String p = normalizePhone(phone);
+        if (!p.isBlank()) m.put("phoneTaken", users.existsByPhone(p));
+        String c = clean(company);
+        if (!c.isBlank()) m.put("companyTaken", companies.existsByNameIgnoreCase(c));
+        return m;
+    }
+
+    /** First step of "Forgot password": is there such an account, and can it receive a WhatsApp OTP? */
+    @Transactional(readOnly = true)
+    public Map<String, Object> validateResetIdentifier(String identifier) {
+        AppUser u = findActive(identifier);
+        if (!u.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account is not active yet. Ask your administrator to approve it first.");
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("message", "Account verified. You can now create your new password.");
+        m.put("hasPhone", u.getPhone() != null && !u.getPhone().isBlank());
+        return m;
+    }
+
     private AppUser findActive(String id) {
         String value = clean(id);
         AppUser user = null;
@@ -287,6 +319,8 @@ public class AuthService {
         m.put("companyName", u.getCompany() == null ? null : u.getCompany().getName());
         m.put("branchId", u.getBranch() == null ? null : u.getBranch().getId());
         m.put("branchName", u.getBranch() == null ? null : u.getBranch().getName());
+        m.put("permissions", permissionService.effective(u));
+        m.put("createdAt", u.getCreatedAt() == null ? null : u.getCreatedAt().toString());
         return m;
     }
 }

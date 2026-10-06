@@ -1,4 +1,5 @@
 import {FormEvent, useEffect, useMemo, useState} from 'react';
+import {usePermissions} from '../shared/permissions';
 import {
   api, login, registerCompany, adminReset, otpRequest, otpVerify, me, users, createUser, enableUser,
   approvals, approve, reject, companies, createCompany, branches, createBranch, records, createRecord,
@@ -12,6 +13,7 @@ import {Table,Empty,Field} from '../shared/ui';
 import {DateRangePicker,defaultPresets,toIso} from '../shared/widgets';
 import './Reports.css';
 export default function ReportsModule({onNotice}:{onNotice:(x:string)=>void}){
+  const perms=usePermissions();
  const [type,setType]=useState('SALES');
  const initialRange=defaultPresets().find(p=>p.key==='30d')!.range();
  const [from,setFrom]=useState(initialRange[0]);
@@ -50,7 +52,7 @@ export default function ReportsModule({onNotice}:{onNotice:(x:string)=>void}){
  const money=(v:any)=>`₹${Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
  return <div className="reportPage">
    <div className="reportToolbar">{type==='SALES'&&<DateRangePicker from={from} to={to} maxDate={toIso(new Date())} onChange={(a,b)=>{setFrom(a);setTo(b);}} label="From / To date"/>}{type!=='SALES'&&<small className="muted">Date filtering applies to the Sales report.</small>}</div>
-   <div className="reportTabs">{['SALES','STOCK','GOLD','PROFIT','CUSTOMERS'].map(x=><button key={x} className={type===x?'active':''} onClick={()=>setType(x)}>{x}</button>)}</div>
+   <div className="reportTabs">{['SALES','STOCK','GOLD','PROFIT','CUSTOMERS'].filter(x=>x!=='PROFIT'||perms.canSeeProfit).map(x=><button key={x} className={type===x?'active':''} onClick={()=>setType(x)}>{x}</button>)}</div>
    <div className="kpiGrid"><div className="kpi"><span>Records</span><strong>{r?.count||0}</strong></div><div className="kpi"><span>Amount</span><strong>{money(r?.total)}</strong></div><div className="kpi"><span>In stock</span><strong>{r?.inStock??'—'}</strong></div></div>
    <div className="panel"><div className="panelHead"><div><span className="eyebrow">REPORTS</span><h2>{type} report</h2></div><button className="ghost" onClick={load}>Refresh</button></div>
      <Table><thead><tr><th>Reference</th><th>Status / Customer</th><th>Date / Branch</th><th>Amount / Outstanding</th>{type==='SALES'&&<th>Actions</th>}</tr></thead>

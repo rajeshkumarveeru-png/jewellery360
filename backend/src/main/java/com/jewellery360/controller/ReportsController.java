@@ -13,10 +13,13 @@ import java.util.*;
 @RestController @RequestMapping("/api/reports") @RequiredArgsConstructor
 public class ReportsController {
     private final BusinessRecordRepository records;
+    private final com.jewellery360.service.PermissionService permissions;
     @GetMapping
     public Map<String,Object> report(@AuthenticationPrincipal AuthenticatedUser me,@RequestParam String type,
         @RequestHeader(value="X-Company-Id",required=false) Long companyId,@RequestHeader(value="X-Branch-Id",required=false) Long branchId,
         @RequestParam(required=false) LocalDate from,@RequestParam(required=false) LocalDate to){
+        permissions.requireModule(me,"REPORTS");
+        if("PROFIT".equalsIgnoreCase(type)) permissions.requireProfit(me);
         Long cid="APP_ADMIN".equals(me.getRole())?companyId:me.getCompanyId();
         if(cid==null) return Map.of("type",type,"rows",List.of());
         List<BusinessRecord> all=branchId!=null?records.findByCompanyIdAndBranchIdOrderByRecordDateDescIdDesc(cid,branchId):records.findByCompanyIdOrderByRecordDateDescIdDesc(cid);

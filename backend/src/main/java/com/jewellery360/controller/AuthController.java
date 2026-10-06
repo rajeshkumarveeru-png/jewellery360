@@ -36,6 +36,17 @@ public class AuthController {
         );
     }
 
+    @GetMapping("/availability")
+    public Map<String, Object> availability(@RequestParam(required = false) String username, @RequestParam(required = false) String email,
+                                            @RequestParam(required = false) String phone, @RequestParam(required = false) String company) {
+        return auth.availability(username, email, phone, company);
+    }
+
+    @PostMapping("/password-reset/validate")
+    public Map<String, Object> validateReset(@RequestBody IdentifierRequest r) {
+        return auth.validateResetIdentifier(r.identifier());
+    }
+
     @PostMapping("/password-reset/admin")
     public Map<String, Object> adminReset(@RequestBody AdminResetRequest r) {
         return auth.requestAdminReset(r.identifier(), r.password(), r.confirmPassword());

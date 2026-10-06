@@ -16,7 +16,21 @@ export default function App(){
     setLoading(true);
     me().then(r=>setUser(r.data)).catch(()=>{localStorage.removeItem('j360_token');setToken(null);setUser(null);}).finally(()=>setLoading(false));
   },[token]);
+  const signOut=()=>{localStorage.removeItem('j360_token');localStorage.removeItem('j360_context_company');localStorage.removeItem('j360_context_branch');setToken(null)};
+  // The company admin can change a staff user's pages and powers while they are signed in: re-read them every minute and when the window
+  // gets focus. A user who was deactivated is signed out.
+  useEffect(()=>{
+    if(!token||!user||user.role==='APP_ADMIN'||user.role==='COMPANY_ADMIN')return;
+    const refresh=()=>{me().then(r=>{
+      const next=r.data as User;
+      if(next&&next.enabled===false){signOut();return;}
+      setUser(cur=>cur&&JSON.stringify([cur.role,cur.permissions,cur.enabled,cur.branchId])===JSON.stringify([next.role,next.permissions,next.enabled,next.branchId])?cur:next);
+    }).catch((e:any)=>{if(e?.response?.status===401)signOut();});};
+    const timer=window.setInterval(refresh,60000);
+    window.addEventListener('focus',refresh);
+    return()=>{window.clearInterval(timer);window.removeEventListener('focus',refresh);};
+  },[token,user?.id,user?.role]);
   if(!token) return <Auth mode={mode} setMode={setMode} onLogin={t=>{localStorage.setItem('j360_token',t);setToken(t)}}/>;
   if(loading||!user) return <Loading/>;
-  return <Dashboard user={user} theme={theme} setTheme={v=>{setTheme(v);localStorage.setItem('j360_theme',v)}} logout={()=>{localStorage.removeItem('j360_token');localStorage.removeItem('j360_context_company');localStorage.removeItem('j360_context_branch');setToken(null)}}/>;
+  return <Dashboard user={user} theme={theme} setTheme={v=>{setTheme(v);localStorage.setItem('j360_theme',v)}} logout={signOut}/>;
 }
