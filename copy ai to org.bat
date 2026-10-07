@@ -8,7 +8,6 @@ set "MOBILE_SOURCE=%CURRENT_DIR%mobile\src"
 
 set "BACKEND_DEST=D:\source_code\jewellery360\backend\src"
 set "FRONTEND_DEST=D:\source_code\jewellery360\frontend\src"
-
 set "MOBILE_DEST=D:\source_code\jewellery360\mobile\src"
 
 echo ===================================================
@@ -19,6 +18,8 @@ echo ===================================================
 robocopy "%BACKEND_SOURCE%" "%BACKEND_DEST%" /E /R:3 /W:5
 echo.
 robocopy "%FRONTEND_SOURCE%" "%FRONTEND_DEST%" /E /R:3 /W:5
+echo.
+robocopy "%MOBILE_SOURCE%" "%MOBILE_DEST%" /E /R:3 /W:5
 echo.
 
 echo ===================================================
