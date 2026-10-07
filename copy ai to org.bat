@@ -4,9 +4,12 @@ chcp 65001 > nul
 set "CURRENT_DIR=%~dp0"
 set "BACKEND_SOURCE=%CURRENT_DIR%backend\src"
 set "FRONTEND_SOURCE=%CURRENT_DIR%frontend\src"
+set "MOBILE_SOURCE=%CURRENT_DIR%mobile\src"
 
 set "BACKEND_DEST=D:\source_code\jewellery360\backend\src"
 set "FRONTEND_DEST=D:\source_code\jewellery360\frontend\src"
+
+set "MOBILE_DEST=D:\source_code\jewellery360\mobile\src"
 
 echo ===================================================
 echo [START] Forcing Overwrite Project Copy...

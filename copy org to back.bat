@@ -9,22 +9,35 @@ set "BACKEND_DEST=D:\source_code\jewellBack\jewell360\backend\src"
 set "FRONTEND_SOURCE=D:\source_code\jewellery360\frontend\src"
 set "FRONTEND_DEST=D:\source_code\jewellBack\jewell360\frontend\src"
 
+set "MOBILE_SOURCE=D:\source_code\jewellery360\mobile\src"
+set "MOBILE_DEST=D:\source_code\jewellBack\jewell360\mobile\src"
+
 echo ===================================================
-echo [START] Project Copy Automation Setup
+echo [START] Project Copy Automation Setup (Mirror & Purge Mode)
 echo ===================================================
 
 :: 1. Copy Backend Files
-echo [1/2] Copying Backend Source...
+echo [1/2] Mirroring Backend Source (Overwriting changes and purging deleted files)...
 echo From: %BACKEND_SOURCE%
 echo To:   %BACKEND_DEST%
-robocopy "%BACKEND_SOURCE%" "%BACKEND_DEST%" /E /XO /R:3 /W:5
+:: /MIR : Mirrors a directory tree (equivalent to /E plus /PURGE). Deletes destination files if missing from source.
+robocopy "%BACKEND_SOURCE%" "%BACKEND_DEST%" /MIR /R:3 /W:5
 echo.
 
 :: 2. Copy Frontend Files
-echo [2/2] Copying Frontend Source...
+echo [2/3] Mirroring Frontend Source (Overwriting changes and purging deleted files)...
 echo From: %FRONTEND_SOURCE%
 echo To:   %FRONTEND_DEST%
-robocopy "%FRONTEND_SOURCE%" "%FRONTEND_DEST%" /E /XO /R:3 /W:5
+:: /MIR : Mirrors a directory tree (equivalent to /E plus /PURGE). Deletes destination files if missing from source.
+robocopy "%FRONTEND_SOURCE%" "%FRONTEND_DEST%" /MIR /R:3 /W:5
+echo.
+
+:: 2. Copy Frontend Files
+echo [3/3] Mirroring Frontend Source (Overwriting changes and purging deleted files)...
+echo From: %MOBILE_SOURCE%
+echo To:   %MOBILE_DEST%
+:: /MIR : Mirrors a directory tree (equivalent to /E plus /PURGE). Deletes destination files if missing from source.
+robocopy "%MOBILE_SOURCE%" "%MOBILE_DEST%" /MIR /R:3 /W:5
 echo.
 
 echo ===================================================
