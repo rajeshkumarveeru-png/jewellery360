@@ -4,19 +4,18 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
-import java.time.*;
 
-@Entity
-@Table(name="purity_master",
-uniqueConstraints={@UniqueConstraint(name="uk_purity_company_name", columnNames="company_id,name")})
+@Entity @Table(name="purity_master")
 @Getter @Setter
 public class PurityMaster {
-    @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
-    private Long id;
+    @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch=FetchType.LAZY, optional=false) @JoinColumn(name="company_id") private Company company;
-    @Column(nullable=false,length=50) private String name;
+    /** GOLD, SILVER or PLATINUM. */
+    @Column(nullable=false, length=20) private String metal = "GOLD";
+    @Column(nullable=false, length=50) private String name;
     @Column(length=10) private String karat;
+    /** 0.9160 for 22K. */
+    @Column(nullable=false, precision=8, scale=4) private BigDecimal fineness;
     @Column(length=500) private String description;
-    @Column(nullable=false,precision=19,scale=3) private BigDecimal fineness;
     @Column(nullable=false) private boolean active = true;
 }

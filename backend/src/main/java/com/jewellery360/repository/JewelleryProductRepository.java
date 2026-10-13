@@ -3,14 +3,17 @@ package com.jewellery360.repository;
 import com.jewellery360.domain.JewelleryProduct;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.*;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+import java.util.Optional;
 
 public interface JewelleryProductRepository extends JpaRepository<JewelleryProduct, Long> {
-    @EntityGraph(attributePaths = {"company", "category", "category.company", "design", "design.category", "design.category.company"})
-List<JewelleryProduct> findByCompanyId(Long companyId);
-    @Override
-    @EntityGraph(attributePaths = {"company", "category", "category.company", "design", "design.category", "design.category.company"})
-    Optional<JewelleryProduct> findById(Long id);
+    @EntityGraph(attributePaths = {"category", "design"})
+    List<JewelleryProduct> findByCompanyIdOrderByNameAsc(Long companyId);
+    Optional<JewelleryProduct> findByCompanyIdAndSkuIgnoreCase(Long companyId, String sku);
+    Optional<JewelleryProduct> findFirstByCompanyIdAndNameIgnoreCase(Long companyId, String name);
 
-    boolean existsByCompanyIdAndSkuIgnoreCase(Long companyId, String sku);
+    @Query("select p.sku from JewelleryProduct p where p.company.id = :companyId")
+    List<String> skus(Long companyId);
 }

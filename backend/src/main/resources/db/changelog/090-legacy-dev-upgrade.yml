@@ -1,0 +1,267 @@
+databaseChangeLog:
+  # ------------------------------------------------------------------------------------------------------------------
+  # ONE-TIME UPGRADE OF DEVELOPMENT DATABASES CREATED BEFORE THE PRE-PRODUCTION SCHEMA CONSOLIDATION.
+  #
+  # A fresh database never runs this (the precondition only matches databases that recorded the old "001-core"
+  # changeset). It converts the old development schema, in place and without losing data, into exactly the schema the
+  # baseline files 001-004 create. Tables that did not exist before (karigar, job_card, expense, day_close, ...) are
+  # created by the baseline files themselves.
+  #
+  # Delete this file - and the legacy-guard preConditions in 001-004 - once every development database has started
+  # once with this version. Production databases are always created from the baseline.
+  # ------------------------------------------------------------------------------------------------------------------
+  - changeSet:
+      id: legacy-dev-upgrade-2026-10
+      author: jewellery360
+      # the script was corrected after release (tags re-used by several pieces); databases that already ran or skipped it stay valid
+      validCheckSum: ANY
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              -- helpers -------------------------------------------------------------------------------------------
+              CREATE OR REPLACE FUNCTION j360_rename_constraint(t text, old_name text, new_name text) RETURNS void AS $f$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = old_name AND conrelid = t::regclass) THEN
+                  EXECUTE format('ALTER TABLE %I RENAME CONSTRAINT %I TO %I', t, old_name, new_name);
+                END IF;
+              END $f$ LANGUAGE plpgsql;
+
+              -- tables that no longer exist ----------------------------------------------------------------------
+              DROP TABLE IF EXISTS business_record, user_permission, permission, role, user_preference, notification_log CASCADE;
+
+              -- company / branch / users --------------------------------------------------------------------------
+              ALTER TABLE company ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              ALTER TABLE branch DROP CONSTRAINT IF EXISTS uk_branch_code;
+              ALTER TABLE branch ADD CONSTRAINT uk_branch_company_code UNIQUE (company_id, code);
+              ALTER TABLE app_user DROP CONSTRAINT IF EXISTS uk_app_user_email;
+              ALTER INDEX IF EXISTS uk_app_user_username_global_ci RENAME TO uk_app_user_username_ci;
+              ALTER INDEX IF EXISTS uk_app_user_email_global_ci RENAME TO uk_app_user_email_ci;
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_username_ci ON app_user (LOWER(TRIM(username)));
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_app_user_email_ci ON app_user (LOWER(TRIM(email)));
+              ALTER INDEX IF EXISTS uk_property_company_key_company RENAME TO uk_property_company_key;
+              CREATE INDEX IF NOT EXISTS idx_audit_company_created ON audit_history (company_id, created_at);
+              CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_history (entity_type, entity_id);
+              DROP INDEX IF EXISTS idx_audit_company_created_repair, idx_audit_entity_repair;
+
+              -- purities and gold rates ---------------------------------------------------------------------------
+              ALTER TABLE purity_master ADD COLUMN IF NOT EXISTS metal VARCHAR(20) NOT NULL DEFAULT 'GOLD';
+              ALTER TABLE purity_master ALTER COLUMN fineness TYPE DECIMAL(8,4);
+              DELETE FROM gold_rate WHERE active = FALSE;
+              ALTER TABLE gold_rate DROP COLUMN IF EXISTS active;
+              UPDATE gold_rate SET source = 'MANUAL' WHERE source IS NULL OR source <> 'MANUAL';
+              ALTER TABLE gold_rate ALTER COLUMN source SET DEFAULT 'MANUAL', ALTER COLUMN source SET NOT NULL;
+              ALTER TABLE gold_rate ADD COLUMN IF NOT EXISTS updated_by_id BIGINT CONSTRAINT fk_gold_rate_updated_by REFERENCES app_user(id),
+                                    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              SELECT j360_rename_constraint('gold_rate', 'uk_gold_rate_context_date', 'uk_gold_rate_day');
+              CREATE INDEX IF NOT EXISTS idx_gold_rate_branch_date ON gold_rate (branch_id, rate_date);
+
+              -- catalogue -----------------------------------------------------------------------------------------
+              ALTER TABLE jewellery_product ADD COLUMN IF NOT EXISTS hsn_code VARCHAR(10) NOT NULL DEFAULT '7113';
+              ALTER TABLE supplier ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+
+              -- jewellery items: tag/barcode move onto the item, the duplicate stock table goes -------------------
+              ALTER TABLE jewellery_item ADD COLUMN IF NOT EXISTS tag_no VARCHAR(80), ADD COLUMN IF NOT EXISTS barcode VARCHAR(100);
+              UPDATE jewellery_item i SET tag_no = t.tag_no, barcode = t.barcode FROM jewellery_tag t WHERE t.id = i.tag_id;
+              UPDATE jewellery_item SET tag_no = 'ITEM-' || id WHERE tag_no IS NULL;
+              UPDATE jewellery_item SET barcode = tag_no WHERE barcode IS NULL;
+              -- the old schema let one tag be re-used by several pieces (a tag moved to a new piece after a sale). The tag stays on
+              -- the piece still in stock (else the newest); older pieces get "-<id>". Bills keep their own copy of the tag number.
+              UPDATE jewellery_item i SET tag_no = i.tag_no || '-' || i.id
+                FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY company_id, tag_no ORDER BY (status = 'IN_STOCK') DESC, id DESC) rn FROM jewellery_item) d
+               WHERE d.id = i.id AND d.rn > 1;
+              UPDATE jewellery_item i SET barcode = i.barcode || '-' || i.id
+                FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY company_id, barcode ORDER BY (status = 'IN_STOCK') DESC, id DESC) rn FROM jewellery_item) d
+               WHERE d.id = i.id AND d.rn > 1;
+              ALTER TABLE jewellery_item ALTER COLUMN tag_no SET NOT NULL, ALTER COLUMN barcode SET NOT NULL;
+              ALTER TABLE jewellery_item ADD COLUMN IF NOT EXISTS location VARCHAR(120);
+              UPDATE jewellery_item i SET location = s.location FROM stock s WHERE s.jewellery_item_id = i.id AND s.location IS NOT NULL;
+              ALTER TABLE jewellery_item DROP COLUMN IF EXISTS tag_id;
+              DROP TABLE IF EXISTS stock, jewellery_tag CASCADE;
+              UPDATE jewellery_item SET huid = LEFT(huid, 20) WHERE LENGTH(huid) > 20;
+              ALTER TABLE jewellery_item ALTER COLUMN huid TYPE VARCHAR(20);
+              ALTER TABLE jewellery_item RENAME COLUMN making_charge TO making_value;
+              ALTER TABLE jewellery_item
+                ADD COLUMN IF NOT EXISTS certificate_no VARCHAR(80),
+                ADD COLUMN IF NOT EXISTS stone_count INT NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS stone_details VARCHAR(500),
+                ADD COLUMN IF NOT EXISTS making_type VARCHAR(20) NOT NULL DEFAULT 'FIXED',
+                ADD COLUMN IF NOT EXISTS other_charge DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS cost_price DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS mrp DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS source VARCHAR(30) NOT NULL DEFAULT 'OPENING',
+                ADD COLUMN IF NOT EXISTS notes VARCHAR(1000),
+                ADD COLUMN IF NOT EXISTS sold_at TIMESTAMP WITH TIME ZONE;
+              UPDATE jewellery_item SET status = 'RETURNED_TO_SUPPLIER' WHERE status = 'RETURNED';
+              UPDATE jewellery_item SET status = 'IN_STOCK' WHERE status NOT IN ('IN_STOCK', 'SOLD', 'RETURNED_TO_SUPPLIER', 'REMOVED');
+              ALTER TABLE jewellery_item ADD CONSTRAINT uk_item_company_tag UNIQUE (company_id, tag_no);
+              ALTER TABLE jewellery_item ADD CONSTRAINT uk_item_company_barcode UNIQUE (company_id, barcode);
+              CREATE INDEX IF NOT EXISTS idx_item_company_branch_status ON jewellery_item (company_id, branch_id, status);
+              CREATE INDEX IF NOT EXISTS idx_item_company_huid ON jewellery_item (company_id, huid);
+
+              -- customers -----------------------------------------------------------------------------------------
+              ALTER TABLE customer ADD COLUMN IF NOT EXISTS pan VARCHAR(20), ADD COLUMN IF NOT EXISTS birthday DATE, ADD COLUMN IF NOT EXISTS anniversary DATE;
+              CREATE INDEX IF NOT EXISTS idx_customer_company_name ON customer (company_id, name);
+
+              -- orders and repairs (needed before sale / advance reference them) ----------------------------------
+              ALTER TABLE custom_order
+                ADD COLUMN IF NOT EXISTS purity_id BIGINT CONSTRAINT fk_custom_order_purity REFERENCES purity_master(id),
+                ADD COLUMN IF NOT EXISTS target_weight DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS making_notes VARCHAR(300),
+                ADD COLUMN IF NOT EXISTS locked_rate DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS karigar_id BIGINT CONSTRAINT fk_custom_order_karigar REFERENCES karigar(id),
+                ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_custom_order_created_by REFERENCES app_user(id),
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              ALTER TABLE custom_order DROP COLUMN IF EXISTS final_amount;
+              UPDATE custom_order SET status = CASE status WHEN 'NEW' THEN 'ORDERED' WHEN 'COMPLETED' THEN 'DELIVERED' ELSE status END;
+              ALTER TABLE custom_order ALTER COLUMN status SET DEFAULT 'ORDERED';
+              CREATE INDEX IF NOT EXISTS idx_custom_order_status ON custom_order (company_id, status);
+
+              ALTER TABLE repair_order
+                ADD COLUMN IF NOT EXISTS expected_date DATE,
+                ADD COLUMN IF NOT EXISTS item_description VARCHAR(300),
+                ADD COLUMN IF NOT EXISTS huid VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS gross_weight DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS problem VARCHAR(2000),
+                ADD COLUMN IF NOT EXISTS karigar_id BIGINT CONSTRAINT fk_repair_order_karigar REFERENCES karigar(id),
+                ADD COLUMN IF NOT EXISTS delivered_date DATE,
+                ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_repair_order_created_by REFERENCES app_user(id),
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              UPDATE repair_order SET problem = description, item_description = COALESCE(NULLIF(item_tag, ''), 'Jewellery item'), delivered_date = completed_date;
+              ALTER TABLE repair_order ALTER COLUMN problem SET NOT NULL, ALTER COLUMN item_description SET NOT NULL;
+              ALTER TABLE repair_order DROP COLUMN IF EXISTS description, DROP COLUMN IF EXISTS completed_date;
+              UPDATE repair_order SET status = CASE status WHEN 'IN_PROGRESS' THEN 'IN_REPAIR' WHEN 'COMPLETED' THEN 'DELIVERED' ELSE status END;
+              CREATE INDEX IF NOT EXISTS idx_repair_status ON repair_order (company_id, status);
+
+              -- sales ---------------------------------------------------------------------------------------------
+              ALTER TABLE sale
+                ADD COLUMN IF NOT EXISTS client_ref VARCHAR(64),
+                ADD COLUMN IF NOT EXISTS metal_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS wastage_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS making_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS stone_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS other_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS taxable_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS round_off DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS returned_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS notes VARCHAR(1000),
+                ADD COLUMN IF NOT EXISTS cancel_reason VARCHAR(500),
+                ADD COLUMN IF NOT EXISTS custom_order_id BIGINT CONSTRAINT fk_sale_custom_order REFERENCES custom_order(id),
+                ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP WITH TIME ZONE;
+              ALTER TABLE sale DROP COLUMN IF EXISTS gold_rate;
+              ALTER TABLE sale ADD CONSTRAINT uk_sale_company_client_ref UNIQUE (company_id, client_ref);
+              CREATE INDEX IF NOT EXISTS idx_sale_customer ON sale (customer_id);
+
+              ALTER TABLE sale_item RENAME COLUMN gold_rate TO rate;
+              ALTER TABLE sale_item ALTER COLUMN purity TYPE VARCHAR(50);
+              ALTER TABLE sale_item
+                ADD COLUMN IF NOT EXISTS description VARCHAR(200),
+                ADD COLUMN IF NOT EXISTS hsn_code VARCHAR(10),
+                ADD COLUMN IF NOT EXISTS huid VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS fineness DECIMAL(8,4) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS metal_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS wastage_percent DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS making_type VARCHAR(20) NOT NULL DEFAULT 'FIXED',
+                ADD COLUMN IF NOT EXISTS making_value DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS discount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS taxable_value DECIMAL(19,3) NOT NULL DEFAULT 0;
+              UPDATE sale_item si SET description = COALESCE(p.name, 'Jewellery'), hsn_code = p.hsn_code, huid = i.huid
+                FROM jewellery_item i JOIN jewellery_product p ON p.id = i.product_id WHERE i.id = si.jewellery_item_id;
+              UPDATE sale_item SET description = 'Jewellery' WHERE description IS NULL;
+              UPDATE sale_item SET metal_value = ROUND(net_weight * rate, 3), making_value = making_charge,
+                                   taxable_value = total - gst;
+              ALTER TABLE sale_item ALTER COLUMN description SET NOT NULL;
+              CREATE INDEX IF NOT EXISTS idx_sale_item_sale ON sale_item (sale_id);
+              CREATE INDEX IF NOT EXISTS idx_sale_item_item ON sale_item (jewellery_item_id);
+
+              UPDATE sale s SET metal_value = x.metal, wastage_value = x.wastage, making_value = x.making, stone_value = x.stone, other_value = x.other
+                FROM (SELECT sale_id, SUM(metal_value) metal, SUM(wastage_value) wastage, SUM(making_charge) making,
+                             SUM(stone_charge) stone, SUM(other_charge) other FROM sale_item GROUP BY sale_id) x WHERE x.sale_id = s.id;
+              UPDATE sale SET taxable_value = subtotal, status = CASE status WHEN 'COMPLETED' THEN 'COMPLETED' ELSE status END;
+
+              -- advances, old gold --------------------------------------------------------------------------------
+              ALTER TABLE customer_advance RENAME COLUMN utilized_amount TO used_amount;
+              ALTER TABLE customer_advance
+                ADD COLUMN IF NOT EXISTS refunded_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'RECEIPT',
+                ADD COLUMN IF NOT EXISTS custom_order_id BIGINT CONSTRAINT fk_customer_advance_custom_order REFERENCES custom_order(id),
+                ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_customer_advance_created_by REFERENCES app_user(id),
+                ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              CREATE INDEX IF NOT EXISTS idx_advance_customer ON customer_advance (customer_id);
+
+              ALTER TABLE old_gold_transaction
+                ADD COLUMN IF NOT EXISTS total_gross_weight DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS total_net_weight DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS used_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_old_gold_transaction_created_by REFERENCES app_user(id);
+              ALTER TABLE old_gold_item ALTER COLUMN purity TYPE VARCHAR(50);
+              ALTER TABLE old_gold_item ADD COLUMN IF NOT EXISTS fineness DECIMAL(8,4) NOT NULL DEFAULT 0,
+                                        ADD COLUMN IF NOT EXISTS deduction_percent DECIMAL(19,3) NOT NULL DEFAULT 0;
+              UPDATE old_gold_transaction t SET total_gross_weight = x.g, total_net_weight = x.n
+                FROM (SELECT transaction_id, SUM(gross_weight) g, SUM(net_weight) n FROM old_gold_item GROUP BY transaction_id) x WHERE x.transaction_id = t.id;
+              -- the old screens always paid old gold out in cash
+              UPDATE old_gold_transaction SET used_amount = total_amount, status = 'SETTLED', transaction_type = 'PURCHASE';
+              ALTER TABLE old_gold_transaction ALTER COLUMN status SET DEFAULT 'OPEN';
+              CREATE INDEX IF NOT EXISTS idx_old_gold_customer ON old_gold_transaction (customer_id);
+
+              -- purchases -----------------------------------------------------------------------------------------
+              ALTER TABLE purchase_order
+                ADD COLUMN IF NOT EXISTS supplier_invoice_no VARCHAR(80),
+                ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS returned_amount DECIMAL(19,3) NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_purchase_order_created_by REFERENCES app_user(id);
+              UPDATE purchase_order SET status = 'RECEIVED' WHERE status = 'DRAFT';
+              ALTER TABLE purchase_order ALTER COLUMN status SET DEFAULT 'RECEIVED';
+              CREATE INDEX IF NOT EXISTS idx_purchase_supplier ON purchase_order (supplier_id);
+              ALTER TABLE purchase_item ADD COLUMN IF NOT EXISTS purity VARCHAR(50), ADD COLUMN IF NOT EXISTS making_charge DECIMAL(19,3) NOT NULL DEFAULT 0;
+              CREATE INDEX IF NOT EXISTS idx_purchase_item_purchase ON purchase_item (purchase_id);
+              UPDATE purchase_order p SET returned_amount = x.amt FROM (SELECT purchase_id, SUM(amount) amt FROM purchase_return GROUP BY purchase_id) x WHERE x.purchase_id = p.id;
+              ALTER TABLE purchase_return_item ADD CONSTRAINT uk_purchase_return_item UNIQUE (purchase_item_id);
+
+              -- payments ------------------------------------------------------------------------------------------
+              ALTER TABLE payment
+                ADD COLUMN IF NOT EXISTS supplier_id BIGINT CONSTRAINT fk_payment_supplier REFERENCES supplier(id),
+                ADD COLUMN IF NOT EXISTS karigar_id BIGINT CONSTRAINT fk_payment_karigar REFERENCES karigar(id),
+                ADD COLUMN IF NOT EXISTS advance_id BIGINT CONSTRAINT fk_payment_advance REFERENCES customer_advance(id),
+                ADD COLUMN IF NOT EXISTS old_gold_id BIGINT CONSTRAINT fk_payment_old_gold REFERENCES old_gold_transaction(id),
+                ADD COLUMN IF NOT EXISTS repair_order_id BIGINT CONSTRAINT fk_payment_repair_order REFERENCES repair_order(id);
+              UPDATE payment SET payment_type = 'RECEIPT' WHERE payment_type IN ('SALE_RECEIPT', 'RECEIPT');
+              UPDATE payment SET payment_type = 'PAYOUT' WHERE payment_type = 'OLD_GOLD';
+              UPDATE payment SET payment_mode = 'CASH' WHERE payment_mode NOT IN ('CASH', 'UPI', 'CARD', 'BANK', 'CHEQUE');
+              CREATE INDEX IF NOT EXISTS idx_payment_context_date ON payment (company_id, branch_id, payment_date);
+              CREATE INDEX IF NOT EXISTS idx_payment_sale ON payment (sale_id);
+              CREATE INDEX IF NOT EXISTS idx_payment_customer ON payment (customer_id);
+              -- old cash-paid old-gold transactions get their payout link
+              UPDATE payment p SET old_gold_id = t.id FROM old_gold_transaction t
+                WHERE p.payment_type = 'PAYOUT' AND p.old_gold_id IS NULL AND p.customer_id = t.customer_id AND p.amount = t.total_amount;
+              -- legacy advances: record the money received so cash books and the customer ledger agree
+              INSERT INTO payment (company_id, branch_id, payment_no, payment_date, payment_type, payment_mode, amount, customer_id, advance_id, notes)
+                SELECT a.company_id, a.branch_id, 'ADV-RCPT-' || a.id, a.advance_date, 'ADVANCE', 'CASH', a.amount, a.customer_id, a.id, 'Migrated advance'
+                FROM customer_advance a WHERE NOT EXISTS (SELECT 1 FROM payment p WHERE p.advance_id = a.id);
+              UPDATE sale s SET paid_amount = COALESCE(x.paid, 0)
+                FROM (SELECT sale_id, SUM(CASE WHEN payment_type = 'REFUND' THEN -amount ELSE amount END) paid FROM payment WHERE sale_id IS NOT NULL GROUP BY sale_id) x
+                WHERE x.sale_id = s.id;
+              UPDATE sale s SET returned_amount = x.amt FROM (SELECT sale_id, SUM(amount) amt FROM sale_return GROUP BY sale_id) x WHERE x.sale_id = s.id;
+
+              -- stock history -------------------------------------------------------------------------------------
+              ALTER TABLE stock_movement DROP COLUMN IF EXISTS quantity;
+              ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+              CREATE INDEX IF NOT EXISTS idx_stock_movement_item ON stock_movement (jewellery_item_id);
+              ALTER TABLE stock_transfer ADD COLUMN IF NOT EXISTS created_by_id BIGINT CONSTRAINT fk_stock_transfer_created_by REFERENCES app_user(id);
+              ALTER TABLE stock_transfer ALTER COLUMN status SET DEFAULT 'COMPLETED';
+              ALTER TABLE stock_transfer_item DROP COLUMN IF EXISTS quantity;
+
+              -- the old YAML cut "company_id,return_no" at the comma, leaving one-column unique keys (one return per company!)
+              ALTER TABLE sale_return DROP CONSTRAINT IF EXISTS uk_sale_return_company_no;
+              ALTER TABLE sale_return ADD CONSTRAINT uk_sale_return_company_no UNIQUE (company_id, return_no);
+              ALTER TABLE purchase_return DROP CONSTRAINT IF EXISTS uk_purchase_return_company_no;
+              ALTER TABLE purchase_return ADD CONSTRAINT uk_purchase_return_company_no UNIQUE (company_id, return_no);
+              ALTER TABLE stock_transfer_item DROP CONSTRAINT IF EXISTS uk_transfer_item;
+              ALTER TABLE stock_transfer_item ADD CONSTRAINT uk_transfer_item UNIQUE (transfer_id, jewellery_item_id);
+              CREATE INDEX IF NOT EXISTS idx_whatsapp_log_company ON whatsapp_log (company_id, created_at);
+
+              DROP FUNCTION j360_rename_constraint(text, text, text);

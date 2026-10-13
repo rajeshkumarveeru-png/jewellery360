@@ -106,7 +106,7 @@ final class InvoiceTemplates {
         p.text(M + 16, y - 71, 7.5f, Font.H, "GSTIN: " + dash(d.gstin()) + "   |   Phone: " + dash(d.phone()), MUTE);
         String contact = join("   |   ", d.email(), d.website());
         if (!contact.isEmpty()) p.text(M + 16, y - 84, 7.2f, Font.H, cut(contact, 70), MUTE);
-        p.text(338, y - 20, 7, Font.HB, "TODAY'S GOLD RATE", GOLD_D);
+        p.text(338, y - 20, 7, Font.HB, "GOLD RATE ON THIS BILL", GOLD_D);
         p.text(338, y - 40, 15, Font.HB, d.dateOnly(), INK);
         p.text(338, y - 60, 18, Font.HB, d.timeOnly(), GOLD_D);
         float rx = 338;

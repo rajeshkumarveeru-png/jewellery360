@@ -46,9 +46,9 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
   const [busy,setBusy] = useState(false);
   const [fileName,setFileName] = useState('');
 
-  const errors = useMemo(()=>result?.results?.filter((x:any)=>x.status==='ERROR') || [],[result]);
-  const ready = Number(result?.ready || 0);
-  const canCommit = rows.length > 0 && result?.success === true && ready === rows.length;
+  const errors = useMemo(()=>result?.rows?.filter((x:any)=>x.status==='ERROR') || [],[result]);
+  const ready = Number(result?.readyCount || 0);
+  const canCommit = rows.length > 0 && Number(result?.errorCount) === 0 && ready === rows.length;
 
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
@@ -75,7 +75,7 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
       const response = await bulkJewelleryImportPreview(normalized);
       setResult(response.data);
     } catch(e:any) {
-      setResult({success:false,results:[{rowNumber:0,status:'ERROR',message:e?.response?.data?.message||e?.message||'Unable to read the file.'}],errors:1});
+      setResult({errorCount:1,rows:[{rowNumber:0,status:'ERROR',message:e?.response?.data?.message||e?.message||'Unable to read the file.'}]});
     } finally { setBusy(false); }
   };
 
@@ -85,7 +85,7 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
     setBusy(true);
     try {
       const response = await bulkJewelleryImportCommit(rows);
-      onNotice(`Bulk import completed: ${response.data?.created || 0} created${response.data?.skipped ? `, ${response.data.skipped} already existed` : ''}.`);
+      onNotice(`Import completed: ${response.data?.created || 0} pieces added to stock.`);
       onClose();
     } catch(e:any) {
       onNotice(e?.response?.data?.message || 'Bulk import failed. No partial import was committed.');
@@ -96,20 +96,20 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
   return <div className="bulkImportOverlay">
     <div className="bulkImportModal">
       <div className="bulkImportHead">
-        <div><span className="eyebrow">JEWELLERY · BULK IMPORT</span><h2>Import your existing stock</h2><p>One Excel file. SmartBill creates the required master data, tags, items and opening stock automatically.</p></div>
+        <div><span className="eyebrow">JEWELLERY · BULK IMPORT</span><h2>Import your existing stock</h2><p>One Excel file. Missing categories and products are created for you; every piece gets a tag and goes into opening stock.</p></div>
         <button className="ghost" onClick={onClose}>Close</button>
       </div>
 
       <div className="bulkImportSteps">
         <div className="bulkStep"><b>1</b><span>Download template</span><button className="secondary" onClick={downloadTemplate}>Download Excel</button></div>
         <div className="bulkStep"><b>2</b><span>Fill your products</span><small>Category and Purity are matched automatically. SKU, Tag and Barcode can be left blank.</small></div>
-        <div className="bulkStep"><b>3</b><span>Upload & check</span><small>SmartBill validates every row before saving anything.</small></div>
+        <div className="bulkStep"><b>3</b><span>Upload & check</span><small>Every row is checked first. Nothing is saved until all rows are valid.</small></div>
       </div>
 
       <label className="bulkDrop">
         <input type="file" accept=".xlsx,.xls,.csv" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void chooseFile(f);}} />
         <strong>{busy ? 'Checking your file…' : fileName || 'Choose Excel / CSV file'}</strong>
-        <span>Up to 10,000 rows · existing items are safely skipped</span>
+        <span>Up to 10,000 rows · all rows are imported together or none</span>
       </label>
 
       {result && <div className="bulkSummary">
@@ -124,7 +124,7 @@ export default function BulkProductImport({onClose,onNotice}:{onClose:()=>void;o
         {errors.length>30 && <small>Showing first 30 errors.</small>}
       </div>}
 
-      {result?.success && ready>0 && errors.length===0 && <div className="bulkReady">✓ Everything is ready. No database changes have been made yet.</div>}
+      {canCommit && <div className="bulkReady">✓ Everything is ready. No database changes have been made yet.</div>}
 
       <div className="bulkImportFoot">
         <button className="ghost" onClick={onClose} disabled={busy}>Cancel</button>

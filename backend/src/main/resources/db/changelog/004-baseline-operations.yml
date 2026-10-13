@@ -1,0 +1,328 @@
+databaseChangeLog:
+  # Tables marked with the legacy guard already exist in development databases created before the
+  # pre-production schema consolidation; 090-legacy-dev-upgrade.yml converts those. Remove the guards
+  # together with 090-legacy-dev-upgrade.yml once every development database has been upgraded.
+  - changeSet:
+      id: baseline-job-card
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: job_card
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_job_card_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_job_card_branch, references: branch(id)}}
+              - column: {name: karigar_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_job_card_karigar, references: karigar(id)}}
+              - column: {name: job_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: job_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: due_date, type: DATE}
+              - column: {name: description, type: VARCHAR(1000), constraints: {nullable: false}}
+              - column: {name: custom_order_id, type: BIGINT, constraints: {foreignKeyName: fk_job_card_custom_order, references: custom_order(id)}}
+              - column: {name: repair_order_id, type: BIGINT, constraints: {foreignKeyName: fk_job_card_repair_order, references: repair_order(id)}}
+              - column: {name: purity_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_job_card_purity, references: purity_master(id)}}
+              - column: {name: wastage_allowed_percent, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: labour_charge, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: OPEN, constraints: {nullable: false}}
+              - column: {name: closed_date, type: DATE}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_job_card_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: job_card, columnNames: 'company_id,job_no', constraintName: uk_job_card_company_no}
+        - createIndex: {tableName: job_card, indexName: idx_job_card_karigar, columns: [{column: {name: karigar_id}}, {column: {name: status}}]}
+  - changeSet:
+      id: baseline-job-metal-movement
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: job_metal_movement
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: job_card_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_job_metal_movement_job_card, references: job_card(id)}}
+              - column: {name: movement_type, type: VARCHAR(20), constraints: {nullable: false}}
+              - column: {name: movement_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: weight, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: fine_weight, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(500)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_job_metal_movement_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - createIndex: {tableName: job_metal_movement, indexName: idx_job_metal_job, columns: [{column: {name: job_card_id}}]}
+  - changeSet:
+      id: baseline-purchase-order
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: purchase_order
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_order_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_order_branch, references: branch(id)}}
+              - column: {name: supplier_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_order_supplier, references: supplier(id)}}
+              - column: {name: purchase_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: supplier_invoice_no, type: VARCHAR(80)}
+              - column: {name: purchase_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: RECEIVED, constraints: {nullable: false}}
+              - column: {name: subtotal, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: gst, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: total, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: paid_amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: returned_amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(2000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_purchase_order_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: purchase_order, columnNames: 'company_id,purchase_no', constraintName: uk_purchase_company_no}
+        - createIndex: {tableName: purchase_order, indexName: idx_purchase_supplier, columns: [{column: {name: supplier_id}}]}
+  - changeSet:
+      id: baseline-purchase-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: purchase_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: purchase_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_item_purchase, references: purchase_order(id)}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {foreignKeyName: fk_purchase_item_jewellery_item, references: jewellery_item(id)}}
+              - column: {name: description, type: VARCHAR(500), constraints: {nullable: false}}
+              - column: {name: purity, type: VARCHAR(50)}
+              - column: {name: quantity, type: 'DECIMAL(19,3)', defaultValueNumeric: 1, constraints: {nullable: false}}
+              - column: {name: gross_weight, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: net_weight, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: rate, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: making_charge, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+        - createIndex: {tableName: purchase_item, indexName: idx_purchase_item_purchase, columns: [{column: {name: purchase_id}}]}
+  - changeSet:
+      id: baseline-purchase-return
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: purchase_return
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_return_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_return_branch, references: branch(id)}}
+              - column: {name: purchase_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_return_purchase, references: purchase_order(id)}}
+              - column: {name: return_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: return_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+              - column: {name: status, type: VARCHAR(30), defaultValue: COMPLETED, constraints: {nullable: false}}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_purchase_return_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: purchase_return, columnNames: 'company_id,return_no', constraintName: uk_purchase_return_company_no}
+  - changeSet:
+      id: baseline-purchase-return-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: purchase_return_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: return_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_return_item_return, references: purchase_return(id)}}
+              - column: {name: purchase_item_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purchase_return_item_purchase_item, references: purchase_item(id)}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {foreignKeyName: fk_purchase_return_item_jewellery_item, references: jewellery_item(id)}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: reason, type: VARCHAR(1000)}
+        - addUniqueConstraint: {tableName: purchase_return_item, columnNames: 'purchase_item_id', constraintName: uk_purchase_return_item}
+  - changeSet:
+      id: baseline-payment
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: payment
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_payment_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_payment_branch, references: branch(id)}}
+              - column: {name: payment_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: payment_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: payment_type, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: payment_mode, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: customer_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_customer, references: customer(id)}}
+              - column: {name: supplier_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_supplier, references: supplier(id)}}
+              - column: {name: karigar_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_karigar, references: karigar(id)}}
+              - column: {name: sale_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_sale, references: sale(id)}}
+              - column: {name: purchase_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_purchase, references: purchase_order(id)}}
+              - column: {name: advance_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_advance, references: customer_advance(id)}}
+              - column: {name: old_gold_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_old_gold, references: old_gold_transaction(id)}}
+              - column: {name: repair_order_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_repair_order, references: repair_order(id)}}
+              - column: {name: reference, type: VARCHAR(160)}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_payment_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: payment, columnNames: 'company_id,payment_no', constraintName: uk_payment_company_no}
+        - createIndex: {tableName: payment, indexName: idx_payment_context_date, columns: [{column: {name: company_id}}, {column: {name: branch_id}}, {column: {name: payment_date}}]}
+        - createIndex: {tableName: payment, indexName: idx_payment_sale, columns: [{column: {name: sale_id}}]}
+        - createIndex: {tableName: payment, indexName: idx_payment_customer, columns: [{column: {name: customer_id}}]}
+  - changeSet:
+      id: baseline-stock-movement
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: stock_movement
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_movement_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_movement_branch, references: branch(id)}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_movement_jewellery_item, references: jewellery_item(id)}}
+              - column: {name: movement_type, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: reference_type, type: VARCHAR(50)}
+              - column: {name: reference_id, type: BIGINT}
+              - column: {name: movement_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_stock_movement_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - createIndex: {tableName: stock_movement, indexName: idx_stock_movement_context_date, columns: [{column: {name: company_id}}, {column: {name: branch_id}}, {column: {name: movement_date}}]}
+        - createIndex: {tableName: stock_movement, indexName: idx_stock_movement_item, columns: [{column: {name: jewellery_item_id}}]}
+  - changeSet:
+      id: baseline-stock-transfer
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: stock_transfer
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_transfer_company, references: company(id)}}
+              - column: {name: from_branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_transfer_from_branch, references: branch(id)}}
+              - column: {name: to_branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_transfer_to_branch, references: branch(id)}}
+              - column: {name: transfer_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: transfer_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(30), defaultValue: COMPLETED, constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_stock_transfer_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: stock_transfer, columnNames: 'company_id,transfer_no', constraintName: uk_transfer_company_no}
+  - changeSet:
+      id: baseline-stock-transfer-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: stock_transfer_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: transfer_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_transfer_item_transfer, references: stock_transfer(id)}}
+              - column: {name: jewellery_item_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_stock_transfer_item_jewellery_item, references: jewellery_item(id)}}
+        - addUniqueConstraint: {tableName: stock_transfer_item, columnNames: 'transfer_id,jewellery_item_id', constraintName: uk_transfer_item}
+  - changeSet:
+      id: baseline-expense
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: expense
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_expense_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_expense_branch, references: branch(id)}}
+              - column: {name: expense_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: category, type: VARCHAR(60), constraints: {nullable: false}}
+              - column: {name: title, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: amount, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: payment_mode, type: VARCHAR(30), defaultValue: CASH, constraints: {nullable: false}}
+              - column: {name: reference, type: VARCHAR(160)}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_expense_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - createIndex: {tableName: expense, indexName: idx_expense_context_date, columns: [{column: {name: company_id}}, {column: {name: branch_id}}, {column: {name: expense_date}}]}
+  - changeSet:
+      id: baseline-day-close
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: day_close
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_day_close_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_day_close_branch, references: branch(id)}}
+              - column: {name: close_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: opening_cash, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cash_in, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cash_out, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cash_expenses, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: expected_cash, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: actual_cash, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: difference, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: upi_total, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: card_total, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: bank_total, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: sales_total, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: credit_sales, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: advances_received, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: refunds_paid, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_day_close_created_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: day_close, columnNames: 'branch_id,close_date', constraintName: uk_day_close_branch_date}
+  - changeSet:
+      id: baseline-backup-run
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: backup_run
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: kind, type: VARCHAR(20), constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(20), constraints: {nullable: false}}
+              - column: {name: file_name, type: VARCHAR(255)}
+              - column: {name: file_size, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: started_at, type: 'TIMESTAMP WITH TIME ZONE', constraints: {nullable: false}}
+              - column: {name: finished_at, type: 'TIMESTAMP WITH TIME ZONE'}
+              - column: {name: message, type: VARCHAR(2000)}
+              - column: {name: created_by_id, type: BIGINT, constraints: {foreignKeyName: fk_backup_run_created_by, references: app_user(id)}}
+        - createIndex: {tableName: backup_run, indexName: idx_backup_run_started, columns: [{column: {name: started_at}}]}
+  - changeSet:
+      id: baseline-whatsapp-log
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: whatsapp_log
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_whatsapp_log_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_whatsapp_log_branch, references: branch(id)}}
+              - column: {name: customer_id, type: BIGINT, constraints: {foreignKeyName: fk_whatsapp_log_customer, references: customer(id)}}
+              - column: {name: phone, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: message_type, type: VARCHAR(50), constraints: {nullable: false}}
+              - column: {name: reference_type, type: VARCHAR(50)}
+              - column: {name: reference_id, type: BIGINT}
+              - column: {name: status, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: provider_message_id, type: VARCHAR(200)}
+              - column: {name: error_message, type: VARCHAR(2000)}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - createIndex: {tableName: whatsapp_log, indexName: idx_whatsapp_log_company, columns: [{column: {name: company_id}}, {column: {name: created_at}}]}

@@ -1,9 +1,10 @@
 import {useEffect, useState} from 'react';
 import {usePermissions} from '../shared/permissions';
-import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getUserMenuPreferences, saveUserMenuPreferences, getBusinessSettings, saveBusinessSettings, invoicePreview, getFriendlyApiError} from '../api';
+import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettings, getBusinessSettings, saveBusinessSettings, invoicePreview, getFriendlyApiError} from '../api';
 import {rememberBrandName} from '../shared/brand';
 import {Role,User,ThemeKey} from '../shared/types';
-import {roleMenus,defaultPreferredMenu} from '../shared/config';
+import MenuEditor from '../shared/MenuEditor';
+import {pushToast} from '../shared/Notify';
 import './Settings.css';
 
 type WhatsAppSettingsState = {
@@ -71,7 +72,6 @@ const emptyWhatsApp:WhatsAppSettingsState={
 };
 
 export default function SettingsModule({user,theme,setTheme}:{user:User;theme:ThemeKey;setTheme:(x:ThemeKey)=>void}){
- const matrix:Record<Role,string[]>=roleMenus;
  const [wa,setWa]=useState<WhatsAppSettingsState>(emptyWhatsApp);
  const [tax,setTax]=useState<TaxSettingsState>(emptyTax);
  const [biz,setBiz]=useState<BusinessState>(emptyBusiness);
@@ -88,49 +88,6 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
  const [message,setMessage]=useState('');
  const [error,setError]=useState('');
  const [secretVersion,setSecretVersion]=useState(0);
- const [menuDraft,setMenuDraft]=useState<string[]>(()=>defaultPreferredMenu(user.role));
- const [menuLoading,setMenuLoading]=useState(false);
- const [menuSaving,setMenuSaving]=useState(false);
- const [menuMessage,setMenuMessage]=useState('');
- const allowedMenu=roleMenus[user.role]||['Overview'];
- const companyIdForMenu=user.role==='APP_ADMIN' ? Number(localStorage.getItem('j360_context_company'))||null : (user.companyId??null);
- const normalizeMenu=(items:string[])=>{const ordered=items.filter(x=>allowedMenu.includes(x)); const unique=[...new Set(ordered)]; for(const locked of ['Overview','Settings']){if(allowedMenu.includes(locked)&&!unique.includes(locked))unique.push(locked);} return unique;};
- useEffect(()=>{
-   setMenuDraft(defaultPreferredMenu(user.role));
-   if(!companyIdForMenu) return;
-   setMenuLoading(true);
-   getUserMenuPreferences(companyIdForMenu).then(r=>{
-     const saved=Array.isArray(r.data?.menu)?r.data.menu:[];
-     setMenuDraft(saved.length?normalizeMenu(saved):defaultPreferredMenu(user.role));
-   }).catch(()=>setMenuDraft(defaultPreferredMenu(user.role))).finally(()=>setMenuLoading(false));
- },[user.id,user.role,companyIdForMenu]);
- const moveMenu=(index:number,direction:-1|1)=>{
-   const next=[...menuDraft]; const target=index+direction;
-   if(target<0||target>=next.length)return;
-   [next[index],next[target]]=[next[target],next[index]]; setMenuDraft(next);
- };
- const toggleMenu=(item:string)=>{
-   if(item==='Overview'||item==='Settings')return;
-   setMenuDraft(v=>v.includes(item)?v.filter(x=>x!==item):[...v,item]);
- };
- const orderedMenuRows=[
-   ...menuDraft.filter(item=>allowedMenu.includes(item)),
-   ...allowedMenu.filter(item=>!menuDraft.includes(item))
- ];
- const saveMenu=async()=>{
-   if(!companyIdForMenu){setMenuMessage('Select a company context before saving user menu settings.');return;}
-   const normalized=normalizeMenu(menuDraft);
-   setMenuSaving(true);setMenuMessage('');
-   try{await saveUserMenuPreferences(normalized,companyIdForMenu);setMenuDraft(normalized);setMenuMessage('Menu visibility and order saved to the database for this user.');window.dispatchEvent(new Event('j360-menu-preferences-changed'));}
-   catch(e){setMenuMessage(getFriendlyApiError(e,'Unable to save menu settings.'));}
-   finally{setMenuSaving(false);}
- };
- const resetMenu=async()=>{
-   if(!companyIdForMenu){setMenuMessage('Select a company context before resetting user menu settings.');return;}
-   const defaults=[...allowedMenu];
-   try{await saveUserMenuPreferences(defaults,companyIdForMenu);setMenuDraft(defaults);setMenuMessage('Default menu restored and saved to the database.');window.dispatchEvent(new Event('j360-menu-preferences-changed'));}
-   catch(e){setMenuMessage(getFriendlyApiError(e,'Unable to reset menu settings.'));}
- };
  const companyId=user.role==='APP_ADMIN'
    ? Number(localStorage.getItem('j360_context_company'))||null
    : (user.companyId??null);
@@ -342,19 +299,8 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
    </div>
 
    <div className="panel menuPreferencesPanel">
-    <span className="eyebrow">NAVIGATION</span><h2>Menu visibility & order</h2>
-    <p className="settingsHelp">Choose which menu sections this user sees and set the order shown in the left navigation. Preferences are stored in the database against this company and user, so they follow the user across browsers and devices.</p>
-    <div className="menuPreferenceList">
-      {orderedMenuRows.map(item=>{const checked=menuDraft.includes(item); const index=menuDraft.indexOf(item); const locked=item==='Overview'||item==='Settings'; return <div className={`menuPreferenceRow ${checked?'selected':'muted'}`} key={item}>
-        <label><input type="checkbox" checked={checked} disabled={locked} onChange={()=>toggleMenu(item)}/><span>{item}</span></label>
-        <div className="menuMoveButtons">
-          <button type="button" disabled={!checked||index<=0} onClick={()=>moveMenu(index,-1)} aria-label={`Move ${item} up`}>↑</button>
-          <button type="button" disabled={!checked||index<0||index>=menuDraft.length-1} onClick={()=>moveMenu(index,1)} aria-label={`Move ${item} down`}>↓</button>
-        </div>
-      </div>})}
-    </div>
-    {menuLoading&&<div className="settingsNotice">Loading database menu preferences…</div>}{menuMessage&&<div className="settingsSuccess">{menuMessage}</div>}
-    <div className="menuPreferenceActions"><button className="secondary" type="button" disabled={menuSaving||menuLoading} onClick={resetMenu}>Reset default</button><button className="settingsSave" type="button" disabled={menuSaving||menuLoading} onClick={saveMenu}>{menuSaving?'Saving…':'Save menu settings'}</button></div>
+    <span className="eyebrow">NAVIGATION</span><h2>Company menu</h2>
+    <MenuEditor companyId={companyId} canEdit={canEditBusiness} onNotice={m=>pushToast(m)}/>
    </div>
 
    <div className="panel settingsRight">
@@ -379,6 +325,5 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
     </>}
    </div>
 
-   <div className="panel rolePanel"><span className="eyebrow">ROLE MATRIX</span><h2>Role access</h2>{Object.entries(matrix).map(([r,m])=><div className="roleRow" key={r}><b>{r}</b><span>{m.join(' · ')}</span></div>)}</div>
  </div>
 }

@@ -1,75 +1,64 @@
-import {FormEvent, useEffect, useMemo, useState} from 'react';
-import {usePermissions} from '../shared/permissions';
-import {
-  api, login, registerCompany, adminReset, otpRequest, otpVerify, me, users, createUser, enableUser,
-  approvals, approve, reject, companies, createCompany, branches, createBranch, records, createRecord,
-  updateRecord, deleteRecord, dashboard, report, audit, calculateBilling, createBilling, createDomainBilling, invoicePdf,
-  domainCustomers, createDomainCustomer, domainCategories, createDomainCategory, domainDesigns, createDomainDesign, salePdf, sendInvoiceWhatsApp,
-  domainProducts, createDomainProduct, domainTags, createDomainTag, domainItems, createDomainItem, domainPurities,
-  domainGoldRates, createDomainGoldRate, domainStock, domainStockMovements, createDomainTransfer, createDomainStockMovement, domainSuppliers, domainPurchases, domainOldGold, domainRepairs, domainCustomOrders, domainPayments, domainAdvances, phase3Transfer, phase3CompleteTransfer, phase3Purchase, phase3OldGold, phase3RepairUpdate, phase3CustomOrderUpdate, phase3Advance, phase3Outstanding, phase3Report
-} from '../api';
-import {Role,User,ThemeKey,RecordItem,Company,Branch} from '../shared/types';
-import {Table,Empty,Field} from '../shared/ui';
-import {DateRangePicker,defaultPresets,toIso} from '../shared/widgets';
-import './Reports.css';
-export default function ReportsModule({onNotice}:{onNotice:(x:string)=>void}){
-  const perms=usePermissions();
- const [type,setType]=useState('SALES');
- const initialRange=defaultPresets().find(p=>p.key==='30d')!.range();
- const [from,setFrom]=useState(initialRange[0]);
- const [to,setTo]=useState(initialRange[1]);
- const [r,setR]=useState<any>(null);
- const [busyId,setBusyId]=useState<number|null>(null);
- const load=()=>phase3Report(type,type==='SALES'?from:undefined,type==='SALES'?to:undefined).then(x=>setR(x.data)).catch(()=>setR(null));
- useEffect(()=>{ void load(); },[type,from,to]);
- const openSalePdf=async(id:number)=>{
-   const popup=window.open('about:blank','_blank');
-   try{
-     setBusyId(id);
-     const response=await salePdf(id);
-     const url=URL.createObjectURL(new Blob([response.data],{type:'application/pdf'}));
-     if(popup){
-       popup.location.href=url;
-       popup.focus();
-     }else{
-       const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.download=`invoice-${id}.pdf`;a.click();
-     }
-     window.setTimeout(()=>URL.revokeObjectURL(url),60000);
-   }catch(err:any){
-     popup?.close();
-     onNotice(err?.response?.data?.message||'Unable to open invoice PDF');
-   }finally{setBusyId(null);}
- };
- const sendWhatsApp=async(id:number)=>{
-   try{
-     setBusyId(id);
-     const response=await sendInvoiceWhatsApp(id);
-     onNotice(response?.data?.status==='SENT'?'Invoice sent on WhatsApp.':(response?.data?.message||'WhatsApp message submitted.'));
-   }catch(err:any){
-     onNotice(err?.response?.data?.message||'Unable to send invoice on WhatsApp');
-   }finally{setBusyId(null);}
- };
- const money=(v:any)=>`₹${Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
- return <div className="reportPage">
-   <div className="reportToolbar">{type==='SALES'&&<DateRangePicker from={from} to={to} maxDate={toIso(new Date())} onChange={(a,b)=>{setFrom(a);setTo(b);}} label="From / To date"/>}{type!=='SALES'&&<small className="muted">Date filtering applies to the Sales report.</small>}</div>
-   <div className="reportTabs">{['SALES','STOCK','GOLD','PROFIT','CUSTOMERS'].filter(x=>x!=='PROFIT'||perms.canSeeProfit).map(x=><button key={x} className={type===x?'active':''} onClick={()=>setType(x)}>{x}</button>)}</div>
-   <div className="kpiGrid"><div className="kpi"><span>Records</span><strong>{r?.count||0}</strong></div><div className="kpi"><span>Amount</span><strong>{money(r?.total)}</strong></div><div className="kpi"><span>In stock</span><strong>{r?.inStock??'—'}</strong></div></div>
-   <div className="panel"><div className="panelHead"><div><span className="eyebrow">REPORTS</span><h2>{type} report</h2></div><button className="ghost" onClick={load}>Refresh</button></div>
-     <Table><thead><tr><th>Reference</th><th>Status / Customer</th><th>Date / Branch</th><th>Amount / Outstanding</th>{type==='SALES'&&<th>Actions</th>}</tr></thead>
-       <tbody>{r?.rows?.map((x:any)=><tr key={x.id}>
-         <td><b>{x.invoiceNo||x.tag||x.customerName||x.itemId||x.id}</b>{type==='SALES'&&x.customer&&<small>{x.customer}</small>}</td>
-         <td>{x.status||x.customerName||''}{type==='SALES'&&x.paymentStatus&&<small>{x.paymentStatus}</small>}</td>
-         <td>{x.date||x.branch||''}{x.date&&x.branch&&<small>{x.branch}</small>}</td>
-         <td>{money(x.total??x.outstanding)}</td>
-         {type==='SALES'&&<td><div className="reportActions">
-           <button className="ghost reportAction" disabled={busyId===x.id} onClick={()=>openSalePdf(Number(x.id))}>🖨 PDF / Print</button>
-           <button className="ghost reportAction whatsappAction" disabled={busyId===x.id} onClick={()=>sendWhatsApp(Number(x.id))}>◌ WhatsApp</button>
-         </div></td>}
-       </tr>)}</tbody>
-     </Table>
-     {!r?.rows?.length&&<div className="reportEmpty">No records found for this report.</div>}
-     {r?.note&&<p className="muted">{r.note}</p>}
-   </div>
- </div>
-}
+import {useEffect, useState} from 'react';
+import {reportCatalogue, runReport} from '../api';
+import {Table} from '../shared/ui';
+import {StateBox, grams, money, useData} from '../shared/kit';
+import type {PageProps} from './Dashboard';
 
+/* ============================================================================================
+   Reports: every report is a plain table from the server ({columns, rows, totals}) so all of them render, filter and
+   export to CSV the same way. Figures come straight from bills, payments and stock - nothing is estimated.
+   ============================================================================================ */
+
+const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; };
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+const cell = (v: any, type: string) => {
+  if (v === null || v === undefined || v === '') return '—';
+  switch (type) {
+    case 'money': return money(v);
+    case 'weight': return grams(v);
+    case 'int': return Number(v).toLocaleString('en-IN');
+    case 'pct':
+    case 'percent': return `${Number(v).toLocaleString('en-IN', {maximumFractionDigits: 2})} %`;
+    default: return String(v);
+  }
+};
+
+export default function ReportsModule({ready}: PageProps) {
+  const cat = useData(() => reportCatalogue(), [], ready);
+  const list: any[] = (cat.data as any) || [];
+  const [key, setKey] = useState('');
+  const [from, setFrom] = useState(firstOfMonth());
+  const [to, setTo] = useState(todayIso());
+  useEffect(() => { if (!key && list.length) setKey(list[0].key); }, [list.length]);
+  const rep = useData(() => runReport(key, from, to), [key, from, to], ready && !!key);
+  if (!ready) return <div className="panel"><StateBox empty emptyText="Choose a company and branch to run reports." /></div>;
+  const r: any = rep.data;
+  const groups = list.reduce<Record<string, any[]>>((g, x) => { (g[x.group] ||= []).push(x); return g; }, {});
+  const cols: any[] = r?.columns || [];
+  return <div className="kSplit kSplitNav">
+    <nav className="panel" aria-label="Reports">
+      <StateBox loading={cat.loading} error={cat.error} onRetry={cat.reload} empty={!list.length} emptyText="No reports available">
+        {Object.entries(groups).map(([g, items]) => <div key={g}>
+          <h3 className="kSection">{g}</h3>
+          {items.map(x => <button key={x.key} type="button" className={`ghost${key === x.key ? ' on' : ''}`} style={{display: 'block', width: '100%', textAlign: 'left', fontWeight: key === x.key ? 800 : 500}} aria-current={key === x.key} onClick={() => setKey(x.key)}>{x.title}</button>)}
+        </div>)}
+      </StateBox>
+    </nav>
+    <section className="panel">
+      <div className="panelHead"><div><span className="eyebrow">REPORT</span><h2>{r?.title || list.find(x => x.key === key)?.title || 'Report'}</h2></div>
+        <div className="kRow">
+          <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} aria-label="From" />
+          <input type="date" value={to} min={from} max={todayIso()} onChange={e => setTo(e.target.value)} aria-label="To" />
+        </div></div>
+      <StateBox loading={rep.loading} error={rep.error} onRetry={rep.reload} empty={!r || !(r.rows || []).length} emptyText="Nothing to show for this period" emptyHint="Pick another report or widen the dates.">
+        {r && <Table>
+          <thead><tr>{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr></thead>
+          <tbody>{r.rows.map((row: any, i: number) => <tr key={i}>{cols.map((c, j) => <td key={c.key}>{j === 0 ? <b>{cell(row[c.key], c.type)}</b> : cell(row[c.key], c.type)}</td>)}</tr>)}</tbody>
+          {r.totals && Object.keys(r.totals).length > 0 && <tfoot><tr>{cols.map((c, j) => <td key={c.key}><b>{j === 0 ? 'Total' : r.totals[c.key] !== undefined ? cell(r.totals[c.key], c.type) : ''}</b></td>)}</tr></tfoot>}
+        </Table>}
+        {(r?.notes || []).map((n: string) => <p className="kMuted" key={n}>{n}</p>)}
+      </StateBox>
+    </section>
+  </div>;
+}

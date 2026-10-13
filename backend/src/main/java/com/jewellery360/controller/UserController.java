@@ -60,8 +60,8 @@ public class UserController {
         if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only an administrator can create users");
         Long cid = resolveCompany(me, contextCompany);
-        Long bid = contextBranch != null ? contextBranch : me.getBranchId();
-        if (bid == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch context is required");
+        Long bid = r.branchId() != null ? r.branchId() : contextBranch != null ? contextBranch : me.getBranchId();
+        if (bid == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pick the branch this user works in");
         // Every new user of a company needs an approved request from the app administrator (no fixed number of users any more).
         boolean appAdmin = "APP_ADMIN".equals(me.getRole());
         UserRequest approval = null;
@@ -98,7 +98,9 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
         if (!phone.isBlank() && users.existsByPhone(phone))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already in use");
-        AppRole role = AppRole.valueOf(r.role());
+        AppRole role;
+        try { role = AppRole.valueOf(r.role() == null ? "" : r.role().trim().toUpperCase(Locale.ROOT)); }
+        catch (IllegalArgumentException e) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pick a valid role"); }
         if (role == AppRole.APP_ADMIN || role == AppRole.COMPANY_ADMIN)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use platform/company administration for administrator accounts");
         AppUser u = new AppUser();
@@ -166,6 +168,12 @@ public class UserController {
                         "Only a company administrator can edit users");
             }
         }
+        boolean appAdmin = "APP_ADMIN".equals(me.getRole());
+        // The platform administrator account is never edited here; a company owner is edited only by the platform administrator.
+        if (u.getRole() == AppRole.APP_ADMIN)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The platform administrator account cannot be edited here.");
+        if (u.getRole() == AppRole.COMPANY_ADMIN && !appAdmin)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the platform administrator can change a company owner.");
 
         // ---------------------------------------------------------
         // Basic validation
@@ -245,13 +253,10 @@ public class UserController {
                     "Invalid role");
         }
 
-        if (role == AppRole.APP_ADMIN ||
-                role == AppRole.COMPANY_ADMIN) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Use platform/company administration for administrator accounts");
-        }
+        if (role == AppRole.APP_ADMIN)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A user cannot be made platform administrator.");
+        if (role == AppRole.COMPANY_ADMIN && !appAdmin)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the platform administrator can make someone a company owner.");
 
         // ---------------------------------------------------------
         // Branch
@@ -321,6 +326,8 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User access denied");
         if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin only");
+        if (u.getRole() == AppRole.COMPANY_ADMIN && !"APP_ADMIN".equals(me.getRole()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the platform administrator can reactivate a company owner.");
         u.setEnabled(true);
         users.save(u);
         audit.log(me, "ENABLE", "USER", id, null, auth.userResponse(u));
@@ -431,8 +438,13 @@ public class UserController {
     public Map<String, Object> disable(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable Long id,
                                        @RequestHeader(value = "X-Company-Id", required = false) Long contextCompany) {
         AppUser u = managedUser(me, id, contextCompany);
-        if (u.getRole() == AppRole.APP_ADMIN || u.getRole() == AppRole.COMPANY_ADMIN)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An administrator account cannot be deactivated here.");
+        if (u.getRole() == AppRole.APP_ADMIN)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The platform administrator account cannot be deactivated.");
+        if (Objects.equals(u.getId(), me.getUserId()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot deactivate your own account.");
+        // a company owner can only be switched off by the platform administrator (e.g. an unpaid subscription)
+        if (u.getRole() == AppRole.COMPANY_ADMIN && !"APP_ADMIN".equals(me.getRole()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the platform administrator can deactivate a company owner.");
         u.setEnabled(false);
         users.save(u);
         audit.log(me, "DISABLE", "USER", id, null, auth.userResponse(u));

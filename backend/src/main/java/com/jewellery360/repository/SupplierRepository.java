@@ -1,15 +1,11 @@
 package com.jewellery360.repository;
 
 import com.jewellery360.domain.Supplier;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.*;
+
+import java.util.List;
 
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
-    @EntityGraph(attributePaths = {"company"})
-List<Supplier> findByCompanyId(Long companyId);
-    @Override
-    @EntityGraph(attributePaths = {"company"})
-    Optional<Supplier> findById(Long id);
-
+    List<Supplier> findByCompanyIdOrderByNameAsc(Long companyId);
+    boolean existsByCompanyIdAndNameIgnoreCase(Long companyId, String name);
 }

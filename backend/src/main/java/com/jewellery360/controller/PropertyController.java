@@ -24,6 +24,7 @@ public class PropertyController {
     private final com.jewellery360.service.PermissionService permissions;
     private final PropertyRepository properties;
     private final CompanyRepository companies;
+    private final com.jewellery360.repository.AppUserRepository users;
     private final CompanyPropertyService companyProperties;
 
     @GetMapping("/whatsapp")
@@ -31,6 +32,7 @@ public class PropertyController {
     public Map<String, Object> getWhatsApp(
             @AuthenticationPrincipal AuthenticatedUser me,
             @RequestParam(required = false) Long companyId) {
+        requireSettings(me);
         Company company = resolveCompany(me, companyId);
         companyProperties.initializeWhatsAppDefaults(company);
         return response(company);
@@ -52,6 +54,7 @@ public class PropertyController {
             @AuthenticationPrincipal AuthenticatedUser me,
             @RequestParam(required = false) Long companyId,
             @RequestBody TaxRequest body) {
+        requireSettings(me);
         Company company = resolveCompany(me, companyId);
         companyProperties.initializeTaxDefaults(company);
 
@@ -89,9 +92,7 @@ public class PropertyController {
             @AuthenticationPrincipal AuthenticatedUser me,
             @RequestParam(required = false) Long companyId,
             @RequestBody BusinessRequest body) {
-        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()) && !permissions.canEditSettings(me)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a company administrator can change business settings");
-        }
+        requireSettings(me);
         Company company = resolveCompany(me, companyId);
         companyProperties.initializeBusinessDefaults(company);
 
@@ -148,6 +149,7 @@ public class PropertyController {
             @AuthenticationPrincipal AuthenticatedUser me,
             @RequestParam(required = false) Long companyId,
             @RequestBody WhatsAppRequest body) {
+        requireSettings(me);
         Company company = resolveCompany(me, companyId);
         companyProperties.initializeWhatsAppDefaults(company);
 
@@ -166,10 +168,144 @@ public class PropertyController {
         return response(company);
     }
 
+    /* ---------------------------------------------------------------- menu layout */
+
+    /** Company menu: order, groups, hidden pages and which roles see each page. Access itself is still decided by permissions. */
+    @GetMapping("/menu")
+    public Map<String, Object> getMenu(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId) throws Exception {
+        Company company = resolveCompany(me, companyId);
+        String json = companyProperties.getMenuLayout(company);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("custom", json != null);
+        out.put("items", json == null ? defaultMenu() : JSON.readValue(json, java.util.List.class));
+        out.put("pages", com.jewellery360.service.PermissionService.PAGES);
+        out.put("roles", java.util.Arrays.stream(com.jewellery360.domain.AppRole.values()).map(Enum::name).filter(r -> !"APP_ADMIN".equals(r)).toList());
+        return out;
+    }
+
+    @PutMapping("/menu")
+    @Transactional
+    public Map<String, Object> saveMenu(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId,
+                                        @RequestBody com.fasterxml.jackson.databind.JsonNode body) throws Exception {
+        requireSettings(me);
+        Company company = resolveCompany(me, companyId);
+        com.fasterxml.jackson.databind.JsonNode items = body.path("items");
+        if (!items.isArray() || items.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The menu needs at least one page.");
+        java.util.Set<String> roles = java.util.EnumSet.allOf(com.jewellery360.domain.AppRole.class).stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.List<Map<String, Object>> clean = new java.util.ArrayList<>();
+        for (com.fasterxml.jackson.databind.JsonNode it : items) {
+            String key = it.path("key").asText("");
+            if (!com.jewellery360.service.PermissionService.PAGES.contains(key) || !seen.add(key))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown or repeated page in the menu: " + key);
+            String group = clean(it.path("group").asText(""));
+            if (group.length() > 30) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group names can be up to 30 characters.");
+            String label = clean(it.path("label").asText(""));
+            if (label.length() > 30) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Menu names can be up to 30 characters.");
+            java.util.List<String> itemRoles = new java.util.ArrayList<>();
+            for (com.fasterxml.jackson.databind.JsonNode r : it.path("roles")) {
+                if (!roles.contains(r.asText())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown role " + r.asText());
+                itemRoles.add(r.asText());
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("key", key);
+            m.put("label", label);
+            m.put("group", group);
+            m.put("hidden", it.path("hidden").asBoolean(false));
+            m.put("roles", itemRoles);
+            clean.add(m);
+        }
+        if ("SETTINGS".equals(clean.stream().filter(m -> Boolean.TRUE.equals(m.get("hidden"))).map(m -> m.get("key")).filter("SETTINGS"::equals).findFirst().orElse(null)))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Settings can't be hidden, or you could not change the menu back.");
+        String json = JSON.writeValueAsString(clean);
+        if (json.length() > 4000) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The menu layout is too large.");
+        companyProperties.setMenuLayout(company, json);
+        return getMenu(me, companyId);
+    }
+
+    @DeleteMapping("/menu")
+    @Transactional
+    public Map<String, Object> resetMenu(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId) throws Exception {
+        requireSettings(me);
+        companyProperties.setMenuLayout(resolveCompany(me, companyId), null);
+        return getMenu(me, companyId);
+    }
+
+    /* ---------------------------------------------------------------- dashboard layout (per user) */
+
+    private static final String DASHBOARD_LAYOUT = "DASHBOARD_LAYOUT";
+    private static final java.util.regex.Pattern WIDGET_ID = java.util.regex.Pattern.compile("[a-z][a-z0-9-]{0,39}");
+
+    /** The signed-in user's own dashboard arrangement in this company: order and hidden widgets. Only layout, no figures. */
+    @GetMapping("/dashboard")
+    public Map<String, Object> getDashboard(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId) throws Exception {
+        Company company = resolveCompany(me, companyId);
+        String json = properties.findByCompanyIdAndUserIdAndKeyAndActiveTrue(company.getId(), me.getUserId(), DASHBOARD_LAYOUT).map(Property::getValue).orElse(null);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("custom", json != null);
+        out.put("items", json == null ? java.util.List.of() : JSON.readValue(json, java.util.List.class));
+        return out;
+    }
+
+    @PutMapping("/dashboard")
+    @Transactional
+    public Map<String, Object> saveDashboard(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId,
+                                             @RequestBody com.fasterxml.jackson.databind.JsonNode body) throws Exception {
+        Company company = resolveCompany(me, companyId);
+        com.fasterxml.jackson.databind.JsonNode items = body.path("items");
+        if (!items.isArray() || items.isEmpty() || items.size() > 40) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The dashboard layout must list 1-40 widgets.");
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.List<Map<String, Object>> clean = new java.util.ArrayList<>();
+        for (com.fasterxml.jackson.databind.JsonNode it : items) {
+            String id = it.path("id").asText("");
+            if (!WIDGET_ID.matcher(id).matches() || !seen.add(id)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown or repeated widget: " + id);
+            clean.add(Map.of("id", id, "hidden", it.path("hidden").asBoolean(false)));
+        }
+        Property p = properties.findByCompanyIdAndUserIdAndKeyAndActiveTrue(company.getId(), me.getUserId(), DASHBOARD_LAYOUT).orElseGet(() -> {
+            Property n = new Property();
+            n.setCompany(company);
+            n.setUser(users.getReferenceById(me.getUserId()));
+            n.setKey(DASHBOARD_LAYOUT);
+            n.setType("JSON");
+            return n;
+        });
+        p.setValue(JSON.writeValueAsString(clean));
+        properties.save(p);
+        return getDashboard(me, companyId);
+    }
+
+    @DeleteMapping("/dashboard")
+    @Transactional
+    public Map<String, Object> resetDashboard(@AuthenticationPrincipal AuthenticatedUser me, @RequestParam(required = false) Long companyId) throws Exception {
+        Company company = resolveCompany(me, companyId);
+        properties.findByCompanyIdAndUserIdAndKeyAndActiveTrue(company.getId(), me.getUserId(), DASHBOARD_LAYOUT).ifPresent(properties::delete);
+        return getDashboard(me, companyId);
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    private static java.util.List<Map<String, Object>> defaultMenu() {
+        String[][] d = {{"OVERVIEW", "Daily"}, {"BILLING", "Daily"}, {"CUSTOMERS", "Daily"}, {"GOLD_RATES", "Daily"}, {"STOCK", "Stock"},
+                {"OLD_GOLD", "Stock"}, {"PURCHASES", "Stock"}, {"SERVICES", "Work"}, {"MONEY", "Accounts"}, {"REPORTS", "Accounts"},
+                {"AUDIT_LOGS", "Admin"}, {"SETTINGS", "Admin"}};
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (String[] x : d) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("key", x[0]); m.put("label", ""); m.put("group", x[1]); m.put("hidden", false); m.put("roles", java.util.List.of());
+            out.add(m);
+        }
+        return out;
+    }
+
+    private void requireSettings(AuthenticatedUser me) {
+        if (!"APP_ADMIN".equals(me.getRole()) && !"COMPANY_ADMIN".equals(me.getRole()) && !permissions.canEditSettings(me))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to change settings.");
+    }
+
     private Company resolveCompany(AuthenticatedUser me, Long requestedCompanyId) {
         if ("APP_ADMIN".equals(me.getRole())) {
             Long id = requestedCompanyId;
-            if (id == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company context is required for WhatsApp settings.");
+            if (id == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a company first.");
             return companies.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found"));
         }
         if (me.getCompanyId() == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Company context required");

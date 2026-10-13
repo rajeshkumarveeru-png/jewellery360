@@ -121,12 +121,11 @@ public class CompanyPropertyService {
      * Business profile used by the header, receipts and PDFs.
      * Phone, e-mail and GSTIN fall back to the values captured on the company record when the property is blank.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public BusinessProfile getBusinessProfile(Company company) {
         if (company == null || company.getId() == null) {
             return new BusinessProfile("", "", "", "", "A4", "", "CLASSIC");
         }
-        initializeBusinessDefaults(company);
         Long id = company.getId();
         String phone = value(id, BUSINESS_PHONE, "");
         String email = value(id, BUSINESS_EMAIL, "");
@@ -142,12 +141,12 @@ public class CompanyPropertyService {
                 value(id, SKU_PREFIX, "").toUpperCase(), template);
     }
 
-    @Transactional
+    /** Read-only (bills preview inside read-only transactions); missing keys fall back to the defaults. */
+    @Transactional(readOnly = true)
     public TaxSettings getTaxSettings(Company company) {
         if (company == null || company.getId() == null) {
             return TaxSettings.defaults();
         }
-        initializeTaxDefaults(company);
         boolean enabled = Boolean.parseBoolean(value(company.getId(), TAX_ENABLED, "true"));
         String mode = value(company.getId(), TAX_MODE, "GST").toUpperCase();
         if (!"GST".equals(mode) && !"CGST_SGST".equals(mode)) mode = "GST";
@@ -176,6 +175,20 @@ public class CompanyPropertyService {
         } catch (NumberFormatException ex) {
             return BigDecimal.ZERO;
         }
+    }
+
+    public static final String MENU_LAYOUT = "MENU_LAYOUT";
+
+    /** Saved company menu layout as JSON text, or null for the built-in default. */
+    @Transactional(readOnly = true)
+    public String getMenuLayout(Company company) {
+        return properties.findByCompanyIdAndKeyAndActiveTrue(company.getId(), MENU_LAYOUT).map(Property::getValue).orElse(null);
+    }
+
+    @Transactional
+    public void setMenuLayout(Company company, String json) {
+        if (json == null) properties.findByCompanyIdAndKeyAndActiveTrue(company.getId(), MENU_LAYOUT).ifPresent(properties::delete);
+        else save(company, MENU_LAYOUT, json);
     }
 
     private Property save(Company company, String key, String value) {

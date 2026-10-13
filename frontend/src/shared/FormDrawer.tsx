@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {usePermissions} from './permissions';
+import {Portal} from './kit';
 import type {ReactNode} from 'react';
 
 /* Slide-over entry form (same idea as BIZ360's EntryDrawer). The page keeps ALL of its form state and handlers;
@@ -53,7 +54,7 @@ export default function FormDrawer({label, title, editTitle, hint, editing = fal
         {hint && <p>{hint}</p>}
         <button type="button" className="entryNew" onClick={() => setManual(true)}><span aria-hidden="true">＋</span> {label}</button>
       </div>
-      <div className={`entryBackdrop${open ? ' open' : ''}`} onClick={dismiss} aria-hidden="true" />
+      <Portal><div className={`entryBackdrop${open ? ' open' : ''}`} onClick={dismiss} aria-hidden="true" />
       <div className={`formDrawer${open ? ' open' : ''}`} role="dialog" aria-modal="true" aria-hidden={!open} aria-label={editing ? (editTitle || title) : title}>
         <div className="formDrawerHead">
           <div><small>{editing ? 'EDITING' : 'NEW ENTRY'}</small><h2>{editing ? (editTitle || title) : title}</h2></div>
@@ -61,7 +62,7 @@ export default function FormDrawer({label, title, editTitle, hint, editing = fal
         </div>
         <div className="formDrawerBody" ref={body} onSubmit={() => { submitted.current = true; }}>{children}</div>
         <div className="formDrawerHint" aria-hidden="true"><kbd>Esc</kbd> to close</div>
-      </div>
+      </div></Portal>
     </>
   );
 }

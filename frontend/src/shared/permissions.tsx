@@ -11,40 +11,43 @@ import {createContext, useContext} from 'react';
 export const pageKey = (tab: string) => 'PAGE_' + tab.toUpperCase().replace(' & ', '_').replace(/ /g, '_');
 
 export type PageDef = {key: string; tab: string; label: string; hint: string};
+/** Same pages, in the same order, as the server (PermissionService.PAGES). */
 export const PAGE_DEFS: PageDef[] = ([
-  ['Overview', 'Sales, today\'s gold rate and targets'],
-  ['Billing', 'Create bills and take payments'],
-  ['Jewellery', 'Items, tags, designs and categories'],
-  ['Gold & Rates', 'Daily gold and silver rates, purities'],
-  ['Inventory', 'Stock, transfers and audits'],
-  ['Purchases', 'Suppliers and purchase entries'],
+  ['Overview', 'Today\'s sales, dues, rates and alerts'],
+  ['Billing', 'Create bills, take payments, returns'],
+  ['Customers', 'Customers, dues, advances and history'],
+  ['Stock', 'Tagged pieces, transfers, masters and import'],
+  ['Gold Rates', 'Daily selling rates per purity'],
   ['Old Gold', 'Old gold purchase and exchange'],
-  ['Customers', 'Find and add customers'],
-  ['Services', 'Repairs and custom orders'],
-  ['Payments', 'Receipts, advances and dues'],
-  ['Reports', 'Sales, stock and gold reports'],
-  ['WhatsApp', 'Send invoices and reminders'],
-  ['Settings', 'View business, tax and bill settings'],
+  ['Purchases', 'Suppliers, purchases and supplier dues'],
+  ['Services', 'Orders, repairs and karigar job work'],
+  ['Money', 'Payments, advances, expenses and day close'],
+  ['Reports', 'Sales, stock, GST and finance reports'],
+  ['Settings', 'Business, tax, invoice and menu settings'],
   ['Audit Logs', 'Who changed what, and when']
 ] as [string, string][]).map(([tab, hint]) => ({key: pageKey(tab), tab, label: tab, hint}));
 
 export type PowerDef = {key: string; label: string; hint: string; sensitive?: boolean};
+/** Same powers as the server (PermissionService.POWERS). */
 export const POWER_DEFS: PowerDef[] = [
-  {key: 'MANAGE_RECORDS', label: 'Add, edit and delete records', hint: 'In the pages above. Billing, payments, customers, services and old gold can always be added.'},
-  {key: 'SEE_PROFIT', label: 'See the profit report', hint: 'Reports - Profit tab', sensitive: true},
+  {key: 'MANAGE_RECORDS', label: 'Add and edit records', hint: 'Stock, masters, gold rates and purchases. Bills, customers, services and old gold never need it.'},
+  {key: 'DISCOUNT', label: 'Give a discount on a bill', hint: 'Billing'},
+  {key: 'PRICE_OVERRIDE', label: 'Change rate, making or wastage on a bill', hint: 'Billing - every change is written to the audit log', sensitive: true},
+  {key: 'CANCEL_RETURN', label: 'Cancel bills, take returns and refund', hint: 'Billing and Money', sensitive: true},
+  {key: 'SEE_PROFIT', label: 'See cost and profit', hint: 'Reports and stock cost price', sensitive: true},
   {key: 'EDIT_SETTINGS', label: 'Change settings', hint: 'Save changes in Settings', sensitive: true}
 ];
 
 const ROLE_PAGES: Record<string, string[]> = {
-  MANAGER: ['Overview', 'Billing', 'Jewellery', 'Gold & Rates', 'Inventory', 'Purchases', 'Old Gold', 'Customers', 'Services', 'Payments', 'Reports', 'Audit Logs', 'WhatsApp'],
-  CASHIER: ['Overview', 'Billing', 'Customers', 'Payments', 'Audit Logs'],
-  SALESMAN: ['Overview', 'Billing', 'Customers', 'Services', 'Audit Logs'],
-  INVENTORY_MANAGER: ['Overview', 'Jewellery', 'Inventory', 'Purchases', 'Old Gold', 'Reports', 'Audit Logs'],
-  ACCOUNTANT: ['Overview', 'Customers', 'Payments', 'Reports', 'Audit Logs'],
-  VIEWER: ['Overview', 'Customers', 'Inventory', 'Reports']
+  MANAGER: ['Overview', 'Billing', 'Customers', 'Stock', 'Gold Rates', 'Old Gold', 'Purchases', 'Services', 'Money', 'Reports', 'Audit Logs'],
+  CASHIER: ['Overview', 'Billing', 'Customers', 'Old Gold', 'Money'],
+  SALESMAN: ['Overview', 'Billing', 'Customers', 'Stock', 'Services'],
+  INVENTORY_MANAGER: ['Overview', 'Stock', 'Gold Rates', 'Purchases', 'Services', 'Reports'],
+  ACCOUNTANT: ['Overview', 'Customers', 'Purchases', 'Money', 'Reports', 'Audit Logs'],
+  VIEWER: ['Overview', 'Customers', 'Stock', 'Reports']
 };
 const ROLE_POWERS: Record<string, string[]> = {
-  MANAGER: ['MANAGE_RECORDS', 'SEE_PROFIT'],
+  MANAGER: ['MANAGE_RECORDS', 'DISCOUNT', 'PRICE_OVERRIDE', 'CANCEL_RETURN', 'SEE_PROFIT'],
   INVENTORY_MANAGER: ['MANAGE_RECORDS'],
   ACCOUNTANT: ['MANAGE_RECORDS', 'SEE_PROFIT']
 };
@@ -74,10 +77,14 @@ export type Permissions = {
   canManage: boolean;
   canSeeProfit: boolean;
   canEditSettings: boolean;
+  canDiscount: boolean;
+  canOverride: boolean;
+  canCancel: boolean;
+  isViewer: boolean;
 };
 
 const ALL_KEYS = [...PAGE_DEFS.map(p => p.key), ...POWER_DEFS.map(p => p.key)];
-const FULL: Permissions = {isAdmin: true, isStaff: false, allowed: ALL_KEYS, canOpen: () => true, canManage: true, canSeeProfit: true, canEditSettings: true};
+const FULL: Permissions = {isAdmin: true, isStaff: false, allowed: ALL_KEYS, canOpen: () => true, canManage: true, canSeeProfit: true, canEditSettings: true, canDiscount: true, canOverride: true, canCancel: true, isViewer: false};
 
 export const permissionsFor = (user?: {role?: string | null; permissions?: string[] | null} | null): Permissions => {
   const role = String(user?.role ?? '').toUpperCase();
@@ -91,7 +98,11 @@ export const permissionsFor = (user?: {role?: string | null; permissions?: strin
     canOpen: (tab: string) => has(pageKey(tab)),
     canManage: has('MANAGE_RECORDS'),
     canSeeProfit: has('SEE_PROFIT'),
-    canEditSettings: has('EDIT_SETTINGS')
+    canEditSettings: has('EDIT_SETTINGS'),
+    canDiscount: has('DISCOUNT'),
+    canOverride: has('PRICE_OVERRIDE'),
+    canCancel: has('CANCEL_RETURN'),
+    isViewer: role === 'VIEWER'
   };
 };
 

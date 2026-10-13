@@ -3,6 +3,8 @@ package com.jewellery360.controller;
 import com.jewellery360.domain.Sale;
 import com.jewellery360.repository.SaleRepository;
 import com.jewellery360.security.AuthenticatedUser;
+import com.jewellery360.service.PermissionService;
+import com.jewellery360.service.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,8 +30,8 @@ import java.util.TreeMap;
  * Read-only sales analytics for the executive dashboard:
  * today's sales summary, totals for a chosen From/To date range and a daily / weekly / monthly trend series.
  *
- * Always scoped to the caller's company (APP_ADMIN passes X-Company-Id), and to the caller's branch when the user is branch-bound.
- * Cancelled invoices are excluded. Any signed-in user can read it: it only aggregates sales of the user's own company.
+ * Scoped through {@link TenantContext} like every other endpoint (company always; branch when one applies).
+ * Cancelled invoices are excluded. Needs the Overview page - the same rule as the dashboard.
  */
 @RestController
 @RequestMapping("/api/analytics")
@@ -39,6 +41,8 @@ public class AnalyticsController {
     private static final long MAX_RANGE_DAYS = 1100;
 
     private final SaleRepository sales;
+    private final TenantContext tenant;
+    private final PermissionService permissions;
 
     @GetMapping("/sales")
     @Transactional(readOnly = true)
@@ -47,20 +51,14 @@ public class AnalyticsController {
             @RequestParam(required = false) LocalDate from,
             @RequestParam(required = false) LocalDate to,
             @RequestParam(defaultValue = "DAY") String granularity,
-            @RequestHeader(value = "X-Company-Id", required = false) Long companyId,
-            @RequestHeader(value = "X-Branch-Id", required = false) Long branchId) {
+            @RequestHeader(value = "X-Company-Id", required = false) String companyHeader) {
 
-        Long cid;
-        Long bid;
-        if ("APP_ADMIN".equals(me.getRole())) {
-            if (companyId == null) return Map.of("platform", true, "message", "Select company and branch context.");
-            cid = companyId;
-            bid = branchId;
-        } else {
-            if (me.getCompanyId() == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Company scope is required");
-            cid = me.getCompanyId();
-            bid = me.getBranchId();
-        }
+        if (me != null && "APP_ADMIN".equals(me.getRole()) && (companyHeader == null || companyHeader.isBlank()))
+            return Map.of("platform", true, "message", "Select company and branch context.");
+        TenantContext.Ctx ctx = tenant.of(me);
+        permissions.requirePage(me, "OVERVIEW");
+        Long cid = ctx.companyId();
+        Long bid = ctx.branchId();
 
         String mode = granularity == null ? "DAY" : granularity.trim().toUpperCase(Locale.ROOT);
         if (!"DAY".equals(mode) && !"WEEK".equals(mode) && !"MONTH".equals(mode)) {
@@ -80,11 +78,7 @@ public class AnalyticsController {
         LocalDate fetchFrom = start.isBefore(yesterday) ? start : yesterday;
         LocalDate fetchTo = end.isAfter(today) ? end : today;
         List<Sale> valid = new ArrayList<>();
-        for (Sale s : sales.findByCompanyIdAndSaleDateBetween(cid, fetchFrom, fetchTo)) {
-            if ("CANCELLED".equalsIgnoreCase(s.getStatus())) continue;
-            if (bid != null && (s.getBranch() == null || !bid.equals(s.getBranch().getId()))) continue;
-            valid.add(s);
-        }
+        valid.addAll(sales.completedBetween(cid, bid, fetchFrom, fetchTo));
 
         Map<LocalDate, Bucket> buckets = new TreeMap<>();
         Bucket totals = new Bucket();
@@ -163,7 +157,7 @@ public class AnalyticsController {
         long count = 0;
 
         void add(Sale s) {
-            total = total.add(s.getTotal() == null ? BigDecimal.ZERO : s.getTotal());
+            total = total.add(s.getTotal().subtract(s.getReturnedAmount()));
             tax = tax.add(s.getGst() == null ? BigDecimal.ZERO : s.getGst());
             count++;
         }

@@ -36,3 +36,33 @@
 .taxPreview{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid #dfd4c4;border-radius:11px;background:#f7f2e9;color:#5f5549;font-size:12px;}
 .taxPreview b{color:#302a24;}
 @media(max-width:720px){.taxSettingsForm{grid-template-columns:1fr}.taxSplitGrid{grid-column:auto;grid-template-columns:1fr}.taxPreview{grid-column:auto;align-items:flex-start;flex-direction:column;gap:6px}.taxSettingsPanel{grid-column:auto}}
+
+/* Company menu editor (shared/MenuEditor.tsx): grouped drag-and-drop list with a live preview */
+.mnLayout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start}
+.mnGroups{display:grid;gap:12px}
+.mnGroup{border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.25);border-radius:14px;padding:8px;transition:border-color .2s,box-shadow .2s}
+.mnGroup.over{border-color:var(--j360-accent,#b58a3a);box-shadow:0 0 0 4px rgba(var(--j360-accent-rgb,181,138,58),.12)}
+.mnGroupHead{display:flex;align-items:center;gap:10px;padding:2px 4px 8px}
+.mnGroupHead input{font-weight:800;font-size:13px;letter-spacing:.04em;border:1px dashed transparent;border-radius:8px;padding:6px 8px;background:transparent;color:inherit;max-width:220px}
+.mnGroupHead input:hover:not(:disabled),.mnGroupHead input:focus{border-color:rgba(var(--j360-accent-rgb,181,138,58),.5);outline:none}
+.mnGroupHead small{opacity:.6}
+.mnRow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px;border-radius:10px;border:1px solid transparent;background:rgba(255,255,255,.55);margin-top:4px;transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s,border-color .18s,opacity .18s}
+.mnRow[draggable=true]{cursor:grab}
+.mnRow.dragging{opacity:.4}
+.mnRow.over{border-color:var(--j360-accent,#b58a3a);box-shadow:0 -3px 0 0 var(--j360-accent,#b58a3a);transform:translateY(2px)}
+.mnRow.off{opacity:.55}
+.mnHandle{font-size:17px;color:var(--j360-accent,#b58a3a);line-height:1}
+.mnShow{display:flex;align-items:center;gap:6px;min-width:130px;font-weight:700;font-size:13px}
+.mnName{flex:1 1 140px;min-width:120px;padding:7px 9px;border:1px solid #ddd6c9;border-radius:8px;background:#fff;font-size:13px}
+.mnRoles,.mnSteps button,.mnMove{border:1px solid #ddd6c9;background:#fff;border-radius:8px;padding:6px 9px;font-size:12px;min-height:32px;color:#3b342b}
+.mnSteps{display:inline-flex;gap:3px}
+.mnRoleList{flex-basis:100%;display:flex;gap:10px;flex-wrap:wrap;padding:6px 4px 2px;font-size:12px}
+.mnAddGroup{justify-self:start;border:1px dashed rgba(var(--j360-accent-rgb,181,138,58),.6);background:transparent;border-radius:10px;padding:9px 12px;font-weight:700;color:inherit}
+.mnPreview{position:sticky;top:12px;background:#15171a;color:#d8d3c8;border-radius:14px;padding:12px;display:grid;gap:10px;font-size:12px}
+.mnPreview small{letter-spacing:.14em;opacity:.6;font-size:10px}
+.mnPreview b{display:block;color:#fff;font-size:11px;margin-bottom:4px}
+.mnPreview span{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px}
+.theme-premium_dark .mnRow{background:rgba(255,255,255,.04)}
+.theme-premium_dark .mnName,.theme-premium_dark .mnRoles,.theme-premium_dark .mnSteps button,.theme-premium_dark .mnMove{background:#0f1620;color:#e6edf5;border-color:#2a3a4d}
+@media(max-width:900px){.mnLayout{grid-template-columns:1fr}.mnPreview{position:static}}
+@media (prefers-reduced-motion:reduce){.mnRow,.mnGroup{transition:none}}

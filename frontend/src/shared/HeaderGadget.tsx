@@ -1,5 +1,5 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {headerGoldRates} from '../api';
+import {useEffect, useMemo, useState} from 'react';
+import {goldRateBoard} from '../api';
 
 /* ------------------------------------------------------------------------------------------------
    Header gadget: analog + digital Indian-time clock, date plate and today's gold-rate board.
@@ -16,7 +16,6 @@ const partsOf = (d: Date) => {
 };
 
 const greeting = (h: number) => (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
-const karatKey = (x: any) => String(x?.karat || x?.purity || '').replace(/[^0-9]/g, '');
 
 function AnalogClock({h, m, s}: {h: number; m: number; s: number}) {
   const hourDeg = ((h % 12) + m / 60) * 30;
@@ -48,14 +47,11 @@ function AnalogClock({h, m, s}: {h: number; m: number; s: number}) {
   );
 }
 
-export default function HeaderGadget({ready}: {ready: boolean}) {
+export default function HeaderGadget({ready, canOpenRates, onOpenRates}: {ready: boolean; canOpenRates?: boolean; onOpenRates?: () => void}) {
   const [now, setNow] = useState(() => new Date());
   const [rates, setRates] = useState<any[]>([]);
-  const [source, setSource] = useState('');
-  const [rateDate, setRateDate] = useState('');
+  const [missing, setMissing] = useState(0);
   const [updated, setUpdated] = useState<Date | null>(null);
-  const [moves, setMoves] = useState<Record<string, 'up' | 'down'>>({});
-  const last = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
@@ -63,39 +59,28 @@ export default function HeaderGadget({ready}: {ready: boolean}) {
   }, []);
 
   useEffect(() => {
-    if (!ready) { setRates([]); setSource(''); return; }
+    if (!ready) { setRates([]); setMissing(0); return; }
     let cancelled = false;
-    const load = () => headerGoldRates().then(r => {
+    const load = () => goldRateBoard().then(r => {
       if (cancelled) return;
-      const list: any[] = Array.isArray(r.data?.marketRates) && r.data.marketRates.length ? r.data.marketRates : (Array.isArray(r.data?.rates) ? r.data.rates : []);
-      const next: Record<string, 'up' | 'down'> = {};
-      list.forEach(x => {
-        const k = karatKey(x);
-        const v = Number(x.ratePerGram || 0);
-        const before = last.current[k];
-        if (before !== undefined && v !== before) next[k] = v > before ? 'up' : 'down';
-        last.current[k] = v;
-      });
-      if (Object.keys(next).length) setMoves(m => ({...m, ...next}));
-      setRates(list);
-      setSource(r.data?.marketSource || '');
-      setRateDate(r.data?.date || '');
+      setRates((Array.isArray(r.data?.rates) ? r.data.rates : []).filter((x: any) => x.ratePerGram != null));
+      setMissing(Array.isArray(r.data?.missingToday) ? r.data.missingToday.length : 0);
       setUpdated(new Date());
     }).catch(() => { if (!cancelled) setRates([]); });
     void load();
     const id = window.setInterval(load, 60000);
-    return () => { cancelled = true; window.clearInterval(id); };
+    const onSaved = () => void load();
+    window.addEventListener('j360-rates-changed', onSaved);
+    return () => { cancelled = true; window.clearInterval(id); window.removeEventListener('j360-rates-changed', onSaved); };
   }, [ready]);
 
   const t = partsOf(now);
-  const top = useMemo(() => {
-    const unique = new Map<string, any>();
-    rates.filter(x => x.active !== false).forEach(x => unique.set(karatKey(x), x));
-    return [...unique.values()].sort((a, b) => Number(karatKey(b)) - Number(karatKey(a))).slice(0, 3);
-  }, [rates]);
+  // highest gold purities first, then silver
+  const top = useMemo(() => [...rates].sort((a, b) => a.metal === b.metal ? Number(b.fineness) - Number(a.fineness) : a.metal === 'GOLD' ? -1 : 1).slice(0, 3), [rates]);
+  const missingText = `${missing} rate${missing === 1 ? '' : 's'} not set today`;
 
   return (
-    <div className="jGadget" role="group" aria-label="Date, time and today's gold rates">
+    <div className="jGadget" role="group" aria-label="Date, time and today's rates">
       <div className="jTime">
         <AnalogClock h={t.h12} m={t.minute} s={t.second} />
         <div className="jDigital" aria-live="off">
@@ -115,22 +100,24 @@ export default function HeaderGadget({ready}: {ready: boolean}) {
       <span className="jOrnament" aria-hidden="true"><i /><u>◆</u><i /></span>
 
       <div className="jRates">
-        <div className="jRatesHead"><span>TODAY'S GOLD RATE</span>{rateDate && <small>{rateDate}</small>}</div>
+        <div className="jRatesHead"><span>TODAY'S SELLING RATE</span></div>
         <div className="jRateRow">
           {!ready ? <span className="jMuted">Select company &amp; branch</span>
-            : top.length ? top.map((x, i) => {
-              const k = karatKey(x);
-              const mv = moves[k];
+            : top.length ? top.map(x => {
+              const ch = Number(x.change || 0);
+              const mv = ch > 0 ? 'up' : ch < 0 ? 'down' : '';
               return (
-                <span className={`jRate${mv ? ` ${mv}` : ''}`} key={`${k}-${i}`} title={mv ? `Moved ${mv === 'up' ? 'up' : 'down'} since the last refresh` : 'Unchanged since the last refresh'}>
-                  <b>{x.karat || x.purity}</b>
+                <span className={`jRate${mv ? ` ${mv}` : ''}`} key={x.purityId} title={x.setToday ? (mv ? `${mv === 'up' ? 'Up' : 'Down'} ₹${Math.abs(ch).toLocaleString('en-IN')} from the previous rate` : 'Set today') : `Last set on ${x.rateDate}`}>
+                  <b>{x.purity}</b>
                   <span>₹{Number(x.ratePerGram || 0).toLocaleString('en-IN', {maximumFractionDigits: 2})}<small>/g</small></span>
                   {mv && <i aria-label={mv === 'up' ? 'rate went up' : 'rate went down'}>{mv === 'up' ? '▲' : '▼'}</i>}
                 </span>
               );
-            }) : <span className="jMuted">No market rate</span>}
+            }) : <span className="jMuted">No rates saved yet</span>}
         </div>
-        {(source || updated) && <small className="jSource">{source}{source && updated ? ' · ' : ''}{updated ? `updated ${updated.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit', timeZone: TZ})}` : ''}</small>}
+        {ready && missing > 0
+          ? (canOpenRates ? <button type="button" className="jSource jWarn" onClick={onOpenRates}>{missingText} · update</button> : <small className="jSource jWarn">{missingText}</small>)
+          : updated && <small className="jSource">updated {updated.toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit', timeZone: TZ})}</small>}
       </div>
     </div>
   );
