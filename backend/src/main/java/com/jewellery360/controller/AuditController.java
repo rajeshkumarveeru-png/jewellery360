@@ -25,11 +25,12 @@ public class AuditController {
           @AuthenticationPrincipal AuthenticatedUser me,
           @RequestHeader(value = "X-Company-Id", required = false) Long companyId) {
 
+    if (!"APP_ADMIN".equals(me.getRole())) permissions.requirePage(me, "AUDIT_LOGS");
     List<AuditHistory> auditHistory;
 
     if ("APP_ADMIN".equals(me.getRole()) && companyId == null) {
 
-      auditHistory = audits.findTop200ByOrderByCreatedAtDesc();
+      auditHistory = audits.findByOrderByCreatedAtDesc(org.springframework.data.domain.PageRequest.of(0, 300));
 
     } else {
 
@@ -38,7 +39,7 @@ public class AuditController {
               : me.getCompanyId();
 
       auditHistory =
-              audits.findTop200ByCompanyIdOrderByCreatedAtDesc(cid);
+              audits.findByCompanyIdOrderByCreatedAtDesc(cid, org.springframework.data.domain.PageRequest.of(0, 300));
     }
 
     return auditHistory.stream()
@@ -78,6 +79,8 @@ public class AuditController {
                     : audit.getCompany().getName()
     );
 
+    response.put("before", audit.getBeforeValue());
+    response.put("after", audit.getAfterValue());
     response.put(
             "branch",
             audit.getBranch() == null

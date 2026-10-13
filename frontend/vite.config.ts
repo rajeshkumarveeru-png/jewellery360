@@ -10,7 +10,8 @@ export default defineConfig({
 
         proxy: {
             '/api': {
-                target: 'http://localhost:8080',
+                // J360_API_TARGET lets a second backend (e.g. a test database) be used without editing this file
+                target: process.env.J360_API_TARGET || 'http://localhost:8080',
                 changeOrigin: true,
                 secure: false
             }

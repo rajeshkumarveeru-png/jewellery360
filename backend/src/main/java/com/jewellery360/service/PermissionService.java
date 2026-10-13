@@ -2,7 +2,6 @@ package com.jewellery360.service;
 
 import com.jewellery360.domain.AppUser;
 import com.jewellery360.repository.AppUserRepository;
-import com.jewellery360.repository.UserPermissionRepository;
 import com.jewellery360.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,51 +11,46 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 
 /**
- * What a user may open and do.
- *  - APP_ADMIN and COMPANY_ADMIN: everything (in their scope).
- *  - Every other role: the pages and powers the company admin granted on the Users page. Without a saved list the defaults of the role apply.
- * Permissions are read from the database on every check, so taking access away works immediately - also for a user who is signed in.
+ * What a user may open and do. This is the server-side check behind every endpoint; hiding a menu entry is never enough.
  *
- * Keys: PAGE_<MODULE> (PAGE_OVERVIEW, PAGE_BILLING, PAGE_GOLD_RATES ...) and the powers
- *   MANAGE_RECORDS - add / edit / delete records in the pages the user can open (billing, payments, customers, services and old gold may always be added)
- *   SEE_PROFIT     - the profit report
- *   EDIT_SETTINGS  - save changes in Settings
+ *  - APP_ADMIN and COMPANY_ADMIN (the owner): everything in their scope.
+ *  - Every other role: the pages and powers the company admin granted on the Users page; without a saved list the
+ *    defaults of the role apply. Permissions are read from the database on every check, so removing access works at once.
+ *
+ * Keys: PAGE_&lt;page&gt; for each page and the powers below. VIEWER is always read-only.
  */
 @Service
 @RequiredArgsConstructor
 public class PermissionService {
-    private final UserPermissionRepository userPermissions;
     private final AppUserRepository users;
 
-    /** Pages in menu order. */
-    public static final List<String> PAGES = List.of("OVERVIEW", "BILLING", "JEWELLERY", "GOLD & RATES", "INVENTORY", "PURCHASES", "OLD GOLD",
-            "CUSTOMERS", "SERVICES", "PAYMENTS", "REPORTS", "WHATSAPP", "SETTINGS", "AUDIT LOGS");
-    public static final List<String> POWERS = List.of("MANAGE_RECORDS", "SEE_PROFIT", "EDIT_SETTINGS");
-    /** Pages where adding a record is part of the daily work, so it needs no extra power. */
-    private static final Set<String> TRANSACTIONAL = Set.of("BILLING", "PAYMENTS", "CUSTOMERS", "SERVICES", "OLD GOLD", "WHATSAPP");
+    /** Page keys in menu order. */
+    public static final List<String> PAGES = List.of("OVERVIEW", "BILLING", "CUSTOMERS", "STOCK", "GOLD_RATES", "OLD_GOLD",
+            "PURCHASES", "SERVICES", "MONEY", "REPORTS", "SETTINGS", "AUDIT_LOGS");
 
-    private static final Map<String, Set<String>> ROLE_MODULES = new HashMap<>();
-    private static final Map<String, Set<String>> ROLE_POWERS = new HashMap<>();
-    static {
-        ROLE_MODULES.put("MANAGER", Set.of("OVERVIEW", "BILLING", "JEWELLERY", "GOLD & RATES", "INVENTORY", "PURCHASES", "OLD GOLD", "CUSTOMERS", "SERVICES", "PAYMENTS", "REPORTS", "AUDIT LOGS", "WHATSAPP"));
-        ROLE_MODULES.put("CASHIER", Set.of("OVERVIEW", "BILLING", "CUSTOMERS", "PAYMENTS", "AUDIT LOGS"));
-        ROLE_MODULES.put("SALESMAN", Set.of("OVERVIEW", "BILLING", "CUSTOMERS", "SERVICES", "AUDIT LOGS"));
-        ROLE_MODULES.put("INVENTORY_MANAGER", Set.of("OVERVIEW", "JEWELLERY", "INVENTORY", "PURCHASES", "OLD GOLD", "REPORTS", "AUDIT LOGS"));
-        ROLE_MODULES.put("ACCOUNTANT", Set.of("OVERVIEW", "CUSTOMERS", "PAYMENTS", "REPORTS", "AUDIT LOGS"));
-        ROLE_MODULES.put("VIEWER", Set.of("OVERVIEW", "CUSTOMERS", "INVENTORY", "REPORTS"));
-        // cashiers and salesmen can bill and add customers, but not edit / delete records and not see profit
-        ROLE_POWERS.put("MANAGER", Set.of("MANAGE_RECORDS", "SEE_PROFIT"));
-        ROLE_POWERS.put("INVENTORY_MANAGER", Set.of("MANAGE_RECORDS"));
-        ROLE_POWERS.put("ACCOUNTANT", Set.of("MANAGE_RECORDS", "SEE_PROFIT"));
-    }
+    /** MANAGE_RECORDS: add / edit masters, stock, gold rates and purchases. DISCOUNT: give a discount on a bill.
+     *  PRICE_OVERRIDE: change rate, making or wastage on a bill line. CANCEL_RETURN: cancel bills, take returns, refund.
+     *  SEE_PROFIT: profit and cost figures. EDIT_SETTINGS: change settings. */
+    public static final List<String> POWERS = List.of("MANAGE_RECORDS", "DISCOUNT", "PRICE_OVERRIDE", "CANCEL_RETURN", "SEE_PROFIT", "EDIT_SETTINGS");
 
-    public static String pageKey(String module) {
-        return "PAGE_" + module.toUpperCase().replace(" & ", "_").replace(" ", "_");
-    }
+    private static final Map<String, List<String>> ROLE_PAGES = Map.of(
+            "MANAGER", List.of("OVERVIEW", "BILLING", "CUSTOMERS", "STOCK", "GOLD_RATES", "OLD_GOLD", "PURCHASES", "SERVICES", "MONEY", "REPORTS", "AUDIT_LOGS"),
+            "CASHIER", List.of("OVERVIEW", "BILLING", "CUSTOMERS", "OLD_GOLD", "MONEY"),
+            "SALESMAN", List.of("OVERVIEW", "BILLING", "CUSTOMERS", "STOCK", "SERVICES"),
+            "INVENTORY_MANAGER", List.of("OVERVIEW", "STOCK", "GOLD_RATES", "PURCHASES", "SERVICES", "REPORTS"),
+            "ACCOUNTANT", List.of("OVERVIEW", "CUSTOMERS", "PURCHASES", "MONEY", "REPORTS", "AUDIT_LOGS"),
+            "VIEWER", List.of("OVERVIEW", "CUSTOMERS", "STOCK", "REPORTS"));
+    private static final Map<String, List<String>> ROLE_POWERS = Map.of(
+            "MANAGER", List.of("MANAGE_RECORDS", "DISCOUNT", "PRICE_OVERRIDE", "CANCEL_RETURN", "SEE_PROFIT"),
+            "INVENTORY_MANAGER", List.of("MANAGE_RECORDS"),
+            "ACCOUNTANT", List.of("MANAGE_RECORDS", "SEE_PROFIT"));
+    /** Keys saved by older versions of the app. */
+    private static final Map<String, String> LEGACY_KEYS = Map.of(
+            "PAGE_JEWELLERY", "PAGE_STOCK", "PAGE_INVENTORY", "PAGE_STOCK", "PAGE_PAYMENTS", "PAGE_MONEY");
 
-    private static boolean isAdmin(String role) {
-        return "APP_ADMIN".equals(role) || "COMPANY_ADMIN".equals(role);
-    }
+    public static String pageKey(String page) { return "PAGE_" + page; }
+
+    public static boolean isAdmin(String role) { return "APP_ADMIN".equals(role) || "COMPANY_ADMIN".equals(role); }
 
     private static List<String> all() {
         List<String> keys = new ArrayList<>();
@@ -69,26 +63,26 @@ public class PermissionService {
     public static List<String> defaults(String role) {
         if (isAdmin(role)) return all();
         List<String> keys = new ArrayList<>();
-        Set<String> pages = ROLE_MODULES.getOrDefault(role, Set.of("OVERVIEW"));
-        for (String p : PAGES) if (pages.contains(p)) keys.add(pageKey(p));
-        for (String power : POWERS) if (ROLE_POWERS.getOrDefault(role, Set.of()).contains(power)) keys.add(power);
-        return keys;
+        for (String p : ROLE_PAGES.getOrDefault(role, List.of("OVERVIEW"))) keys.add(pageKey(p));
+        keys.addAll(ROLE_POWERS.getOrDefault(role, List.of()));
+        return sanitize(keys);
     }
 
     /** Only known keys, in a stable order, and always at least one page. */
     public static List<String> sanitize(Collection<String> requested) {
         Set<String> wanted = new LinkedHashSet<>();
-        if (requested != null) for (String k : requested) if (k != null) wanted.add(k.trim().toUpperCase());
+        if (requested != null) for (String k : requested) {
+            if (k == null) continue;
+            String key = k.trim().toUpperCase(Locale.ROOT);
+            wanted.add(LEGACY_KEYS.getOrDefault(key, key));
+        }
         List<String> out = new ArrayList<>();
         for (String k : all()) if (wanted.contains(k)) out.add(k);
-        boolean anyPage = out.stream().anyMatch(k -> k.startsWith("PAGE_"));
-        if (!anyPage) out.add(0, pageKey("OVERVIEW"));
+        if (out.stream().noneMatch(k -> k.startsWith("PAGE_"))) out.add(0, pageKey("OVERVIEW"));
         return out;
     }
 
-    public static String serialize(Collection<String> keys) {
-        return String.join(",", sanitize(keys));
-    }
+    public static String serialize(Collection<String> keys) { return String.join(",", sanitize(keys)); }
 
     /** Effective permissions of an account. */
     public List<String> effective(AppUser user) {
@@ -106,55 +100,60 @@ public class PermissionService {
         return users.findById(me.getUserId()).map(this::effective).orElseGet(() -> defaults(me.getRole()));
     }
 
-    public boolean hasPower(AuthenticatedUser me, String power) {
-        return me != null && effective(me).contains(power);
+    public boolean can(AuthenticatedUser me, String page) {
+        return me != null && (isAdmin(me.getRole()) || effective(me).contains(pageKey(page)));
     }
 
-    public boolean canModule(AuthenticatedUser u, String module) {
-        if (u == null) return false;
-        if (isAdmin(u.getRole())) return true;
-        return effective(u).contains(pageKey(module));
+    public boolean has(AuthenticatedUser me, String power) {
+        return me != null && (isAdmin(me.getRole()) || effective(me).contains(power));
     }
 
-    public boolean has(AuthenticatedUser u, String module, String action) {
-        if (!canModule(u, module)) return false;
-        if (isAdmin(u.getRole())) return true;
-        String code = pageKey(module).substring(5) + "_" + action.toUpperCase();
-        var explicit = userPermissions.findByUserIdAndPermission_Code(u.getUserId(), code);
-        if (explicit.isPresent()) return explicit.get().isGranted();
-        String act = action.toUpperCase();
-        if ("VIEW".equals(act)) return true;
-        if ("VIEWER".equals(u.getRole())) return false;
-        boolean manage = effective(u).contains("MANAGE_RECORDS");
-        if ("CREATE".equals(act) || "SEND".equals(act)) return manage || TRANSACTIONAL.contains(module.toUpperCase());
-        return manage; // UPDATE, DELETE and anything else
+    public void requirePage(AuthenticatedUser me, String page) {
+        if (!can(me, page)) throw forbidden("You do not have access to " + label(page) + ".");
     }
 
-    public void requireModule(AuthenticatedUser u, String module) {
-        if (!canModule(u, module)) throw forbidden("You do not have permission for " + module);
+    /** Daily work in a page (bills, receipts, customers, repairs ...): page access and not a read-only account. */
+    public void requireWrite(AuthenticatedUser me, String page) {
+        requirePage(me, page);
+        if ("VIEWER".equals(me.getRole())) throw forbidden("Your account can only view records.");
     }
 
-    public void requireAction(AuthenticatedUser u, String module, String action) {
-        if (!has(u, module, action)) throw forbidden("Permission denied: " + module + "/" + action);
+    /** Master data and stock changes: page access plus "Add, edit and delete records". */
+    public void requireManage(AuthenticatedUser me, String page) {
+        requireWrite(me, page);
+        if (!has(me, "MANAGE_RECORDS")) throw forbidden("You do not have permission to change records in " + label(page) + ".");
     }
 
-    public void requireWrite(AuthenticatedUser u, String module) {
-        requireAction(u, module, "CREATE");
+    public void requirePower(AuthenticatedUser me, String power) {
+        if (!has(me, power)) throw forbidden(switch (power) {
+            case "DISCOUNT" -> "You do not have permission to give a discount.";
+            case "PRICE_OVERRIDE" -> "You do not have permission to change rates or charges on a bill.";
+            case "CANCEL_RETURN" -> "You do not have permission to cancel bills, take returns or refund.";
+            case "SEE_PROFIT" -> "You do not have permission to see profit details.";
+            case "EDIT_SETTINGS" -> "You do not have permission to change settings.";
+            default -> "Permission denied.";
+        });
     }
 
-    public void requireAppAdmin(AuthenticatedUser u) {
-        if (!"APP_ADMIN".equals(u.getRole())) throw forbidden("APP_ADMIN only");
+    public void requireAdmin(AuthenticatedUser me) {
+        if (me == null || !isAdmin(me.getRole())) throw forbidden("Only the owner / administrator can do this.");
     }
 
-    public void requireProfit(AuthenticatedUser u) {
-        if (!isAdmin(u.getRole()) && !hasPower(u, "SEE_PROFIT")) throw forbidden("You do not have permission to see profit details");
+    public void requireAppAdmin(AuthenticatedUser me) {
+        if (me == null || !"APP_ADMIN".equals(me.getRole())) throw forbidden("Only the platform administrator can do this.");
     }
 
-    public boolean canEditSettings(AuthenticatedUser u) {
-        return u != null && (isAdmin(u.getRole()) || hasPower(u, "EDIT_SETTINGS"));
+    public boolean canEditSettings(AuthenticatedUser me) { return has(me, "EDIT_SETTINGS"); }
+
+    private static String label(String page) {
+        return switch (page) {
+            case "GOLD_RATES" -> "Gold rates";
+            case "OLD_GOLD" -> "Old gold";
+            case "SERVICES" -> "Orders & repairs";
+            case "AUDIT_LOGS" -> "Audit logs";
+            default -> page.charAt(0) + page.substring(1).toLowerCase(Locale.ROOT);
+        };
     }
 
-    private ResponseStatusException forbidden(String s) {
-        return new ResponseStatusException(HttpStatus.FORBIDDEN, s);
-    }
+    private ResponseStatusException forbidden(String s) { return new ResponseStatusException(HttpStatus.FORBIDDEN, s); }
 }

@@ -112,7 +112,7 @@ export function Table({children, cards = false, bare = false}: {children: ReactN
     </div>
   );
 }
-export function Empty({text}:{text:string}){return <div className="empty"><div>◇</div><b>{text}</b><small>Use the create form to add a real PostgreSQL record.</small></div>}
+export function Empty({text}:{text:string}){return <div className="empty"><div>◇</div><b>{text}</b></div>}
 /* Jewellery-style line icons for the sidebar (24x24, 1.7 stroke). Unknown names fall back to a diamond. */
 export const NAV_PATHS: Record<string, string> = {
   Overview: 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z',
@@ -121,18 +121,17 @@ export const NAV_PATHS: Record<string, string> = {
   Users: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7z M2.5 20a6.5 6.5 0 0113 0 M16 4.5a3.3 3.3 0 010 6.3 M18 14.5a6 6 0 013.5 5.5',
   Approvals: 'M12 3l2.4 1.6 2.9-.2 1 2.7 2.4 1.6-.9 2.8.9 2.8-2.4 1.6-1 2.7-2.9-.2L12 21l-2.4-1.6-2.9.2-1-2.7L3.3 15.3l.9-2.8-.9-2.8 2.4-1.6 1-2.7 2.9.2z M8.5 12.2l2.3 2.3 4.7-4.9',
   Billing: 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3',
-  Jewellery: 'M7 3h10l4 6-9 12L3 9z M3 9h18 M9 3l3 6 3-6 M12 9v12',
-  'Gold & Rates': 'M5 8c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z M5 8v4c0 1.7 3.1 3 7 3s7-1.3 7-3V8 M5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4',
-  Inventory: 'M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10',
+  'Gold Rates': 'M5 8c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z M5 8v4c0 1.7 3.1 3 7 3s7-1.3 7-3V8 M5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4',
+  Stock: 'M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10',
   Purchases: 'M3 4h2.5l2.2 11h10.6l2-8H7 M10 20a1 1 0 100-.01 M17 20a1 1 0 100-.01',
   'Old Gold': 'M20 12a8 8 0 01-14 5.3 M4 12a8 8 0 0114-5.3 M18 3v4h-4 M6 21v-4h4',
   Customers: 'M12 12a4 4 0 100-8 4 4 0 000 8z M4.5 21a7.5 7.5 0 0115 0',
   Services: 'M14.5 6.5a4 4 0 00-5 5L3.5 17.5l3 3 6-6a4 4 0 005-5l-2.5 2.5-2.5-.5-.5-2.5z',
-  Payments: 'M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z M3 7l2-3h12l1 3 M16 14h3',
+  Money: 'M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z M3 7l2-3h12l1 3 M16 14h3',
   Reports: 'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',
-  WhatsApp: 'M21 12a9 9 0 01-13.3 7.9L3 21l1.2-4.5A9 9 0 1121 12z M9 9.5c.3 2.6 2.4 4.7 5 5l1.2-1.4-1.9-1-.9.6a3 3 0 01-1.6-1.6l.6-.9-1-1.9z',
   Settings: 'M4 7h9 M17 7h3 M4 17h3 M11 17h9 M15 7a2 2 0 100-.01 M9 17a2 2 0 100-.01',
-  'Audit Logs': 'M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6z M9 12l2 2 4-4'
+  'Audit Logs': 'M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6z M9 12l2 2 4-4',
+  Backups: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3'
 };
 
 export function NavIcon({name}:{name:string}){

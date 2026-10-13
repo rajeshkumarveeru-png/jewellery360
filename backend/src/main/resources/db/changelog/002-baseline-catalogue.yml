@@ -1,0 +1,186 @@
+databaseChangeLog:
+  # Tables marked with the legacy guard already exist in development databases created before the
+  # pre-production schema consolidation; 090-legacy-dev-upgrade.yml converts those. Remove the guards
+  # together with 090-legacy-dev-upgrade.yml once every development database has been upgraded.
+  - changeSet:
+      id: baseline-purity-master
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: purity_master
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_purity_master_company, references: company(id)}}
+              - column: {name: metal, type: VARCHAR(20), defaultValue: GOLD, constraints: {nullable: false}}
+              - column: {name: name, type: VARCHAR(50), constraints: {nullable: false}}
+              - column: {name: karat, type: VARCHAR(10)}
+              - column: {name: fineness, type: 'DECIMAL(8,4)', constraints: {nullable: false}}
+              - column: {name: description, type: VARCHAR(500)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: purity_master, columnNames: 'company_id,name', constraintName: uk_purity_company_name}
+  - changeSet:
+      id: baseline-gold-rate
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: gold_rate
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_gold_rate_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_gold_rate_branch, references: branch(id)}}
+              - column: {name: purity_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_gold_rate_purity, references: purity_master(id)}}
+              - column: {name: rate_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: rate_per_gram, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: source, type: VARCHAR(100), defaultValue: MANUAL, constraints: {nullable: false}}
+              - column: {name: updated_by_id, type: BIGINT, constraints: {foreignKeyName: fk_gold_rate_updated_by, references: app_user(id)}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+              - column: {name: updated_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: gold_rate, columnNames: 'company_id,branch_id,purity_id,rate_date', constraintName: uk_gold_rate_day}
+        - createIndex: {tableName: gold_rate, indexName: idx_gold_rate_branch_date, columns: [{column: {name: branch_id}}, {column: {name: rate_date}}]}
+  - changeSet:
+      id: baseline-jewellery-category
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: jewellery_category
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_category_company, references: company(id)}}
+              - column: {name: name, type: VARCHAR(120), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: jewellery_category, columnNames: 'company_id,code', constraintName: uk_category_company_code}
+  - changeSet:
+      id: baseline-jewellery-design
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: jewellery_design
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_design_company, references: company(id)}}
+              - column: {name: category_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_design_category, references: jewellery_category(id)}}
+              - column: {name: name, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(60), constraints: {nullable: false}}
+              - column: {name: description, type: VARCHAR(2000)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: jewellery_design, columnNames: 'company_id,code', constraintName: uk_design_company_code}
+  - changeSet:
+      id: baseline-jewellery-product
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: jewellery_product
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_product_company, references: company(id)}}
+              - column: {name: category_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_product_category, references: jewellery_category(id)}}
+              - column: {name: design_id, type: BIGINT, constraints: {foreignKeyName: fk_jewellery_product_design, references: jewellery_design(id)}}
+              - column: {name: name, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: sku, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: hsn_code, type: VARCHAR(10), defaultValue: 7113, constraints: {nullable: false}}
+              - column: {name: description, type: VARCHAR(2000)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: jewellery_product, columnNames: 'company_id,sku', constraintName: uk_product_company_sku}
+  - changeSet:
+      id: baseline-supplier
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: supplier
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_supplier_company, references: company(id)}}
+              - column: {name: name, type: VARCHAR(180), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(25)}
+              - column: {name: email, type: VARCHAR(180)}
+              - column: {name: address, type: VARCHAR(600)}
+              - column: {name: gstin, type: VARCHAR(30)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: supplier, columnNames: 'company_id,name', constraintName: uk_supplier_company_name}
+  - changeSet:
+      id: baseline-karigar
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: karigar
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_karigar_company, references: company(id)}}
+              - column: {name: name, type: VARCHAR(150), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(25)}
+              - column: {name: address, type: VARCHAR(500)}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: karigar, columnNames: 'company_id,name', constraintName: uk_karigar_company_name}
+  - changeSet:
+      id: baseline-jewellery-item
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: jewellery_item
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_item_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_item_branch, references: branch(id)}}
+              - column: {name: product_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_item_product, references: jewellery_product(id)}}
+              - column: {name: purity_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_jewellery_item_purity, references: purity_master(id)}}
+              - column: {name: tag_no, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: barcode, type: VARCHAR(100), constraints: {nullable: false}}
+              - column: {name: huid, type: VARCHAR(20)}
+              - column: {name: certificate_no, type: VARCHAR(80)}
+              - column: {name: gross_weight, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: stone_weight, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: net_weight, type: 'DECIMAL(19,3)', constraints: {nullable: false}}
+              - column: {name: stone_count, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: stone_details, type: VARCHAR(500)}
+              - column: {name: stone_value, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: wastage_percent, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: making_type, type: VARCHAR(20), defaultValue: FIXED, constraints: {nullable: false}}
+              - column: {name: making_value, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: other_charge, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cost_price, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: mrp, type: 'DECIMAL(19,3)', defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: location, type: VARCHAR(120)}
+              - column: {name: status, type: VARCHAR(30), defaultValue: IN_STOCK, constraints: {nullable: false}}
+              - column: {name: source, type: VARCHAR(30), defaultValue: OPENING, constraints: {nullable: false}}
+              - column: {name: notes, type: VARCHAR(1000)}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+              - column: {name: updated_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+              - column: {name: sold_at, type: 'TIMESTAMP WITH TIME ZONE'}
+        - addUniqueConstraint: {tableName: jewellery_item, columnNames: 'company_id,tag_no', constraintName: uk_item_company_tag}
+        - addUniqueConstraint: {tableName: jewellery_item, columnNames: 'company_id,barcode', constraintName: uk_item_company_barcode}
+        - createIndex: {tableName: jewellery_item, indexName: idx_item_company_branch_status, columns: [{column: {name: company_id}}, {column: {name: branch_id}}, {column: {name: status}}]}
+        - createIndex: {tableName: jewellery_item, indexName: idx_item_company_huid, columns: [{column: {name: company_id}}, {column: {name: huid}}]}

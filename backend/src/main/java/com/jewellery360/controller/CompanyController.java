@@ -14,7 +14,7 @@ import java.util.*;
 
 @RestController @RequestMapping("/api/companies") @RequiredArgsConstructor
 public class CompanyController {
-    private final CompanyRepository companies; private final BranchRepository branches; private final PermissionService permissions; private final AuditService audit;
+    private final CompanyRepository companies; private final BranchRepository branches; private final PermissionService permissions; private final AuditService audit; private final com.jewellery360.service.CompanySetupService companySetup;
     @GetMapping public List<Map<String,Object>> list(@AuthenticationPrincipal AuthenticatedUser me){
         if(!"APP_ADMIN".equals(me.getRole())) return companies.findById(me.getCompanyId()).map(c->List.of(view(c))).orElse(List.of());
         return companies.findAll().stream().map(this::view).toList();
@@ -22,7 +22,7 @@ public class CompanyController {
     @PostMapping public Map<String,Object> create(@AuthenticationPrincipal AuthenticatedUser me,@RequestBody Request r){
         permissions.requireAppAdmin(me);
         Company c=new Company();c.setName(r.name().trim());c.setCode(r.code()==null||r.code().isBlank()?"J360-"+UUID.randomUUID().toString().substring(0,8).toUpperCase():r.code().trim());
-        c.setGstin(r.gstin());c.setPhone(r.phone());c.setEmail(r.email());c.setAddress(r.address());c.setActive(true);companies.save(c);
+        c.setGstin(r.gstin());c.setPhone(r.phone());c.setEmail(r.email());c.setAddress(r.address());c.setActive(true);companies.save(c);companySetup.setUp(c);
         audit.log(me,"CREATE","COMPANY",c.getId(),null,view(c));return view(c);
     }
     @PutMapping("/{id}") public Map<String,Object> update(@AuthenticationPrincipal AuthenticatedUser me,@PathVariable Long id,@RequestBody Request r){

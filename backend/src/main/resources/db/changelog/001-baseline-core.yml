@@ -1,0 +1,175 @@
+databaseChangeLog:
+  # Tables marked with the legacy guard already exist in development databases created before the
+  # pre-production schema consolidation; 090-legacy-dev-upgrade.yml converts those. Remove the guards
+  # together with 090-legacy-dev-upgrade.yml once every development database has been upgraded.
+  - changeSet:
+      id: baseline-company
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: company
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: name, type: VARCHAR(150), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(30)}
+              - column: {name: gstin, type: VARCHAR(30)}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: email, type: VARCHAR(150)}
+              - column: {name: address, type: VARCHAR(500)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: company, columnNames: 'name', constraintName: uk_company_name}
+        - addUniqueConstraint: {tableName: company, columnNames: 'code', constraintName: uk_company_code}
+  - changeSet:
+      id: baseline-branch
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: branch
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_branch_company, references: company(id)}}
+              - column: {name: name, type: VARCHAR(120), constraints: {nullable: false}}
+              - column: {name: code, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: email, type: VARCHAR(150)}
+              - column: {name: gstin, type: VARCHAR(30)}
+              - column: {name: website, type: VARCHAR(180)}
+              - column: {name: address, type: VARCHAR(500)}
+              - column: {name: invoice_title, type: VARCHAR(180)}
+              - column: {name: invoice_subtitle, type: VARCHAR(250)}
+              - column: {name: invoice_terms, type: VARCHAR(1000)}
+              - column: {name: invoice_footer, type: VARCHAR(1000)}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: branch, columnNames: 'company_id,code', constraintName: uk_branch_company_code}
+  - changeSet:
+      id: baseline-app-user
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: app_user
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: username, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(200), constraints: {nullable: false}}
+              - column: {name: phone, type: VARCHAR(20)}
+              - column: {name: password_hash, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: role, type: VARCHAR(30), constraints: {nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {foreignKeyName: fk_app_user_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {foreignKeyName: fk_app_user_branch, references: branch(id)}}
+              - column: {name: permissions, type: VARCHAR(800)}
+              - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: deleted, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: app_user, columnNames: 'phone', constraintName: uk_app_user_phone}
+        - sql: {sql: "CREATE UNIQUE INDEX uk_app_user_username_ci ON app_user (LOWER(TRIM(username)))"}
+        - sql: {sql: "CREATE UNIQUE INDEX uk_app_user_email_ci ON app_user (LOWER(TRIM(email)))"}
+  - changeSet:
+      id: baseline-otp-challenge
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: otp_challenge
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: user_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_otp_challenge_user, references: app_user(id)}}
+              - column: {name: otp_hash, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: expires_at, type: 'TIMESTAMP WITH TIME ZONE', constraints: {nullable: false}}
+              - column: {name: attempts, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: consumed, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+  - changeSet:
+      id: baseline-user-request
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: user_request
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: request_type, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(20), constraints: {nullable: false}}
+              - column: {name: target_user_id, type: BIGINT, constraints: {foreignKeyName: fk_user_request_target_user, references: app_user(id)}}
+              - column: {name: requested_by_id, type: BIGINT, constraints: {foreignKeyName: fk_user_request_requested_by, references: app_user(id)}}
+              - column: {name: company_id, type: BIGINT, constraints: {foreignKeyName: fk_user_request_company, references: company(id)}}
+              - column: {name: message, type: VARCHAR(500)}
+              - column: {name: pending_password_hash, type: VARCHAR(255)}
+              - column: {name: requested_name, type: VARCHAR(80)}
+              - column: {name: decision_note, type: VARCHAR(300)}
+              - column: {name: created_user_id, type: BIGINT}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+              - column: {name: processed_at, type: 'TIMESTAMP WITH TIME ZONE'}
+  - changeSet:
+      id: baseline-property
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: property
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {foreignKeyName: fk_property_company, references: company(id)}}
+              - column: {name: user_id, type: BIGINT, constraints: {foreignKeyName: fk_property_user, references: app_user(id)}}
+              - column: {name: property_key, type: VARCHAR(120), constraints: {nullable: false}}
+              - column: {name: property_value, type: VARCHAR(4000)}
+              - column: {name: property_type, type: VARCHAR(20), defaultValue: STRING, constraints: {nullable: false}}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+        - sql: {sql: "CREATE UNIQUE INDEX uk_property_company_key ON property (company_id, property_key) WHERE user_id IS NULL"}
+        - sql: {sql: "CREATE UNIQUE INDEX uk_property_company_user_key ON property (company_id, user_id, property_key) WHERE user_id IS NOT NULL"}
+  - changeSet:
+      id: baseline-audit-history
+      author: jewellery360
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck: {expectedResult: '1', sql: "SELECT COUNT(*) FROM databasechangelog WHERE id = '001-core'"}
+      changes:
+        - createTable:
+            tableName: audit_history
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: created_at, type: 'TIMESTAMP WITH TIME ZONE', defaultValueComputed: NOW(), constraints: {nullable: false}}
+              - column: {name: user_id, type: BIGINT, constraints: {foreignKeyName: fk_audit_history_user, references: app_user(id)}}
+              - column: {name: company_id, type: BIGINT, constraints: {foreignKeyName: fk_audit_history_company, references: company(id)}}
+              - column: {name: branch_id, type: BIGINT, constraints: {foreignKeyName: fk_audit_history_branch, references: branch(id)}}
+              - column: {name: action, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_type, type: VARCHAR(80), constraints: {nullable: false}}
+              - column: {name: entity_id, type: BIGINT}
+              - column: {name: before_value, type: TEXT}
+              - column: {name: after_value, type: TEXT}
+        - createIndex: {tableName: audit_history, indexName: idx_audit_company_created, columns: [{column: {name: company_id}}, {column: {name: created_at}}]}
+        - createIndex: {tableName: audit_history, indexName: idx_audit_entity, columns: [{column: {name: entity_type}}, {column: {name: entity_id}}]}
+  - changeSet:
+      id: baseline-document-sequence
+      author: jewellery360
+      changes:
+        - createTable:
+            tableName: document_sequence
+            columns:
+              - column: {name: id, type: BIGINT, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: company_id, type: BIGINT, constraints: {nullable: false, foreignKeyName: fk_document_sequence_company, references: company(id)}}
+              - column: {name: doc_key, type: VARCHAR(40), constraints: {nullable: false}}
+              - column: {name: next_value, type: BIGINT, defaultValueNumeric: 1, constraints: {nullable: false}}
+        - addUniqueConstraint: {tableName: document_sequence, columnNames: 'company_id,doc_key', constraintName: uk_document_sequence}

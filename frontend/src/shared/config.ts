@@ -1,90 +1,66 @@
-import { ThemeKey, Role } from './types';
-import { permissionsFor } from './permissions';
+import {permissionsFor} from './permissions';
 
-export const roleMenus: Record<string,string[]> = {
-  APP_ADMIN:['Overview','Companies','Branches','Users','Approvals','Billing','Jewellery','Gold & Rates','Inventory','Purchases','Old Gold','Customers','Services','Payments','Reports','WhatsApp','Settings','Audit Logs'],
-  COMPANY_ADMIN:['Overview','Branches','Users','Billing','Jewellery','Gold & Rates','Inventory','Purchases','Old Gold','Customers','Services','Payments','Reports','WhatsApp','Settings','Audit Logs'],
-  MANAGER:['Overview','Billing','Jewellery','Gold & Rates','Inventory','Purchases','Old Gold','Customers','Services','Payments','Reports','WhatsApp','Audit Logs'],
-  CASHIER:['Overview','Billing','Customers','Payments','Reports'],
-  SALESMAN:['Overview','Billing','Customers','Services','Payments'],
-  INVENTORY_MANAGER:['Overview','Jewellery','Gold & Rates','Inventory','Purchases','Old Gold','Reports'],
-  ACCOUNTANT:['Overview','Customers','Payments','Reports'],
-  VIEWER:['Overview','Customers','Inventory','Reports']
+/* ============================================================================================
+   Navigation. Business pages use the server's page keys (PermissionService.PAGES); the company can rename, regroup, hide
+   and restrict them per role on Settings → Menu (stored as the company MENU_LAYOUT). Access itself is always decided by
+   the user's permissions - on the server for every request, and here only to hide what cannot be opened.
+   ============================================================================================ */
+
+/** Page key → tab name used inside the app. */
+export const PAGE_TABS: Record<string, string> = {
+  OVERVIEW: 'Overview', BILLING: 'Billing', CUSTOMERS: 'Customers', STOCK: 'Stock', GOLD_RATES: 'Gold Rates', OLD_GOLD: 'Old Gold',
+  PURCHASES: 'Purchases', SERVICES: 'Services', MONEY: 'Money', REPORTS: 'Reports', SETTINGS: 'Settings', AUDIT_LOGS: 'Audit Logs'
 };
+/** Default menu names where the page name alone hides what is inside. */
+export const DEFAULT_LABELS: Record<string, string> = {MONEY: 'Money & expenses'};
 
-export const navigationCatalog = [
-  'Overview','Companies','Branches','Users','Approvals','Billing','Jewellery','Gold & Rates','Inventory',
-  'Purchases','Old Gold','Customers','Services','Payments','Reports','WhatsApp','Settings','Audit Logs'
+export const tabKey = (tab: string) => Object.keys(PAGE_TABS).find(k => PAGE_TABS[k] === tab) || tab.toUpperCase().replace(/ /g, '_');
+
+/** Default menu (same as the server's default layout). */
+export const DEFAULT_GROUPS: [string, string][] = [
+  ['OVERVIEW', 'Daily'], ['BILLING', 'Daily'], ['CUSTOMERS', 'Daily'], ['GOLD_RATES', 'Daily'],
+  ['STOCK', 'Stock'], ['OLD_GOLD', 'Stock'], ['PURCHASES', 'Stock'],
+  ['SERVICES', 'Work'],
+  ['MONEY', 'Accounts'], ['REPORTS', 'Accounts'],
+  ['SETTINGS', 'Admin'], ['AUDIT_LOGS', 'Admin']
 ];
 
-export function defaultPreferredMenu(role:string): string[] {
-  return [...(roleMenus[role] || ['Overview'])];
-}
-/** Company / platform admins follow their role's menu. Every other user gets exactly the pages the company admin granted
- *  (the server uses the same list, so a page they cannot open is never shown). */
-const adminPages = ['Companies','Branches','Users','Approvals'];
-export function allowedMenu(user:{role:string;permissions?:string[]|null}): string[] {
+export type MenuLayoutItem = {key: string; label?: string; group?: string; hidden?: boolean; roles?: string[]};
+export type MenuEntry = {tab: string; label: string; group: string};
+
+/** Administration pages that are not company business pages. */
+const adminPages = (role: string): MenuEntry[] => {
+  const out: MenuEntry[] = [];
+  if (role === 'APP_ADMIN') out.push({tab: 'Companies', label: 'Companies', group: 'Admin'});
+  if (role === 'APP_ADMIN' || role === 'COMPANY_ADMIN') out.push({tab: 'Branches', label: 'Branches', group: 'Admin'}, {tab: 'Users', label: 'Users', group: 'Admin'});
+  if (role === 'APP_ADMIN') out.push({tab: 'Approvals', label: 'Approvals', group: 'Admin'}, {tab: 'Backups', label: 'Backups', group: 'Admin'});
+  return out;
+};
+
+/** The menu a user sees: the company layout (or the default), minus hidden pages, pages restricted to other roles and
+ *  pages the user may not open, plus the administration pages of their role. */
+export function buildMenu(user: {role: string; permissions?: string[] | null}, layout?: MenuLayoutItem[] | null): MenuEntry[] {
   const perms = permissionsFor(user);
-  if (perms.isAdmin) return defaultPreferredMenu(user.role);
-  return navigationCatalog.filter(x => !adminPages.includes(x) && perms.canOpen(x));
+  const items: MenuLayoutItem[] = layout && layout.length ? layout : DEFAULT_GROUPS.map(([key, group]) => ({key, group}));
+  const known = items.filter(i => PAGE_TABS[i.key]);
+  // pages added to the app after the layout was saved still appear (at the end of their default group)
+  for (const [key, group] of DEFAULT_GROUPS) if (!known.some(i => i.key === key)) known.push({key, group});
+  const out: MenuEntry[] = [];
+  for (const i of known) {
+    const tab = PAGE_TABS[i.key];
+    if (i.hidden && i.key !== 'SETTINGS') continue;
+    if (!perms.isAdmin && i.roles && i.roles.length && !i.roles.includes(user.role)) continue;
+    if (!perms.canOpen(tab)) continue;
+    out.push({tab, label: (i.label || '').trim() || DEFAULT_LABELS[i.key] || tab, group: (i.group || '').trim() || 'Pages'});
+  }
+  const admin = adminPages(user.role);
+  if (user.role === 'APP_ADMIN') return [...admin, ...out];
+  return [...out, ...admin];
 }
+
 export const themeMap: Record<string,{bg:string;ink:string}> = {
   LUXURY_GOLD:{bg:'#f5efe4',ink:'#211c18'},
   CLASSIC_IVORY:{bg:'#fbf8f1',ink:'#2b2722'},
   PREMIUM_DARK:{bg:'#151719',ink:'#f5f0e7'},
   MODERN_LIGHT:{bg:'#eef2f5',ink:'#20252b'}
 };
-
-export const moduleConfig:Record<string,{subtypes:string[];fields:{key:string;label:string;type?:string;required?:boolean}[]}> = {
- Jewellery:{subtypes:['ITEM','DESIGN','CATEGORY','TAG','BARCODE'],fields:[
-  {key:'tag',label:'Tag / SKU',required:true},{key:'barcode',label:'Barcode'},{key:'itemName',label:'Item name',required:true},
-  {key:'design',label:'Design'},{key:'category',label:'Category'},{key:'purity',label:'Purity'},
-  {key:'grossWeight',label:'Gross weight (g)',type:'number'},{key:'stoneWeight',label:'Stone weight (g)',type:'number'},
-  {key:'netWeight',label:'Net weight (g)',type:'number'},{key:'huid',label:'HUID'},{key:'wastage',label:'Wastage %',type:'number'},
-  {key:'makingCharge',label:'Making charge',type:'number'}
- ]},
- 'Gold & Rates':{subtypes:['GOLD_RATE','PURITY','RATE_HISTORY'],fields:[
-  {key:'rateDate',label:'Effective date',type:'date',required:true},{key:'effectiveTime',label:'Effective time',type:'time'},
-  {key:'24K',label:'24K rate / g',type:'number'},{key:'22K',label:'22K rate / g',type:'number'},
-  {key:'18K',label:'18K rate / g',type:'number'},{key:'14K',label:'14K rate / g',type:'number'},
-  {key:'silver',label:'Silver rate / g',type:'number'},{key:'purityPercent',label:'Purity %',type:'number'}
- ]},
- Inventory:{subtypes:['STOCK','ADJUSTMENT','TRANSFER','STOCK_AUDIT'],fields:[
-  {key:'tag',label:'Tag / SKU',required:true},{key:'item',label:'Item',required:true},{key:'quantity',label:'Quantity',type:'number',required:true},
-  {key:'weight',label:'Weight (g)',type:'number'},{key:'location',label:'Location'},{key:'reason',label:'Reason'}
- ]},
- Purchases:{subtypes:['SUPPLIER','PURCHASE','PURCHASE_RETURN'],fields:[
-  {key:'purchaseNo',label:'Purchase number',required:true},{key:'supplier',label:'Supplier',required:true},
-  {key:'invoiceNo',label:'Supplier invoice'},{key:'purity',label:'Purity'},{key:'grossWeight',label:'Gross weight (g)',type:'number'},
-  {key:'netWeight',label:'Net weight (g)',type:'number'},{key:'stoneWeight',label:'Stone weight (g)',type:'number'},
-  {key:'purchaseRate',label:'Purchase rate',type:'number'},{key:'making',label:'Making',type:'number'},{key:'amount',label:'Amount',type:'number'}
- ]},
- 'Old Gold':{subtypes:['PURCHASE','EXCHANGE','HISTORY'],fields:[
-  {key:'receiptNo',label:'Receipt number',required:true},{key:'customer',label:'Customer',required:true},
-  {key:'grossWeight',label:'Gross weight (g)',type:'number'},{key:'stoneWeight',label:'Stone weight (g)',type:'number'},
-  {key:'netWeight',label:'Net weight (g)',type:'number'},{key:'purity',label:'Purity'},
-  {key:'rate',label:'Applicable rate',type:'number'},{key:'deduction',label:'Deduction',type:'number'},{key:'amount',label:'Exchange value',type:'number'}
- ]},
- Customers:{subtypes:['CUSTOMER'],fields:[
-  {key:'customerName',label:'Customer name',required:true},{key:'phone',label:'Phone',required:true},{key:'whatsapp',label:'WhatsApp'},
-  {key:'email',label:'Email',type:'email'},{key:'address',label:'Address'},{key:'gstin',label:'GSTIN'},{key:'pan',label:'PAN'},
-  {key:'dateOfBirth',label:'Date of birth',type:'date'},{key:'anniversary',label:'Anniversary',type:'date'}
- ]},
- Services:{subtypes:['REPAIR','CUSTOM_ORDER'],fields:[
-  {key:'serviceNo',label:'Service / order no',required:true},{key:'customer',label:'Customer',required:true},
-  {key:'item',label:'Jewellery item'},{key:'description',label:'Description'},{key:'receivedDate',label:'Received date',type:'date'},
-  {key:'expectedDate',label:'Expected date',type:'date'},{key:'charges',label:'Charges',type:'number'},{key:'assignedTo',label:'Assigned staff'}
- ]},
- Payments:{subtypes:['RECEIPT','ADVANCE','DUE'],fields:[
-  {key:'receiptNo',label:'Receipt number',required:true},{key:'customer',label:'Customer',required:true},
-  {key:'invoiceNo',label:'Invoice / order'},{key:'amount',label:'Amount',type:'number',required:true},{key:'mode',label:'Payment mode'}
- ]},
- WhatsApp:{subtypes:['MESSAGE','INVOICE','RECEIPT','REMINDER','ORDER_READY','REPAIR_READY'],fields:[
-  {key:'recipient',label:'Recipient',required:true},{key:'template',label:'Template'},{key:'message',label:'Message',required:true}
- ]},
- Settings:{subtypes:['BUSINESS','INVOICE','INTEGRATION'],fields:[
-  {key:'key',label:'Setting key',required:true},{key:'value',label:'Setting value',required:true},{key:'description',label:'Description'}
- ]}
-};
-
-

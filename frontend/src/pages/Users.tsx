@@ -244,7 +244,7 @@ function MemberDrawer({me, state, branchList, onClose, onSaved}: {me: User; stat
           <FieldHint s={shown('phone')} /></label>
         <div className="tmRow2">
           <label className="afField"><span className="afLabel">Role</span>
-            <select className="tmSelect" value={f.role} onChange={e => pickRole(e.target.value as Role)}>{STAFF_ROLES.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
+            <select className="tmSelect" value={f.role} onChange={e => pickRole(e.target.value as Role)}>{[...(me.role === 'APP_ADMIN' && editing ? ['COMPANY_ADMIN'] : []), ...STAFF_ROLES].map(r => <option key={r} value={r}>{r === 'COMPANY_ADMIN' ? 'Company owner (full access)' : ROLE_LABEL[r]}</option>)}</select></label>
           {editing && branchList.length > 0 && (
             <label className="afField"><span className="afLabel">Branch</span>
               <select className="tmSelect" value={f.branchId} onChange={e => setF({...f, branchId: e.target.value})}>{branchList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
@@ -432,15 +432,19 @@ export default function UsersModule({user, onNotice, focusCreate = 0}: {user: Us
 
   const tone = (u: User) => ({['--h' as string]: hue(u.username || 'x')} as CSSProperties);
   const Actions = ({u}: {u: User}) => {
-    if (!can || u.role === 'APP_ADMIN' || u.role === 'COMPANY_ADMIN') return <span className="tmMuted">Administrator</span>;
+    if (u.role === 'APP_ADMIN') return <span className="tmMuted">Platform administrator</span>;
+    // company owners are managed by the platform administrator only (the server enforces the same rule)
+    const owner = u.role === 'COMPANY_ADMIN';
+    if (!can || (owner && !isAppAdmin)) return <span className="tmMuted">{owner ? 'Company owner' : '—'}</span>;
+    const self = u.id === user.id;
     const link = waLink(u.phone, `Hello ${u.username}!`);
     return (
       <div className="tmActions" onClick={e => e.stopPropagation()}>
-        {u.enabled
+        {self ? null : u.enabled
           ? <button type="button" className="tmBtn danger" disabled={busy === u.id} onClick={() => void setActive(u, false)}><Ico name="user-x" size={14} /> Deactivate</button>
           : <button type="button" className="tmBtn solid" disabled={busy === u.id} onClick={() => void setActive(u, true)}><Ico name="user-check" size={14} /> Reactivate</button>}
         <button type="button" className="tmBtn ghost icon" aria-label={`Edit ${u.username}`} title="Edit details" onClick={() => setDrawer({mode: 'edit', member: u})}><Ico name="edit" size={14} /></button>
-        <button type="button" className="tmBtn ghost icon" aria-label={`Manage access for ${u.username}`} title="Manage access (pages and powers)" onClick={() => setAccessFor(u)}><Ico name="shield" size={14} /></button>
+        {!owner && <button type="button" className="tmBtn ghost icon" aria-label={`Manage access for ${u.username}`} title="Manage access (pages and powers)" onClick={() => setAccessFor(u)}><Ico name="shield" size={14} /></button>}
         <button type="button" className="tmBtn ghost icon" aria-label={`Set a new password for ${u.username}`} title="Set a new password" onClick={() => setPwFor(u)}><Ico name="key" size={14} /></button>
         {link ? <a className="tmBtn wa icon" href={link} target="_blank" rel="noreferrer" aria-label={`WhatsApp ${u.username}`} title="Message on WhatsApp"><Ico name="whatsapp" size={15} /></a> : <span className="tmBtn wa icon off" title="No phone number saved"><Ico name="whatsapp" size={15} /></span>}
       </div>

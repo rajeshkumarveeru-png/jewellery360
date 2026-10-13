@@ -1,10 +1,8 @@
 package com.jewellery360.service;
 
 import com.jewellery360.domain.Company;
-import com.jewellery360.domain.JewelleryProduct;
-import com.jewellery360.domain.JewelleryTag;
+import com.jewellery360.repository.JewelleryItemRepository;
 import com.jewellery360.repository.JewelleryProductRepository;
-import com.jewellery360.repository.JewelleryTagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,39 +15,25 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Tenant-isolated sequence generator for product SKUs and tag numbers.
- *
- * Every lookup is scoped by company id, so two companies can both own "01", "02", ... without ever clashing, and
- * one company's sequence is never influenced by another's. The company can set an alphanumeric prefix in Settings
- * (property SKU_PREFIX); with no prefix the numbers start at 01.
- *
- * The next value is derived from the highest number already used for that company and prefix (plus a uniqueness guard),
- * so deleting rows never causes a number to be handed out twice. The database unique constraints remain the final
- * safeguard against two simultaneous requests picking the same value.
+ * Per-company product SKUs and tag numbers: 01, 02 ... or PREFIX01 when the company sets an SKU prefix in Settings.
+ * The next value follows the highest number already used, so deleting never re-issues a number; the unique constraints
+ * stay the final guard.
  */
 @Service
 @RequiredArgsConstructor
 public class SkuService {
     private final JewelleryProductRepository products;
-    private final JewelleryTagRepository tags;
+    private final JewelleryItemRepository items;
     private final CompanyPropertyService companyProperties;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public String nextProductSku(Company company) {
-        Set<String> used = new HashSet<>();
-        for (JewelleryProduct p : products.findByCompanyId(company.getId())) {
-            if (p.getSku() != null) used.add(p.getSku().trim().toUpperCase(Locale.ROOT));
-        }
-        return next(prefix(company), used);
+        return next("P" + prefix(company), products.skus(company.getId()));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public String nextTagNo(Company company) {
-        Set<String> used = new HashSet<>();
-        for (JewelleryTag t : tags.findByCompanyId(company.getId())) {
-            if (t.getTagNo() != null) used.add(t.getTagNo().trim().toUpperCase(Locale.ROOT));
-        }
-        return next(prefix(company), used);
+        return next(prefix(company), items.tagNumbers(company.getId()));
     }
 
     private String prefix(Company company) {
@@ -57,25 +41,18 @@ public class SkuService {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
 
-    private static String next(String prefix, Collection<String> used) {
+    static String next(String prefix, Collection<String> usedRaw) {
+        Set<String> used = new HashSet<>();
+        for (String u : usedRaw) if (u != null) used.add(u.trim().toUpperCase(Locale.ROOT));
         Pattern pattern = Pattern.compile("^" + Pattern.quote(prefix) + "(\\d+)$");
         long max = 0;
         for (String value : used) {
             Matcher m = pattern.matcher(value);
-            if (m.matches()) {
-                try {
-                    max = Math.max(max, Long.parseLong(m.group(1)));
-                } catch (NumberFormatException ignored) {
-                    // an oversized numeric suffix is simply not part of the sequence
-                }
-            }
+            if (m.matches() && m.group(1).length() < 18) max = Math.max(max, Long.parseLong(m.group(1)));
         }
-        long candidateNo = max + 1;
-        String candidate = format(prefix, candidateNo);
-        while (used.contains(candidate)) {
-            candidateNo++;
-            candidate = format(prefix, candidateNo);
-        }
+        long n = max + 1;
+        String candidate = format(prefix, n);
+        while (used.contains(candidate)) candidate = format(prefix, ++n);
         return candidate;
     }
 

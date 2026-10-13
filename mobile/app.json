@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Jewellery360",
+    "slug": "jewellery360",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "jewellery360",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      ["expo-camera", {"cameraPermission": "Jewellery360 uses the camera to scan tag barcodes."}]
+    ],
+    "experiments": {"typedRoutes": false},
+    "android": {"package": "com.jewellery360.mobile"},
+    "ios": {"bundleIdentifier": "com.jewellery360.mobile", "supportsTablet": true}
+  }
+}

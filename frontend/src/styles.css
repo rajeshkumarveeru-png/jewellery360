@@ -911,3 +911,151 @@ button:disabled{cursor:not-allowed}
 @media (prefers-reduced-motion:reduce){
   .ultraGlassGrid::before,.ultraGlassGrid::after,.app aside .nav::after{animation:none!important}
 }
+
+/* =========================================================
+   Shared jewellery page kit (shared/kit.tsx): states, tabs, fields, pickers, totals.
+   Uses the theme tokens so every theme pack styles it.
+   ========================================================= */
+.kState{display:grid;justify-items:center;gap:8px;padding:36px 16px;text-align:center;color:var(--j360-muted,#7a7064);font-size:13px}
+.kState b{color:var(--j360-text,#2b241b);font-size:14px}
+.kState.bad{color:#9d413a}
+.kSpin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(var(--j360-accent-rgb,181,138,58),.25);border-top-color:var(--j360-accent,#b58a3a);animation:kspin .8s linear infinite}
+@keyframes kspin{to{transform:rotate(360deg)}}
+.kTabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.kTabs button{border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.3);background:transparent;color:inherit;padding:9px 14px;border-radius:10px;font-weight:750;font-size:12px;min-height:40px}
+.kTabs button.on{background:var(--j360-accent,#b58a3a);border-color:transparent;color:#fff}
+.kCount{margin-left:6px;padding:1px 7px;border-radius:99px;background:rgba(0,0,0,.12);font-size:10px}
+.kField{display:grid;gap:5px;font-size:11px;font-weight:700;color:var(--j360-muted,#6d6457);min-width:0}
+.kField.wide{grid-column:1/-1}
+.kField small{font-weight:500}
+.kField input,.kField select,.kField textarea,.kRow input,.kRow select,.kPick input{width:100%;padding:10px 12px;border:1px solid #d9d2c5;border-radius:10px;background:var(--pro-input-bg,#fff);color:var(--pro-input-ink,#221e19);font-size:13px;min-height:42px}
+.kField textarea{min-height:70px;resize:vertical}
+.kGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kRow>input,.kRow>select{flex:1 1 140px;width:auto}
+.kActions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.kActions .grow{flex:1}
+.kPick{position:relative;display:flex;gap:8px}
+.kPick input{flex:1}
+.kHits{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;background:var(--pro-input-bg,#fff);border:1px solid #d9d2c5;border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.18);max-height:280px;overflow:auto}
+.kHits button{display:grid;width:100%;text-align:left;border:0;background:transparent;color:var(--pro-input-ink,#221e19);padding:9px 10px;border-radius:8px}
+.kHits button:hover,.kHits button:focus{background:rgba(var(--j360-accent-rgb,181,138,58),.12)}
+.kHits small{color:#8b8377}
+.kPicked{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.35);border-radius:12px}
+.kPicked>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kPicked small{color:#8b8377}
+.kPays{display:grid;gap:8px}
+.kPayFoot{justify-content:space-between}
+.kMuted{color:var(--j360-muted,#7a7064);font-size:12px}
+.kBad{color:#9d413a;font-size:12px;font-weight:700}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px;margin:0 0 14px}
+.kv div{min-width:0}.kv dt{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--j360-muted,#8b8377)}.kv dd{margin:3px 0 0;font-weight:700;overflow-wrap:anywhere}
+.kTotals{display:grid;gap:6px;font-size:13px}
+.kTotals>div{display:flex;justify-content:space-between;gap:10px}
+.kTotals .big{font-size:20px;font-weight:850;border-top:1px solid rgba(var(--j360-accent-rgb,181,138,58),.3);padding-top:8px;margin-top:4px}
+.kNote{padding:10px 12px;border-radius:10px;background:rgba(var(--j360-accent-rgb,181,138,58),.1);font-size:12px;margin:8px 0}
+.kNote.warn{background:#fff3d6;color:#7a5410}.kNote.bad{background:#fbe5e2;color:#8a2f28}
+.pill.bad{background:#fbe5e2;color:#8a2f28;border-color:#f1c9c3}.pill.warn{background:#fff3d6;color:#7a5410;border-color:#f0dca6}
+.kStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kStat{padding:14px;border-radius:14px;border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.22);background:rgba(var(--j360-accent-rgb,181,138,58),.05)}
+.kStat span{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--j360-muted,#8b8377)}
+.kStat strong{display:block;margin-top:6px;font-size:19px}
+.kStat button{margin-top:6px}
+.kLines td input{width:84px;padding:6px 8px;border:1px solid #d9d2c5;border-radius:8px;min-height:34px}
+.kSplit{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:16px;align-items:start}
+.kSticky{position:sticky;top:12px}
+.formDrawer.kWide{width:min(760px,100vw)}
+.kClick{cursor:pointer}
+.kClick:hover td{background:rgba(var(--j360-accent-rgb,181,138,58),.06)}
+.kSection{margin:16px 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--j360-muted,#8b8377)}
+.kSplit.kSplitNav{grid-template-columns:minmax(220px,280px) minmax(0,1fr)}
+@media(max-width:1000px){.kSplit,.kSplit.kSplitNav{grid-template-columns:1fr}.kSticky{position:static}}
+@media(max-width:560px){.kActions>button{flex:1 1 auto}.kTabs{overflow-x:auto;flex-wrap:nowrap}.kTabs button{flex:0 0 auto}}
+.jSource.jWarn{color:#b5532a!important;font-weight:750;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
+/* checkboxes and radios keep their natural size (some theme packs stretch every input) */
+.workspace :is(input[type=checkbox],input[type=radio]),.formDrawer :is(input[type=checkbox],input[type=radio]){width:18px!important;height:18px!important;min-width:18px;min-height:0!important;padding:0!important;margin:0 6px 0 0;flex:0 0 auto;accent-color:var(--j360-accent,#b58a3a);box-shadow:none!important;vertical-align:middle}
+.kRow>label,label.kMuted{display:inline-flex;align-items:center;gap:4px}
+
+/* =========================================================
+   Stat tiles, tabs and tables on every page - same family as the dashboard tiles: soft gradients that cycle through
+   a jewellery palette, a decorative ring, a gentle lift on hover. Text keeps AA contrast on every tone.
+   ========================================================= */
+.kStats{gap:12px;margin-bottom:16px}
+.workspace .kStat,.formDrawer .kStat{position:relative;overflow:hidden;border:0;border-radius:18px;padding:16px 16px 14px;min-height:96px;color:#fff;
+  background:linear-gradient(140deg,#0f766e,#0b4f4a);box-shadow:0 1px 2px rgba(40,30,10,.06),0 12px 24px -16px rgba(40,30,10,.45);
+  transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
+.workspace .kStat::after,.formDrawer .kStat::after{content:"";position:absolute;right:-26px;bottom:-34px;width:110px;height:110px;border-radius:50%;border:16px solid rgba(255,255,255,.1);pointer-events:none}
+.workspace .kStat:hover,.formDrawer .kStat:hover{transform:translateY(-3px);box-shadow:0 4px 10px rgba(40,30,10,.08),0 22px 36px -18px rgba(40,30,10,.5)}
+.kStats>.kStat:nth-child(6n+1){background:linear-gradient(140deg,#f3d58f,#c8973d);color:#2b1e08}
+.kStats>.kStat:nth-child(6n+2){background:linear-gradient(140deg,#0f766e,#0b4f4a)}
+.kStats>.kStat:nth-child(6n+3){background:linear-gradient(140deg,#4f46e5,#312e81)}
+.kStats>.kStat:nth-child(6n+4){background:linear-gradient(140deg,#db2777,#9d174d)}
+.kStats>.kStat:nth-child(6n+5){background:linear-gradient(140deg,#ea8a1d,#b45309)}
+.kStats>.kStat:nth-child(6n){background:linear-gradient(140deg,#475569,#1e293b)}
+.workspace .kStat span,.formDrawer .kStat span{color:inherit;opacity:.82;font-weight:800;letter-spacing:.12em;font-size:10.5px}
+.workspace .kStat strong,.formDrawer .kStat strong{font-size:22px;letter-spacing:-.4px;font-variant-numeric:tabular-nums;color:inherit}
+.workspace .kStat small,.formDrawer .kStat small{display:block;margin-top:2px;opacity:.8;font-size:11.5px}
+.workspace .kStat .kBad,.formDrawer .kStat .kBad{color:inherit}
+.workspace .kStat button.ghost,.formDrawer .kStat button.ghost{position:relative;z-index:1;color:inherit!important;padding:2px 0;font-weight:800;font-size:12px;text-decoration:underline;text-underline-offset:3px;background:transparent!important}
+
+/* tabs: segmented pill bar */
+.kTabs{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:14px;background:rgba(var(--j360-accent-rgb,181,138,58),.08);border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.18)}
+.kTabs button.ghost{border:0!important;border-radius:10px;transition:background .2s,color .2s,box-shadow .2s}
+.kTabs button.ghost:hover:not(.on){background:rgba(255,255,255,.7)}
+.kTabs button.ghost.on{background:linear-gradient(140deg,var(--j360-accent,#b58a3a),#8a6420)!important;color:#fff!important;box-shadow:0 6px 14px -8px rgba(var(--j360-accent-rgb,181,138,58),.9)}
+
+/* tables: tinted header, row hover with an accent edge */
+.workspace .tableWrap thead th{background:rgba(var(--j360-accent-rgb,181,138,58),.08)}
+.workspace .tableWrap thead th:first-child{border-top-left-radius:10px}.workspace .tableWrap thead th:last-child{border-top-right-radius:10px}
+.workspace tr.kClick td{transition:background .15s}
+.workspace tr.kClick:hover td{background:rgba(var(--j360-accent-rgb,181,138,58),.07)}
+.workspace tr.kClick:hover td:first-child{box-shadow:inset 3px 0 0 var(--j360-accent,#b58a3a)}
+
+/* side panels: accent header band */
+.formDrawer .formDrawerHead{background:linear-gradient(120deg,rgba(var(--j360-accent-rgb,181,138,58),.16),rgba(var(--j360-accent-rgb,181,138,58),.03))}
+
+.theme-premium_dark .kTabs button.ghost:hover:not(.on){background:rgba(255,255,255,.06)}
+@media (prefers-reduced-motion:reduce){.workspace .kStat,.formDrawer .kStat,.kTabs button.ghost{transition:none}.workspace .kStat:hover{transform:none}}
+
+/* =========================================================
+   Sidebar: every menu button spans the full width so the column has one clean edge; group labels as small caps.
+   ========================================================= */
+.app aside .nav{gap:2px}
+.app aside .navGroup{display:flex;flex-direction:column;gap:3px;padding:6px 0 4px}
+.app aside .navGroup+.navGroup{border-top:1px solid rgba(255,255,255,.06)}
+.app aside .navGroupLabel{display:block;padding:4px 12px 2px;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:rgba(232,199,118,.75)}
+.app aside .nav button,.app aside .signout{width:100%!important;max-width:none!important;box-sizing:border-box;justify-content:flex-start}
+.app.nav-collapsed aside .navGroupLabel{font-size:0;padding:2px 0;height:6px}
+.app.nav-collapsed aside .nav button,.app.nav-collapsed aside .signout{justify-content:center!important}
+
+/* =========================================================
+   Side panels (details and forms): facts as small tiles, section titles with an accent bar, card tables,
+   a totals card and consistent action buttons - one style for every panel in the app.
+   ========================================================= */
+.formDrawer .formDrawerHead h2{font-size:21px}
+.formDrawer .formDrawerHead small{color:var(--j360-accent,#b58a3a);font-weight:800;letter-spacing:.16em}
+.formDrawer .formDrawerBody{background:linear-gradient(180deg,rgba(var(--j360-accent-rgb,181,138,58),.04),transparent 240px)}
+.formDrawer .kv{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.formDrawer .kv div{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.18);box-shadow:0 1px 2px rgba(40,30,10,.04);transition:border-color .2s,transform .2s}
+.formDrawer .kv div:hover{border-color:rgba(var(--j360-accent-rgb,181,138,58),.45);transform:translateY(-1px)}
+.formDrawer .kv dt{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:var(--j360-accent,#8b6a2b)}
+.formDrawer .kv dd{font-size:15px;margin-top:4px;font-variant-numeric:tabular-nums}
+.formDrawer .kSection{display:flex;align-items:center;gap:8px;margin:18px 0 10px;font-weight:800;color:#3b342b}
+.formDrawer .kSection::before{content:"";width:4px;height:16px;border-radius:4px;background:linear-gradient(180deg,var(--j360-accent,#b58a3a),#8a6420)}
+.formDrawer .tableWrap{border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.18);border-radius:14px;background:#fff;overflow:auto}
+.formDrawer .tableWrap thead th{background:rgba(var(--j360-accent-rgb,181,138,58),.1);position:sticky;top:0}
+.formDrawer .tableWrap tbody tr:nth-child(even) td{background:rgba(var(--j360-accent-rgb,181,138,58),.03)}
+.formDrawer tr.kClick:hover td{background:rgba(var(--j360-accent-rgb,181,138,58),.1)}
+.formDrawer .kTotals{padding:12px 14px;border-radius:14px;background:linear-gradient(160deg,#1d2430,#141820);color:#eef1f6}
+.formDrawer .kTotals .big{border-top-color:rgba(232,199,118,.4);color:#e8c776}
+.formDrawer .kState{border:1px dashed rgba(var(--j360-accent-rgb,181,138,58),.35);border-radius:14px;background:rgba(255,255,255,.6)}
+.formDrawer .kActions button{min-height:42px;border-radius:12px;padding:0 16px;font-weight:800}
+.formDrawer .kActions .primary{background:linear-gradient(140deg,var(--j360-accent,#b58a3a),#8a6420)!important;color:#fff!important;border:0!important;box-shadow:0 8px 18px -10px rgba(var(--j360-accent-rgb,181,138,58),.9)}
+.formDrawer .kActions .secondary{background:#fff!important;border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.45)!important;color:#7a5a1e!important}
+.formDrawer .kActions button:hover:not(:disabled){transform:translateY(-1px)}
+.formDrawer .kNote{border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.25)}
+.formDrawer .dxDef{padding:10px 12px;border-radius:12px;background:rgba(var(--j360-accent-rgb,181,138,58),.08);border-left:3px solid var(--j360-accent,#b58a3a);color:#5b5246}
+.theme-premium_dark .formDrawer .kv div,.theme-premium_dark .formDrawer .tableWrap{background:#121a24;border-color:#233041}
+.theme-premium_dark .formDrawer .kSection{color:#e6edf5}
+.theme-premium_dark .formDrawer .kActions .secondary{background:#121a24!important;color:#e8c776!important}
+@media (prefers-reduced-motion:reduce){.formDrawer .kv div,.formDrawer .kActions button{transition:none;transform:none!important}}

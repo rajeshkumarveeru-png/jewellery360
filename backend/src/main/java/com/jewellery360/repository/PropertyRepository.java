@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface PropertyRepository extends JpaRepository<Property,Long> {
     Optional<Property> findByCompanyIdAndKeyAndActiveTrue(Long companyId,String key);
     Optional<Property> findByCompanyIdAndUserIdAndKeyAndActiveTrue(Long companyId, Long userId, String key);
+    /** Platform-wide settings (no company, no user), e.g. the backup folder. */
+    Optional<Property> findByCompanyIsNullAndUserIsNullAndKeyAndActiveTrue(String key);
 }
