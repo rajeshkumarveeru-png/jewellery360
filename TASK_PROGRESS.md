@@ -140,3 +140,9 @@ IN_PROGRESS — Phases 1 (foundation), dev-DB upgrade, cleanup and mobile v1 DON
 - Tests: smoke 59/59; new invoice-number API test 12/12 (scratchpad inv_test.mjs); browser: duplicate refused on screen, bill CNT-0500 completed, field returned to INV/26-27/0007; `npm run build` and `./gradlew build` passed. Test schema dropped.
 - Files: backend NumberingService, SalesService, SalesController, SaleRepository, DocumentSequenceRepository; frontend api.ts, pages/Billing.tsx, pages/Billing.css.
 - Next: restart the backend (new endpoints) and hard-refresh the browser.
+
+## Round 8 (2026-10-13: cleanup + commit)
+- [x] Removed 22 `.bak` copies, unused `frontend/src/pages/BarcodeCameraScanner.tsx` (not imported anywhere), `backend/scripts/smoke_test.py` (replaced by smoke_test.mjs), `frontend/tsconfig.tsbuildinfo` (now git-ignored), empty `backend/src/main/resources/static/`, test-only `.claude/launch.json`.
+- Checked: frontend import graph from main.tsx has no other orphans; every backend class is referenced; all Liquibase changelogs are included.
+- Verified after cleanup: frontend build, mobile tsc, backend compile all pass.
+- Committed on develop-claude-ui-version as b6edead (not pushed).
