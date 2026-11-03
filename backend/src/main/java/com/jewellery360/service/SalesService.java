@@ -54,6 +54,7 @@ public class SalesService {
     private final PermissionService permissions;
     private final TenantContext tenant;
     private final AuditService audit;
+    private final UpiSettingsService upiSettings;
 
     /* =================================================================== preview / create ==================== */
 
@@ -139,13 +140,20 @@ public class SalesService {
             og.setStatus(og.available().signum() > 0 ? "OPEN" : "SETTLED");
         }
         applyPayments(ctx, sale, p.order, body.get("payments"));
-        if (CustomerService.isWalkIn(p.customer) && sale.balance().signum() > 0)
+        // a walk-in bill must be paid in full - unless the balance is collected by UPI right after saving (Settings -> UPI payments)
+        boolean upiNext = Num.bool(body, "upiPending", false) && upiReady(ctx.companyId());
+        if (CustomerService.isWalkIn(p.customer) && sale.balance().signum() > 0 && !upiNext)
             throw Errors.bad("A walk-in bill must be paid in full. Add the customer's name and phone to give credit.");
         if (p.order != null) p.order.setStatus("DELIVERED");
         audit.log(ctx, "BILL_COMPLETE", "Sale", sale.getId(), null, Map.of("invoiceNo", sale.getInvoiceNo(), "total", sale.getTotal(),
                 "discount", sale.getDiscount(), "paid", sale.getPaidAmount(), "items", p.lines.size()));
         if (p.overridden) audit.log(ctx, "BILL_PRICE_OVERRIDE", "Sale", sale.getId(), null, Map.of("invoiceNo", sale.getInvoiceNo(), "lines", p.overrideNotes));
         return detail(ctx, sale.getId());
+    }
+
+    private boolean upiReady(Long companyId) {
+        UpiSettingsService.Settings s = upiSettings.settings(companyId);
+        return s.qrReady() || s.razorpayReady();
     }
 
     /* =================================================================== invoice numbers ===================== */

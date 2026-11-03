@@ -53,6 +53,9 @@ type Props = {
   onDraft: () => void;
   onComplete: () => void;
   onRates: () => void;
+  upiAvailable?: boolean;
+  upiViaQr?: boolean;
+  onUpiViaQr?: (v: boolean) => void;
 };
 
 export default function BillSummary(p: Props) {
@@ -161,6 +164,7 @@ export default function BillSummary(p: Props) {
         <div className="bsumModes" role="radiogroup" aria-label="Payment mode">
           {p.modes.map(m => <button key={m} type="button" role="radio" aria-checked={p.paymentMode === m} className={p.paymentMode === m ? 'on' : ''} onClick={() => p.onMode(m)}>{m}</button>)}
         </div>
+        {p.paymentMode === 'UPI' && p.upiAvailable && <label className="bsumUpiSwitch"><input type="checkbox" checked={!!p.upiViaQr} onChange={e => p.onUpiViaQr?.(e.target.checked)} /> Show a UPI QR - the bill is marked paid when the money arrives</label>}
       </div>
 
       <div className="bsumActions">

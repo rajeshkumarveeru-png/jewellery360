@@ -252,3 +252,13 @@ export const userSlotRequests=()=>api.get('/users/slot-requests');
 export const createSlotRequest=(x:{requestedName:string;note?:string})=>api.post('/users/slot-requests',x);
 export const cancelSlotRequest=(id:number)=>api.delete(`/users/slot-requests/${id}`);
 export const userRequestHistory=()=>api.get('/approvals/user-requests');
+
+// UPI collection (Settings -> UPI payments): shop UPI QR and/or Razorpay QR / payment link
+export const upiSettings=()=>api.get('/upi/settings');
+export const saveUpiSettings=(x:any)=>api.put('/upi/settings',x);
+export const testUpiKeys=()=>api.post('/upi/settings/test');
+export const createUpiRequest=(x:{saleId:number;amount?:number;mode?:string})=>api.post('/upi/requests',x);
+export const upiRequest=(id:number)=>api.get(`/upi/requests/${id}`);
+export const upiRequestsForSale=(saleId:number)=>api.get('/upi/requests',{params:{saleId}});
+export const confirmUpiRequest=(id:number,utr?:string)=>api.post(`/upi/requests/${id}/confirm`,{utr:utr||undefined});
+export const cancelUpiRequest=(id:number)=>api.post(`/upi/requests/${id}/cancel`);

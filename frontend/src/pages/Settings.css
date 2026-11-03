@@ -66,3 +66,7 @@
 .theme-premium_dark .mnName,.theme-premium_dark .mnRoles,.theme-premium_dark .mnSteps button,.theme-premium_dark .mnMove{background:#0f1620;color:#e6edf5;border-color:#2a3a4d}
 @media(max-width:900px){.mnLayout{grid-template-columns:1fr}.mnPreview{position:static}}
 @media (prefers-reduced-motion:reduce){.mnRow,.mnGroup{transition:none}}
+/* UPI payments: full width, its three cards side by side on wide screens */
+.upiSettingsPanel{grid-column:1/-1;min-width:0}
+@media(min-width:1180px){.upiSettingsPanel .upiSet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}.upiSettingsPanel .upiSet>.settingsError,.upiSettingsPanel .upiSet>.settingsSave,.upiSettingsPanel .upiSet>.settingsNotice{grid-column:1/-1;justify-self:start}}
+@media(max-width:1100px){.upiSettingsPanel{grid-column:auto}}

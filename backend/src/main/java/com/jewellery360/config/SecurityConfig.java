@@ -43,6 +43,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
+                        // Razorpay calls this without a login; the body is trusted only after its HMAC signature check
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/razorpay").permitAll()
                         // every REST endpoint lives under /api and needs a signed-in user
                         .requestMatchers("/api/**").authenticated()
                         // everything else is the web app itself (index.html, /assets/**, screens like /sales):

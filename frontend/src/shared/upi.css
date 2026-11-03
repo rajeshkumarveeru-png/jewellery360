@@ -1,0 +1,80 @@
+/* UPI collection dialog + Settings → UPI payments. Own tokens so every theme stays readable. */
+.upiOverlay{position:fixed;inset:0;z-index:7500;display:grid;place-items:center;padding:16px;background:rgba(18,14,8,.58);backdrop-filter:blur(4px);animation:upiFade .18s ease}
+.upiCard{--u-ink:#1d1a14;--u-mute:#6f6655;--u-line:#e8dfcd;--u-gold:#b58a3a;--u-gold2:#e2c27a;--u-ok:#178a5a;--u-bad:#b4372a;
+  width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:linear-gradient(180deg,#fffdf8,#fbf6ea);color:var(--u-ink);
+  border:1px solid var(--u-line);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.35);padding:18px;display:flex;flex-direction:column;gap:12px;animation:upiPop .22s cubic-bezier(.2,.9,.3,1.2)}
+.upiHead{display:flex;align-items:center;gap:12px}
+.upiHead h3{margin:0;font-size:17px;font-weight:800}
+.upiHead small{color:var(--u-mute);font-size:12px}
+.upiHead>div{flex:1;min-width:0}
+.upiHeadIco{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:19px;color:#2b210d;background:linear-gradient(135deg,var(--u-gold2),var(--u-gold));box-shadow:0 6px 16px rgba(181,138,58,.35)}
+.upiX{width:34px;height:34px;min-height:0!important;border-radius:10px!important;border:1px solid var(--u-line)!important;background:#fff!important;color:var(--u-ink)!important;cursor:pointer;padding:0!important;box-shadow:none!important}
+.upiAmount{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#1f1a12,#3a2d16);color:#f6e7c1}
+.upiAmount span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.upiAmount strong{font-size:24px;font-family:Georgia,serif;color:#f3d48c}
+.upiModes{display:flex;gap:4px;padding:4px;border-radius:12px;background:#f1e8d6}
+.upiModes button{flex:1;min-height:34px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:var(--u-mute)!important;font-weight:700;font-size:12.5px;cursor:pointer;box-shadow:none!important;padding:0 6px!important}
+.upiModes button.on{background:#fff!important;color:var(--u-ink)!important;box-shadow:0 2px 8px rgba(0,0,0,.08)!important}
+.upiError{padding:10px 12px;border-radius:12px;background:#fdecea;color:var(--u-bad);border:1px solid #f3c4bd;font-size:13px;font-weight:600}
+.upiWait{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px;color:var(--u-mute);font-size:13px;text-align:center}
+.upiSpin{width:24px;height:24px;border-radius:50%;border:3px solid #ead9b2;border-top-color:var(--u-gold);animation:upiRot .8s linear infinite}
+.upiQr{display:grid;place-items:center;padding:12px;border-radius:16px;background:#fff;border:1px dashed var(--u-gold2)}
+.upiQr img{width:232px;height:232px;object-fit:contain}
+.upiQrSvg{display:grid;place-items:center;color:var(--u-mute);font-size:12px}
+.upiQrSvg svg{width:100%;height:100%}
+.upiPayee{display:flex;flex-direction:column;align-items:center;gap:2px}
+.upiPayee b{font-size:15px}.upiPayee span{font-size:12.5px;color:var(--u-mute);font-family:ui-monospace,Consolas,monospace}
+.upiHint{margin:0;font-size:12px;color:var(--u-mute);line-height:1.45;text-align:center}
+.upiField{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--u-mute)}
+.upiField small{text-transform:none;letter-spacing:0;font-weight:500}
+.upiField input{min-height:40px;border-radius:11px;border:1px solid var(--u-line);padding:8px 12px;font-size:14px;color:var(--u-ink);background:#fff;letter-spacing:.04em}
+.upiLive{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;color:var(--u-ok);font-weight:600}
+.upiLive i{width:9px;height:9px;border-radius:50%;background:var(--u-ok);box-shadow:0 0 0 0 rgba(23,138,90,.5);animation:upiPulse 1.4s infinite}
+.upiLink{display:flex;gap:8px;align-items:center}
+.upiLink code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:8px 10px;border-radius:10px;background:#f4ecdb;font-size:12px}
+.upiTimer{text-align:center;font-size:12px;color:var(--u-mute);font-variant-numeric:tabular-nums}
+.upiDone{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;text-align:center}
+.upiDone b{font-size:18px;color:var(--u-ok)}.upiDone small{color:var(--u-mute);font-size:12.5px}
+.upiDoneIco{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:#fff;background:linear-gradient(135deg,#2bb37b,#178a5a);box-shadow:0 10px 24px rgba(23,138,90,.35);animation:upiPop .3s ease}
+.upiFoot{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
+.upiBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px!important;padding:0 14px!important;border-radius:11px!important;border:1px solid var(--u-line,#e8dfcd)!important;background:#fff!important;color:var(--u-ink,#1d1a14)!important;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;box-shadow:none!important}
+.upiBtn:hover{border-color:var(--u-gold,#b58a3a)!important}
+.upiBtn.solid{background:linear-gradient(135deg,#e2c27a,#b58a3a)!important;border-color:transparent!important;color:#24190a!important;box-shadow:0 6px 16px rgba(181,138,58,.35)!important}
+.upiBtn.wa{background:#25d366!important;border-color:transparent!important;color:#fff!important}
+.upiBtn:disabled{opacity:.55;cursor:not-allowed}
+@keyframes upiFade{from{opacity:0}to{opacity:1}}
+@keyframes upiPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes upiRot{to{transform:rotate(360deg)}}
+@keyframes upiPulse{0%{box-shadow:0 0 0 0 rgba(23,138,90,.5)}70%{box-shadow:0 0 0 9px rgba(23,138,90,0)}100%{box-shadow:0 0 0 0 rgba(23,138,90,0)}}
+@media(prefers-reduced-motion:reduce){.upiOverlay,.upiCard,.upiDoneIco,.upiLive i,.upiSpin{animation:none}}
+@media(max-width:480px){.upiCard{padding:14px;border-radius:18px}.upiQr img{width:200px;height:200px}.upiAmount strong{font-size:21px}}
+
+/* Settings → UPI payments */
+.upiSet{display:flex;flex-direction:column;gap:12px}
+.upiSetCard{border:1px solid rgba(var(--j360-accent-rgb,181,138,58),.25);border-radius:16px;padding:14px;background:rgba(var(--j360-accent-rgb,181,138,58),.04);display:flex;flex-direction:column;gap:10px}
+.upiSetHead{display:flex;align-items:flex-start;gap:10px}
+.upiSetHead>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.upiSetHead small{color:var(--j360-muted,#6f6655);font-size:12px;line-height:1.4}
+.upiSetIco{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;font-weight:900;color:#2b210d;background:linear-gradient(135deg,#e2c27a,#b58a3a)}
+.upiSetIco.rzp{background:linear-gradient(135deg,#6c8cff,#3355d6);color:#fff}
+.upiSetIco.pref{background:linear-gradient(135deg,#7ed6b0,#178a5a);color:#fff}
+.upiBadge{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.upiBadge.on{background:#dff5ea;color:#11734a}.upiBadge.off{background:#eee8dc;color:#7a6f5c}
+.upiBadge.test{background:#fff3d6;color:#8a5b00}.upiBadge.live{background:#fde2df;color:#a2281b}
+.upiSetGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.upiSetGrid label,.upiSetCard>label:not(.toggleField){display:flex;flex-direction:column;gap:4px}
+.upiSetNote{margin:0;font-size:12px;color:var(--j360-muted,#6f6655);line-height:1.5}
+.upiSetNote code{font-size:11.5px;word-break:break-all}
+.upiPref{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:rgba(var(--j360-accent-rgb,181,138,58),.12);align-self:flex-start}
+.upiPref button{min-height:32px!important;padding:0 12px!important;border-radius:9px!important;border:0!important;background:transparent!important;color:inherit!important;font-weight:700;font-size:12.5px;box-shadow:none!important;cursor:pointer}
+.upiPref button.on{background:#fff!important;color:#1d1a14!important;box-shadow:0 2px 8px rgba(0,0,0,.1)!important}
+.upiSetActions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* billing: "show a UPI QR" switch under the payment modes */
+.bsumUpiSwitch{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#e9dcc0;cursor:pointer}
+.bsumUpiSwitch input{width:16px;height:16px;accent-color:#e2c27a}
+
+/* theme packs paint every button with a gradient: keep toggles neutral and mark only the chosen one */
+.app .upiSet .upiPref button,.upiOverlay .upiModes button{background-image:none!important}
+.app .upiSet .upiPref button.on{background-image:linear-gradient(135deg,#e2c27a,#b58a3a)!important;color:#24190a!important}
+.upiOverlay .upiModes button.on{background-image:none!important}

@@ -4,5 +4,7 @@ databaseChangeLog:
   - include: {file: db/changelog/002-baseline-catalogue.yml}
   - include: {file: db/changelog/003-baseline-sales.yml}
   - include: {file: db/changelog/004-baseline-operations.yml}
+  # Features added after the baseline.
+  - include: {file: db/changelog/005-upi-payment.yml}
   # One-time conversion of development databases created before the consolidation. Delete before production.
   - include: {file: db/changelog/090-legacy-dev-upgrade.yml}

@@ -14,6 +14,7 @@ import {printBill, shareBillOnWhatsApp} from '../shared/billActions';
 import type {PageProps} from './Dashboard';
 import './Billing.css';
 import BillSummary from './BillSummary';
+import UpiCollect, {loadUpiSettings, upiReady, type UpiSettings} from '../shared/UpiCollect';
 
 /* ============================================================================================
    Billing: one counter for every sale (scan or search → review → pay → complete) and the list of bills.
@@ -69,6 +70,10 @@ function Counter({onNotice, focus, draft, clearDraft, onDone, go}: {onNotice: (s
   const [invSuggest, setInvSuggest] = useState('');
   const [invAuto, setInvAuto] = useState(true);
   const [invErr, setInvErr] = useState('');
+  // UPI collection (Settings -> UPI payments): bill saved first, then the dialog collects and records the money
+  const [upiCfg, setUpiCfg] = useState<UpiSettings | null>(null);
+  const [upiViaQr, setUpiViaQr] = useState(true);
+  const [upiCollect, setUpiCollect] = useState<null | {bill: any; amount: number}>(null);
   // customer picker
   const [custQ, setCustQ] = useState('');
   const [custOpen, setCustOpen] = useState(false);
@@ -133,7 +138,7 @@ function Counter({onNotice, focus, draft, clearDraft, onDone, go}: {onNotice: (s
     }).catch(e => onNotice(errText(e)));
   }, [focus?.n]);
 
-  useEffect(() => { scanRef.current?.focus(); }, []);
+  useEffect(() => { scanRef.current?.focus(); void loadUpiSettings().then(setUpiCfg); }, []);
 
   // open old gold receipts (exchange) of the customer can pay this bill
   useEffect(() => {
@@ -215,18 +220,27 @@ function Counter({onNotice, focus, draft, clearDraft, onDone, go}: {onNotice: (s
     if (!asDraft && !invAuto && invErr) { onNotice(invErr); return; }
     const shownNo = invAuto ? invNo : '';
     const amount = payMode === 'CREDIT' ? 0 : Math.min(num(payAmount), due);
-    const payments = asDraft ? [] : [...ogPays, ...(amount > 0 ? [{mode: payMode, amount, reference: payRef || undefined}] : [])];
-    const paid = payments.reduce((s, p) => s + p.amount, 0);
+    const byUpi = !asDraft && amount > 0 && payMode === 'UPI' && upiViaQr && upiReady(upiCfg);
+    const payments = asDraft ? [] : [...ogPays, ...(amount > 0 && !byUpi ? [{mode: payMode, amount, reference: payRef || undefined}] : [])];
+    const paid = payments.reduce((s, p) => s + p.amount, 0) + (byUpi ? amount : 0);
     if (!asDraft && !customer && paid + 0.005 < payable) { onNotice('A walk-in bill must be paid in full. Pick or add the customer to give credit.'); return; }
     if (!asDraft && paid + 0.005 < payable && !(await confirmDialog({title: 'Leave a balance on credit?', message: `${customer?.name} will owe ${money(payable - paid)} on this bill.`, confirmLabel: 'Complete with credit'}))) return;
     setBusy(true);
     try {
-      const r = await createSale({...body(true), draft: asDraft || undefined, payments});
+      const r = await createSale({...body(true), draft: asDraft || undefined, payments, upiPending: byUpi || undefined});
       const b = r.data;
       if (asDraft) { onNotice('Draft saved. Open it from Bills to continue.'); reset(); return; }
       reset();
       onDone(b.id);
       if (shownNo && b.invoiceNo !== shownNo) onNotice(`${shownNo} was just used by another counter, so this bill is ${b.invoiceNo}.`);
+      if (byUpi) { setUpiCollect({bill: b, amount: Number(amount.toFixed(2))}); return; }
+      billDone(b);
+    } catch (e) { onNotice(errText(e)); }
+    finally { setBusy(false); }
+  };
+
+  /** "Bill completed" card with print / WhatsApp. */
+  const billDone = (b: any) => {
       void successDialog({
         title: `Bill ${b.invoiceNo} completed`,
         message: `${money(b.total)} · ${b.label}`,
@@ -237,8 +251,18 @@ function Counter({onNotice, focus, draft, clearDraft, onDone, go}: {onNotice: (s
         ],
         doneLabel: 'New bill'
       });
-    } catch (e) { onNotice(errText(e)); }
-    finally { setBusy(false); }
+  };
+
+  /** UPI dialog closed: paid -> the usual completed card (with the fresh balance); not paid -> the bill stays saved with the balance due. */
+  const upiClosed = async (paid: boolean) => {
+    const c = upiCollect;
+    setUpiCollect(null);
+    if (!c) return;
+    let b = c.bill;
+    try { b = (await loadSale(c.bill.id)).data; } catch { /* show what we have */ }
+    onDone(b.id);
+    if (paid) billDone(b);
+    else onNotice(`Bill ${b.invoiceNo} is saved with ${money(b.balance)} due. Collect it from Bills → Take payment or Collect by UPI.`);
   };
 
   const rates: any[] = ((board as any)?.rates || []).filter((r: any) => r.ratePerGram != null);
@@ -355,7 +379,10 @@ function Counter({onNotice, focus, draft, clearDraft, onDone, go}: {onNotice: (s
       </div>
     </form>
 
-    <BillSummary draft={!!draftId} saleDate={saleDate} saleTime={time} rateLabel={rateLabel} customer={customer} pieces={lines.length} preview={preview} previewErr={previewErr}
+    {upiCollect && <UpiCollect saleId={upiCollect.bill.id} amount={upiCollect.amount} invoiceNo={upiCollect.bill.invoiceNo}
+      customerName={upiCollect.bill.customer && !upiCollect.bill.walkIn ? upiCollect.bill.customer.name : null} customerPhone={upiCollect.bill.customer?.phone}
+      onClose={paid => void upiClosed(paid)} />}
+    <BillSummary upiAvailable={upiReady(upiCfg)} upiViaQr={upiViaQr} onUpiViaQr={setUpiViaQr} draft={!!draftId} saleDate={saleDate} saleTime={time} rateLabel={rateLabel} customer={customer} pieces={lines.length} preview={preview} previewErr={previewErr}
       due={due} paymentAmount={num(payAmount)} paymentMode={payMode} modes={modes} rateMissing={rateMissing} busy={busy}
       onPayment={v => { setPayAmount(v ? String(v) : ''); if (payMode === 'CREDIT' && v > 0) setPayMode('CASH'); }} onMode={setPayMode}
       onDraft={() => void complete(true)} onComplete={() => void complete(false)} onRates={() => go('Gold Rates')} />
@@ -407,6 +434,9 @@ export function BillSheet({id, onClose, onNotice, onChanged, onContinueDraft}: {
   const [picked, setPicked] = useState<number[]>([]);
   const [refundMode, setRefundMode] = useState('CASH');
   const [busy, setBusy] = useState(false);
+  const [upiCfg, setUpiCfg] = useState<UpiSettings | null>(null);
+  const [upiAmount, setUpiAmount] = useState<number | null>(null);   // fixed when the dialog opens (the balance changes once paid)
+  useEffect(() => { void loadUpiSettings().then(setUpiCfg); }, []);
   useEffect(() => { setMode('view'); setPicked([]); setPays([emptyPay()]); }, [id]);
   const refresh = () => { void bill.reload(); onChanged?.(); };
   const act = async (fn: () => Promise<unknown>, ok: string) => {
@@ -433,11 +463,15 @@ export function BillSheet({id, onClose, onNotice, onChanged, onContinueDraft}: {
           {b.status !== 'DRAFT' && <button type="button" className="secondary" onClick={() => printBill(b.id, onNotice)}>Print</button>}
           {b.status !== 'DRAFT' && b.customer?.phone && <button type="button" className="secondary" onClick={() => shareBillOnWhatsApp(b.id, onNotice)}>WhatsApp</button>}
           {num(b.balance) > 0 && !perms.isViewer && <button type="button" className="primary" onClick={() => { setMode('pay'); setPays([emptyPay(String(num(b.balance)))]); }}>Take payment</button>}
+          {num(b.balance) > 0 && !perms.isViewer && upiReady(upiCfg) && ['COMPLETED', 'PARTIALLY_RETURNED'].includes(b.status) && <button type="button" className="secondary" onClick={() => setUpiAmount(num(b.balance))}>Collect by UPI</button>}
           {['COMPLETED', 'PARTIALLY_RETURNED'].includes(b.status) && perms.canCancel && <button type="button" className="secondary" onClick={() => setMode('return')}>Return pieces</button>}
           {b.status === 'COMPLETED' && perms.canCancel && <button type="button" className="ghost danger" disabled={busy} onClick={cancel}>Cancel bill</button>}
           {b.status === 'DRAFT' && onContinueDraft && <button type="button" className="primary" onClick={() => { onContinueDraft(b); onClose(); }}>Continue draft</button>}
           {b.status === 'DRAFT' && <button type="button" className="ghost danger" onClick={async () => { if (await confirmDialog({title: 'Delete this draft?', confirmLabel: 'Delete', tone: 'danger'}) && await act(() => deleteDraftSale(b.id), 'Draft deleted.')) onClose(); }}>Delete draft</button>}
         </div>
+
+        {upiAmount != null && <UpiCollect saleId={b.id} amount={upiAmount} invoiceNo={b.invoiceNo} customerName={b.walkIn ? null : b.customer?.name} customerPhone={b.customer?.phone}
+          onPaid={refresh} onClose={() => { setUpiAmount(null); refresh(); }} />}
 
         {mode === 'pay' && <div className="kNote">
           <b>Take payment</b>

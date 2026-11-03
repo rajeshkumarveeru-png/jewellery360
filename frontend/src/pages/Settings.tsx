@@ -4,6 +4,7 @@ import {getWhatsAppSettings, saveWhatsAppSettings, getTaxSettings, saveTaxSettin
 import {rememberBrandName} from '../shared/brand';
 import {Role,User,ThemeKey} from '../shared/types';
 import MenuEditor from '../shared/MenuEditor';
+import UpiSettingsPanel from '../shared/UpiSettingsPanel';
 import {pushToast} from '../shared/Notify';
 import './Settings.css';
 
@@ -296,6 +297,12 @@ export default function SettingsModule({user,theme,setTheme}:{user:User;theme:Th
       <div className="taxPreview"><b>Invoice preview</b>{!tax.enabled?<span>No tax</span>:tax.mode==='GST'?<span>GST @ {Number(tax.rate||0).toFixed(2)}%</span>:<span>CGST @ {Number(tax.cgstRate||0).toFixed(2)}% + SGST @ {Number(tax.sgstRate||0).toFixed(2)}% = {(Number(tax.cgstRate||0)+Number(tax.sgstRate||0)).toFixed(2)}%</span>}</div>
       {canEditBusiness&&<button className="settingsSave" type="button" disabled={taxSaving} onClick={saveTax}>{taxSaving?'Saving…':'Save tax settings'}</button>}
     </div>}
+   </div>
+
+   <div className="panel upiSettingsPanel">
+    <span className="eyebrow">UPI PAYMENTS</span><h2>Collect by UPI QR or Razorpay</h2>
+    <p className="settingsHelp">Show a UPI QR for the exact amount at the counter, or send a Razorpay payment link. Paid money is put on the bill automatically (Razorpay) or when the cashier confirms (shop UPI QR).</p>
+    <UpiSettingsPanel companyId={companyId} canEdit={canEditBusiness}/>
    </div>
 
    <div className="panel menuPreferencesPanel">
